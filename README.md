@@ -13,7 +13,7 @@ repository is marked as tested.
 
 ## Status
 
-Early (0.1.1). Three skills.
+Early (0.1.2). Three skills.
 
 The skills moved here from agent-engine 0.14.0, where their history up to that tag lives. The scripts in `examples/`
 were run on Windows against Unreal 5.7.3, 5.8.2 and 5.8.3 as each README states; other platforms were not run.
@@ -31,7 +31,9 @@ game client. Physical button use, rendered reset poses, audible audio, multiplay
 this does not establish a complete UEFN sample-scene pass.
 
 The UEFN references cover [authoring routes](skills/uefn/references/uefn-authoring.md)
-and [saved controls and capture](skills/uefn/references/uefn-native-operations.md),
+and [native operations](skills/uefn/references/uefn-native-operations.md) (with [switches](skills/uefn/references/uefn-native-switches.md),
+[scoped saves](skills/uefn/references/uefn-native-saves.md), [proof cleanup](skills/uefn/references/uefn-native-cleanup.md) and
+[capture](skills/uefn/references/uefn-native-capture.md)),
 plus [native FBX coordinates and collision](skills/uefn/references/uefn-native-fbx.md)
 and [native audio import](skills/uefn/references/uefn-native-audio.md).
 The saved-controls reference also records the measured Fortnite Button component
@@ -96,8 +98,8 @@ non-required Linux observer on ready pull requests, and also runs weekly, manual
 `node scripts/check.mjs` runs the dependency-free merge checks: the Node tests and the skill lint. Native-engine
 acceptance (building, cooking and running Unreal) is separate and needs the documented engine setup.
 `scripts/lint-skills.mjs` checks frontmatter, relative links, the "You are about to / Read" table, size budgets,
-placeholders and evidence labels. `unreal-native` passes the strict rules; `unreal-features` is checked for structure
-and size, and four `uefn` references are over the size budget and held at their current size. Structural checks do not
+placeholders and evidence labels. `unreal-native` passes the strict rules and `uefn` passes the default rules; `unreal-features` is checked for
+structure and size. Structural checks do not
 establish that a skill improves an agent's work.
 
 ## Install

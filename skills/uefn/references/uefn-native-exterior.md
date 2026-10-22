@@ -1,10 +1,6 @@
-# UEFN native exterior materials and save scope
+# UEFN native exterior materials and collision
 
-Read for native material pin failures, decorative sky collision, derived
-LevelBounds changes or an extra dirty ActorFolder package. Observed in one
-consuming UEFN project on UEFN 42.30; not reproduced in this repo. These are
-local observations, not a universal engine contract. Use the authoring
-reference for connection setup and exact-world guards.
+Read for native material pin failures, decorative sky collision or derived LevelBounds changes. Observed in one consuming UEFN project on UEFN 42.30; not reproduced in this repo. These are local observations, not a universal engine contract. Use the [authoring reference](uefn-authoring.md) for connection setup and exact-world guards. An extra dirty ActorFolder package is in [scoped saves](uefn-native-saves.md).
 
 ## Choose the work and the evidence
 
@@ -12,7 +8,7 @@ reference for connection setup and exact-world guards.
 |---|---|---|---|---|---|
 | Probe material pin metadata | One transient graph | Guessing names or retaining failed assets | Small native script | Installed API is authoritative | Record names and connection booleans |
 | Add a source-owned sky/exterior | Build, import and scoped save | Entrances, collision, large bounds or cost | Separate mesh groups and opaque materials | Preserve existing levels and actor identities | Hash source, FBX and protected native files |
-| Save derived bounds/new folder | Inspect after the actor save | Unrelated dirty packages | Exact identities and ownership evidence | Explicit additions to save scope | Preserve original dirty set; no Save All |
+| Save derived bounds | Inspect after the actor save | Unrelated dirty packages | Exact identities and ownership evidence | Explicit additions to save scope | Preserve original dirty set; no Save All |
 
 A portable verification record for an exterior like this lists the static mesh
 actors, mesh/material assets and actor/folder package saves, the protected
@@ -114,34 +110,6 @@ sky vertex counts do not establish streaming, memory or frame-time cost.
 identities/transforms remained intact while actor/component rendering and
 collision were disabled. A label or prefix alone is not ownership. Verify
 replacement floor/spawn support before saving those changes.
-
-## Save a new folder only after identifying it
-
-[general] The first scoped save wrote the owned assets and identified actor
-packages. Dirty readback still contained the original unsaved external
-objects **plus one new ActorFolder package**. Saving succeeded; the dirty-set
-comparison correctly stopped the script. Do not replay that successful save or
-broaden it to Save All.
-
-The folder follow-up required that exact saved phase, no previous folder-save
-attempt, exactly one identified new ActorFolder object/package and an otherwise
-unchanged dirty set. `ObjectIterator(unreal.Object)` identified its class/package.
-Folder `label` and actor `folder_guid` property reads failed; actors'
-`get_folder_path()` returned the folder path.
-
-Project-specific evidence matched the folder's GUID suffix to one occurrence of
-its bytes in each newly saved owned actor file, after checking current
-folder paths. Observed serialization was four little-endian 32-bit words from
-`ActorFolder_UID_AAAAAAAA-BBBBBBBB-CCCCCCCC-DDDDDDDD`. This is a narrow observation
-about known files, not a general package parser, reflected folder API or
-sufficient ownership test for arbitrary assets. Byte presence alone is not
-permission to save an unknown folder.
-
-The follow-up recorded the actor hashes, wrote a pending folder-save
-receipt, saved only that exact package and checked the dirty set returned to the
-original. Preserve unrelated dirty packages. A changed GUID, file hash,
-folder path, object identity or dirty set invalidates reconciliation: inspect
-again rather than guessing, overwriting receipts or trusting the save boolean alone.
 
 ## Keep source reproducibility and runtime acceptance separate
 

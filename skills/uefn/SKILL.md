@@ -12,12 +12,19 @@ fix and Epic's MCP server are in FBX clips and MCP (`engine-asset-import` skill,
 
 | You are about to | Read |
 |---|---|
-| Find missing MCP tools, use native Python or Sequencer, set an exact Reset, import audio or migrate from UE | [UEFN authoring beyond MCP](references/uefn-authoring.md) |
+| Find missing MCP tools, choose a route, or decide whether to author in regular UE | [UEFN authoring beyond MCP](references/uefn-authoring.md) |
+| Run Python in the editor: startup scripts, remote execution, launch with a project | [Native Python](references/uefn-native-python.md) |
+| Set an exact Reset, make a Level Sequence or migrate assets from UE | [Animation and migration](references/uefn-animation.md) |
 | Import rendered WAVs (SoundFactory, guarded source and destination checks, looping Wave Players, scoped saves) | [Native UEFN audio import](references/uefn-native-audio.md) |
-| Set named rotation axes, check front and up, save actors in scope, clean up proof assets, use typed Verse references or compact buttons, or take editor and client screenshots | [Saved controls and capture](references/uefn-native-operations.md) |
+| Choose a native operation and its proof, wire typed Verse references or run runtime QA | [Native operations](references/uefn-native-operations.md) |
+| Set named rotation axes, check a switch's front and up, or compact a Button's visible mesh | [Native Button switches](references/uefn-native-switches.md) |
+| Save actors in scope, or a new ActorFolder, without Save All | [Scoped saves](references/uefn-native-saves.md) |
+| Delete disposable proof assets after reconciling them | [Proof asset cleanup](references/uefn-native-cleanup.md) |
+| Take editor screenshots when viewport capture stalls, or capture the Fortnite client window | [Editor and client capture](references/uefn-native-capture.md) |
 | Fix edited Python helpers that still produce old values in a running editor | [Python helper freshness](references/uefn-python-helper-freshness.md) |
-| Diagnose native material pin failures, sky collision after property edits, LevelBounds changes or an extra dirty ActorFolder | [Exterior materials and save scope](references/uefn-native-exterior.md) |
-| Fit exhibit cover that follows bones, or find hidden comparison blockers and misplaced proxies after animation edits | [Moving exhibit cover](references/uefn-native-cover.md) |
+| Diagnose native material pin failures, sky collision after property edits or LevelBounds changes | [Exterior materials](references/uefn-native-exterior.md) |
+| Fit exhibit cover that follows bones | [Moving exhibit cover](references/uefn-native-cover.md) |
+| Check fitted cover: semantic collision, variant state, hidden comparison blockers, misplaced proxies after animation edits | [Cover verification](references/uefn-native-cover-verification.md) |
 | Fix mirrored native FBX architecture, reversed glyphs or missing UCX and deck collision | [UEFN FBX coordinates and collision](references/uefn-native-fbx.md) |
 
 ## What was tested
