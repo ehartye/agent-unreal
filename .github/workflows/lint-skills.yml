@@ -1,0 +1,39 @@
+# Lint and release checks for the skills. No dependencies: Node only.
+name: lint-skills
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+    paths:
+      - '.github/workflows/lint-skills.yml'
+      - '.claude-plugin/**'
+      - 'AGENTS.md'
+      - 'README.md'
+      - 'scripts/**'
+      - 'skills/**'
+      - 'examples/**'
+  push:
+    tags: ['v*']
+  schedule:
+    - cron: '17 9 * * 1'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  lint-skills:
+    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20.11'
+      - name: Local merge checks (tests and skill lint)
+        run: node scripts/check.mjs

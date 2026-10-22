@@ -1,0 +1,36 @@
+# GLB to FBX for UEFN and the Unreal MCP tools
+
+UEFN's MCP mesh tool, and Epic's on Unreal 5.8.3, import only FBX and OBJ. `glb_to_fbx.py` converts an agent-meshes
+GLB (a rigged, animated model) with Blender:
+
+```text
+blender --background --python glb_to_fbx.py -- fox.glb fox.fbx
+```
+
+It sets the scene to 30 fps **before** importing the glTF, so clips whose length is a whole number of frames at 30 fps
+(the fox's 0.8 s and 1.2 s) survive Unreal's importer, which drops any clip that is not frame-aligned. Setting the rate
+after the import shrinks every clip. See FBX clips and MCP (`engine-asset-import` skill, agent-engine).
+
+Verified with Blender 5.2.2 on the sample fox: Epic's MCP `import_file` on Unreal 5.8.3 produced the mesh, the
+skeleton and both clips. Re-run in UEFN 42.20 on 2026-10-01: the saved import contains `walk` at 1.2 seconds / 36 frames
+and `trot` at 0.8 seconds / 24 frames, both at 30 fps. The UEFN import response initially listed only the mesh;
+querying the destination folder afterwards found all 52 assets, including both clips. Check the asset registry
+after import and save the complete asset list explicitly.
+
+The Microsoft Store build of Blender must be started through its
+execution alias, `%LOCALAPPDATA%\Microsoft\WindowsApps\blender-launcher.exe`, from an interactive user session.
+
+## UEFN device check
+
+The imported fox renders through UEFN's Animated Mesh device. Discover its catalog entry with `ListDeviceAssets`,
+place it with `PlaceDevice`, and inspect its properties before setting `skeletalMesh`, `animation`, `loop` and
+`playRate`. Playback state is read-only; bind a player spawn pad's `On Player Spawned` event to the device's `Play`
+function instead. A property update can apply supported fields and still return an error for another field, so
+read the properties back after a partial failure.
+
+Verified so far: saved assets, device configuration, spawn-event bindings and editor viewport rendering.
+Runtime animation and the complete sample scene remain unverified.
+
+`CaptureViewport` returns the PNG in a separate MCP image content block. Its JSON `image` value is a
+`urn:toolresult` reference, not base64 data. Session startup can also outlast the HTTP request timeout: query
+`GetSessionStatus` before retrying a launch.

@@ -1,0 +1,16 @@
+{
+  "name": "agent-unreal",
+  "description": "Local marketplace for the agent-unreal plugin",
+  "owner": {
+    "name": "ehartye"
+  },
+  "plugins": [
+    {
+      "name": "agent-unreal",
+      "description": "Skills for working in Unreal Engine 5.8 from a coding agent: choose the engine system that fits a goal, build, package and profile a native C++ game, and author for UEFN",
+      "version": "0.1.0",
+      "source": "./",
+      "license": "MIT"
+    }
+  ]
+}
