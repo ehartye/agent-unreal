@@ -48,6 +48,18 @@ Epic's MCP server exposes the toolset registry through `list_toolsets`, `describ
 - A mesh renderer takes a static mesh from the system or a user parameter (`override_system_user_variable_static_mesh`); the Static Mesh data interface also binds an actor or component. The Audio Player data interface plays a `SoundBase` from particle data.
 - Turn a sprite atlas into a flipbook: import it, use a Sprite Renderer with the Sub UV Animation module, and set Sub Image Size to the atlas grid. Epic advises a power-of-two texture and a tile count that divides it evenly. The Niagara Baker, which bakes a simulation to a flipbook, is an editor UI workflow.
 
+## Drawn, ink and cel looks
+
+Choose by what must stay drawn. [`stylized_validate.mjs`](../../../examples/unreal/stylized/stylized_validate.mjs) runs each [tested] line.
+
+- Drawn frames that ignore the lighting: a self-emissive sprite that plays a flipbook. [tested] An Unlit, Masked material (Texture Sample Parameter SubUV into Emissive Color and Opacity Mask) drew the same colours and area under a bright backdrop with a strong sun and a dark backdrop with no sun.
+- [tested] Set the Sprite Renderer's Sub Image Size to the grid (`SetRendererData`, `{"SubImageSize":{"x":4,"y":4}}`). SubUV Animation in Linear mode writes `Particles.SubImageIndex` as normalized age x frame count (0 to 16 over the lifetime). Direct Index mode with a constant Direct Frame Index shows that cell.
+- [documented] Turn Sub UV Blending Enabled off for hard cuts: on, it blends with the next cell by the fractional index (`NiagaraSpriteRendererProperties.h`).
+- Stepped light on an unlit particle: quantize a light term, `floor(term x N) / (N - 1)`, into a Lerp. [tested] It drew flat bands next to a smooth control.
+- [tested] The Dynamic Material Parameters module's Index 0 Param 1 (3) reached the material's Dynamic Parameter node (default 4): three bands rendered.
+- Lit toon on a particle: [tested] Substrate Toon works on sprites ([Substrate](unreal-substrate.md)).
+- Not verified: linking Direct Frame Index to a user parameter; the frame stayed age-driven.
+
 ## Fluids
 
 - Enable Generate Mesh Distance Fields (Project Settings > Rendering; `r.GenerateMeshDistanceFields=True`) and restart the editor before using the 3D fluid templates ([Epic: Mesh Distance Fields](https://dev.epicgames.com/documentation/unreal-engine/mesh-distance-fields-in-unreal-engine)).

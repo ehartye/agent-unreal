@@ -19,6 +19,7 @@ Unreal 5.8 on Windows. Pick the feature from the goal, enable only its plugin, t
 | Simulate cloth, outfits or soft bodies (ChaosCloth on; Cloth Asset, Outfit Asset, ChaosFlesh off) | [Cloth and flesh](references/unreal-chaos-cloth-and-flesh.md) |
 | Add hair or fur (Hair Strands; off) | [Hair Strands](references/unreal-hair-strands.md) |
 | Rig, animate procedurally or retarget with IK (Control Rig and IK Rig on; Full Body IK off) | [Control Rig](references/unreal-control-rig.md) |
+| Verify stylized or large-landscape guidance with a test scene | [Example scenes](references/unreal-example-scenes.md) |
 | Build a landscape with rivers and scattered content (Landmass, Water, PCG) | [Landmass](references/unreal-landmass.md), [Water](references/unreal-water.md), [PCG](references/unreal-pcg.md) |
 | Scatter or place world content by rules: foliage, props, biomes (PCG; on) | [PCG](references/unreal-pcg.md) |
 | Author terrain with helpers (Landmass; off, beta) | [Landmass](references/unreal-landmass.md) |
@@ -52,4 +53,3 @@ Unreal 5.8 on Windows. Pick the feature from the goal, enable only its plugin, t
 1. List the plugin's descriptor: `node examples/unreal/engine_plugins.mjs --engine "<UE folder>" --name <Plugin>`.
 2. Enable it in Edit > Plugins, or add `{ "Name": "<Plugin>", "Enabled": true }` to the `.uproject` `Plugins` array, and restart the editor.
 3. See what Python reaches: run [`unreal_surface.py`](../../examples/unreal/unreal_surface.py) headless with `UNREAL_SURFACE_MATCH=<name fragment>`.
-4. Script the editor with [Editor Python](references/unreal-editor-python.md).

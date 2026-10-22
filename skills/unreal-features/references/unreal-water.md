@@ -34,8 +34,8 @@ Target: Unreal Engine 5.8, Windows. The Water plugin is a "full suite of water t
 |---|---|---|
 | Place a water body | Editor UI / Blueprint / Python | Water Body actors (Ocean, Lake, River, Custom, Island); Python classes `unreal.WaterBodyOcean`, `WaterBodyLake`, `WaterBodyRiver`, `WaterBodyCustom`, `WaterBodyIsland` (components `unreal.WaterBodyOceanComponent`, etc.) |
 | Shape a body | Editor UI | Edit its spline (`unreal.WaterSplineComponent`): ocean and lake use a closed loop at one height; river uses an open spline with per-point height and velocity |
-| Generate the surface | Editor UI / Python | Place one `unreal.WaterZone` and one `unreal.WaterMeshActor`; bodies draw only inside a Water Zone |
-| Carve terrain | Editor UI | Landscape with edit layers plus the water brush (`unreal.WaterBrushManager`, `unreal.WaterLandscapeBrush`); blend and falloff via `unreal.WaterBodyHeightmapSettings`, `WaterFalloffSettings`, `WaterCurveSettings`, `unreal.WaterBrushBlendType` |
+| Generate the surface | Editor UI / Python | Place one `unreal.WaterZone` (`unreal.WaterMeshActor` is the same class); bodies draw only inside a Water Zone |
+| Carve terrain | Editor UI | Landscape with edit layers plus the water brush (`unreal.WaterBrushManager`, `unreal.WaterLandscapeBrush`; the manager is added for you, see below); blend and falloff via `unreal.WaterBodyHeightmapSettings`, `WaterFalloffSettings`, `WaterCurveSettings`, `unreal.WaterBrushBlendType` |
 | Cut a hole in a body | Editor UI | `unreal.WaterBodyExclusionVolume` |
 | Waves | Python / editor UI | Gerstner waves (default): `unreal.GerstnerWaterWaves`, `GerstnerWaterWaveGeneratorSimple` (`num_waves`, `min_wavelength`, `max_wavelength`, `min_amplitude`, `max_amplitude`, `large_wave_steepness`); asset replacement: `unreal.WaterWaves`, `WaterWavesAssetFactory` |
 | Runtime queries and toggles | Python / Blueprint | `unreal.WaterSubsystem` (`is_water_rendering_enabled`, `get_ocean_base_height`, `get_ocean_flood_height`, `set_ocean_flood_height`, `get_camera_underwater_depth`, `is_underwater_post_process_enabled`, `on_camera_underwater_state_changed`) |
@@ -54,6 +54,17 @@ Target: Unreal Engine 5.8, Windows. The Water plugin is a "full suite of water t
 8. Tune waves with depth attenuation (0 disables depth-based attenuation) or a Water Waves Asset.
 
 Custom materials need the Used with Water flag. Transition-material colors are matched by hand to the neighboring water materials.
+
+## Large worlds in World Partition
+
+The partitioned map, the Landscape layout and the order of steps are in [Landmass](unreal-landmass.md). Water adds:
+- [tested] Place water in the editor: `UnrealEditor.exe -nullrhi -ExecCmds="py script"`, with the edits on an editor tick. In `UnrealEditor-Cmd.exe` a Water Zone spawns, then spawning a River stops the process on a Slate assertion (`CurrentBaseApplication.IsValid`, from LandscapeEditor).
+- [tested] The Water Zone and the brush manager are always loaded; Lake and River bodies are spatially loaded. A new actor reports `runtime_grid` None and no Data Layers. A converted sample map kept the same split.
+- [tested] Do not place a Water Brush Manager: the first body on a Landscape with edit layers adds `Landscape_WaterBrushManager` and a Water edit layer. The class is `/Script/WaterEditor.WaterBrushManager`.
+- [tested] River: `river.get_water_spline()` (`clear_spline_points`, `add_spline_point` in `SplineCoordinateSpace.WORLD`), then width and depth per point with `river.get_water_body_component().set_river_width_at_spline_input_key` and `set_river_depth_at_spline_input_key`, then `spline.k2_synchronize_and_broadcast_data_change()`. In the partitioned template a river at Z -600 with depth 400 and width 3000 carved the flat terrain to -1000, so bed = river Z minus depth.
+- [tested] Partition settings persist in the saved descriptors: `set_editor_property("is_spatially_loaded", False)` and `("runtime_grid", "MainGrid")`; for a Data Layer create a `DataLayerAsset` (`AssetTools.create_asset` with `DataLayerFactory`), call `DataLayerEditorSubsystem.create_data_layer_instance(DataLayerCreationParameters)` then `add_actor_to_data_layer`.
+
+Not verified: how a river carves proxies that are not loaded; which spatial-loading setting suits a given river length.
 
 ## Sources
 

@@ -52,7 +52,15 @@ Set the Blend Mode on the root node: Opaque, Masked, Translucent - Grey Transmit
 ## Substrate Toon Shading
 
 - Author with the Substrate Toon BSDF node plus a Toon Profile asset. The profile holds a diffuse ramp, a specular ramp, optional ramp offset textures with strength and size, and a shadow extinction value (`ToonProfile.h` in the 5.8 install). The release notes add dithered ramps, self-shadowing with hatching patterns, anisotropic specular highlights and global illumination scale controls.
-- Epic's documentation states no further render path requirement beyond the Blendable GBuffer base.
+
+[`stylized_validate.mjs`](../../../examples/unreal/stylized/stylized_validate.mjs) runs each [tested] line.
+
+- [tested] A bare project has `r.Substrate=0` and the Adaptive GBuffer (`r.Substrate.ProjectGBufferFormat=1`; 0 is Blendable, `EngineTypes.h`). The test project sets `r.Substrate=True` and the format to 0 in `DefaultEngine.ini` under `[/Script/Engine.RendererSettings]`.
+- [tested] Headless editor Python authors it: `create_asset(name, path, unreal.ToonProfile, unreal.ToonProfileFactory())`; `create_material_expression(mat, unreal.MaterialExpressionSubstrateToonBSDF, x, y)` (property `toon_profile`; inputs connect by name: BaseColor, Metallic, Specular, Roughness, Normal, EmissiveColor, PatternUVs, Anisotropy, Tangent); `connect_material_property(toon, "", unreal.MaterialProperty.MP_FRONT_MATERIAL)`. A new profile's diffuse ramp already has four levels (0.25 to 1).
+- [tested] On a lit mesh the Toon BSDF draws flat tone bands where a plain material draws a gradient.
+- [tested] On a Niagara sprite (`used_with_niagara_sprites`) it renders lit with flat bands, Masked (Opacity Mask) or Translucent, with no shader errors. The BSDF has no opacity input: wire a Substrate Weight node from the mask between the BSDF and Front Material.
+- [tested] `ToonProfileOverride` on a Material Instance has no Python property; `override_toon_profile` does. `Set <instance name> ToonProfileOverride <profile path>` plus a forced save survived a new editor process (`GetAll` with `-LogCmds="global Log"` read it back); a class name in `Set` also changes the class default, so the value is not saved. The editor UI was not tested.
+- Not verified: Toon on the Adaptive GBuffer, ribbons or mesh particles; frame cost.
 
 ## How an agent drives it
 
@@ -60,8 +68,8 @@ Set the Blend Mode on the root node: Opaque, Masked, Translucent - Grey Transmit
 |---|---|---|
 | Enable Substrate, pick GBuffer format | Project settings | `r.Substrate`, `r.Substrate.ProjectGBufferFormat`; restart |
 | Tune Adaptive limits | Project settings / cvars | `r.Substrate.ProjectClosuresPerPixel`, `r.Substrate.BytesPerPixel` (default 80) |
-| Author Substrate graphs, Toon BSDF, Toon Profile | Material Editor UI | Slab and Toon BSDF nodes; right-click the root node > Convert to Substrate (permanent; the material then renders black with Substrate off) |
-| Create material expressions from script | Python | Not confirmed: the class surface dump names only `MaterialExpressionSubstrateHairBSDF` and `MaterialExpressionSubstrateSingleLayerWaterBSDF` |
+| Author Substrate graphs, Toon BSDF, Toon Profile | Python (row below) or Material Editor UI | Slab and Toon BSDF nodes; right-click the root node > Convert to Substrate (permanent; the material then renders black with Substrate off) |
+| Create Substrate and Toon nodes from script | Python | `MaterialEditingLibrary.create_material_expression` with `unreal.MaterialExpressionSubstrateToonBSDF` |
 | Set or read cvars | Python | `unreal.SystemLibrary.execute_console_command` (documented for the 5.7 Python API) |
 | Inspect cost | Editor UI | Substrate stats panel; advanced visualization shaders setting (Editor, Win64, DX12) |
 
