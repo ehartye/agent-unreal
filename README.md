@@ -13,10 +13,13 @@ repository is marked as tested.
 
 ## Status
 
-Early (0.1.2). Three skills.
+Early (0.1.3). Three skills.
 
 The skills moved here from agent-engine 0.14.0, where their history up to that tag lives. The scripts in `examples/`
 were run on Windows against Unreal 5.7.3, 5.8.2 and 5.8.3 as each README states; other platforms were not run.
+
+[`docs/sample-scene.md`](docs/sample-scene.md) records what Unreal 5.7, Unreal 5.8 and UEFN passed of the cross-engine
+sample scene. Its spec stays in agent-engine, which also holds the Godot, Unity and web builds.
 
 ## Verification status
 

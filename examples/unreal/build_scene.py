@@ -1,4 +1,4 @@
-"""Build the agent-engine sample scene in Unreal 5.7 and 5.8 through the editor Python API.
+"""Build the sample scene (spec: docs/sample-scene.md) in Unreal 5.7 and 5.8 through the editor Python API.
 
 Run headless (assets + level only, no rendering):
   UnrealEditor-Cmd.exe SampleScene.uproject -run=pythonscript -script=<this file> -unattended -nullrhi -nosplash -nopause -nosound
