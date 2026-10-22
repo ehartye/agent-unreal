@@ -25,7 +25,7 @@ Target: Unreal Engine 5.8, Windows. Geometry Script is a function library for cr
 
 ## Use something else when
 
-- Use agent-meshes (GLB import) when the model is authored art: characters, creatures, props, anything with named parts, rigs or vertex colours. Author it as a GLB, then import it (see the `engine-asset-import` skill). Use Geometry Scripting when the mesh is generated from parameters in the engine, depends on level data at runtime, or is post-processed after import (copy from the static mesh, edit, copy back).
+- Use Blender through agent-meshes (the `mesh-tool-selection` skill decides) when the geometry is fixed once the game is built and is authored art (characters, creatures, props with named parts, rigs, morph targets or vertex colours), needs UV, bevel or Boolean quality, or must also load in another engine. Author a GLB, then import it (see the `engine-asset-import` skill). Use Geometry Scripting when the mesh is parametric and exists only in the engine, depends on level data or gameplay at runtime, or is post-processed after import (copy from the static mesh, edit, copy back). The result of either is a Static Mesh asset, and its Nanite, collision and LOD settings are set in Unreal.
 - Use [unreal-procedural-mesh-component.md](unreal-procedural-mesh-component.md) when you already hold raw vertex and triangle arrays and want them on screen with the least setup.
 - Use [unreal-pcg.md](unreal-pcg.md) when the goal is populating a world with placed content rather than building one mesh.
 - Use [unreal-water.md](unreal-water.md) for oceans, rivers and lakes.

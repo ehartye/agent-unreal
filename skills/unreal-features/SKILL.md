@@ -42,7 +42,7 @@ Unreal 5.8 on Windows. Pick the feature from the goal, enable only its plugin, t
 
 - When two features fit equally, choose the one whose plugin is on by default. A beta or experimental plugin is a deliberate opt-in, and its reference says what it is for.
 - Use Niagara for new particle work and keep Cascade for content that already exists. Prefer the current system in every area: each reference notes in one line what it supersedes (for example Lumen over baked lighting, Enhanced Input over legacy mappings) and whether Epic labels it beta or experimental.
-- Import a fixed asset (a GLB from agent-meshes, a WAV from agent-beeps, a sprite atlas from agent-sprites); build in Unreal (Geometry Scripting, MetaSounds, Niagara) when the asset must respond to gameplay. The import steps are in `engine-asset-import` (agent-engine).
+- Import a fixed asset (a GLB, a WAV, a sprite atlas) with `engine-asset-import` (agent-engine); build in Unreal (Geometry Scripting, MetaSounds, Niagara) when it must respond to gameplay. Blender or Unreal for a mesh: `mesh-tool-selection` (agent-meshes).
 - Choose the route by reach: asset creation, level building and property edits are editor Python (`EditorAssetLibrary`, asset tools, editor subsystems; see [Editor Python](references/unreal-editor-python.md)); per-frame behaviour, custom solvers and new data types are C++ or Blueprint. Each reference's route table says which tasks are which.
 
 ## Enable a feature
