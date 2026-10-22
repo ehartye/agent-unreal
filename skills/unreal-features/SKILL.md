@@ -6,7 +6,7 @@ when_to_use: Use when asked which Unreal system or plugin to use for lighting, s
 
 # Choosing an Unreal feature
 
-Unreal 5.8 on Windows. Pick the feature from the goal, enable only its plugin, then read that system's reference. Each reference states when to use the system, what to use instead, how an agent drives it (Python, Blueprint, C++ or editor UI) and the Epic documentation behind it. The plugin state in brackets is the shipped descriptor: `node examples/unreal/engine_plugins.mjs --engine <UE folder>` lists them.
+Unreal 5.8 on Windows. Pick the feature from the goal, enable only its plugin, then read that system's reference. Each reference says when to use the system, what to use instead and how an agent drives it. Brackets show each plugin's shipped state.
 
 | You are about to | Read |
 |---|---|
@@ -19,6 +19,7 @@ Unreal 5.8 on Windows. Pick the feature from the goal, enable only its plugin, t
 | Simulate cloth, outfits or soft bodies (ChaosCloth on; Cloth Asset, Outfit Asset, ChaosFlesh off) | [Cloth and flesh](references/unreal-chaos-cloth-and-flesh.md) |
 | Add hair or fur (Hair Strands; off) | [Hair Strands](references/unreal-hair-strands.md) |
 | Rig, animate procedurally or retarget with IK (Control Rig and IK Rig on; Full Body IK off) | [Control Rig](references/unreal-control-rig.md) |
+| Build a landscape with rivers and scattered content (Landmass, Water, PCG) | [Landmass](references/unreal-landmass.md), [Water](references/unreal-water.md), [PCG](references/unreal-pcg.md) |
 | Scatter or place world content by rules: foliage, props, biomes (PCG; on) | [PCG](references/unreal-pcg.md) |
 | Author terrain with helpers (Landmass; off, beta) | [Landmass](references/unreal-landmass.md) |
 | Add oceans, lakes or rivers (Water; off, experimental) | [Water](references/unreal-water.md) |
@@ -28,6 +29,7 @@ Unreal 5.8 on Windows. Pick the feature from the goal, enable only its plugin, t
 | Script the editor from Python: run modes, cameras, keyboard and gamepad input, process cleanup | [Editor Python](references/unreal-editor-python.md) |
 | Light a scene dynamically: global illumination and reflections, many shadow-casting lights, high-resolution shadows (project settings; MegaLights opt-in) | [Lumen](references/unreal-lumen.md), [MegaLights](references/unreal-megalights.md), [Virtual Shadow Maps](references/unreal-virtual-shadow-maps.md) |
 | Render dense or high-polygon geometry without authored LODs (project setting plus per-mesh flag) | [Nanite](references/unreal-nanite.md) |
+| Give materials or effects a toon or cel look (Substrate Toon, experimental; Niagara) | [Substrate](references/unreal-substrate.md), [Niagara](references/unreal-niagara.md) |
 | Author layered or stylized materials, or choose anti-aliasing and upscaling (Substrate beta, Substrate Toon experimental; TSR on) | [Substrate](references/unreal-substrate.md), [TSR and anti-aliasing](references/unreal-temporal-super-resolution.md) |
 | Give characters abilities, stat effects, costs or predicted actions (GameplayAbilities; off) | [Gameplay Ability System](references/unreal-gameplay-ability-system.md) |
 | Bind player input and switch controls by situation (EnhancedInput; on) | [Enhanced Input](references/unreal-enhanced-input.md) |
@@ -41,9 +43,9 @@ Unreal 5.8 on Windows. Pick the feature from the goal, enable only its plugin, t
 ## Rules of thumb
 
 - When two features fit equally, choose the one whose plugin is on by default. A beta or experimental plugin is a deliberate opt-in, and its reference says what it is for.
-- Use Niagara for new particle work and keep Cascade for content that already exists. Prefer the current system in every area: each reference notes in one line what it supersedes (for example Lumen over baked lighting, Enhanced Input over legacy mappings) and whether Epic labels it beta or experimental.
+- Use Niagara for new particle work and Cascade only for existing content. Each reference says in one line what its system supersedes and whether Epic labels it beta or experimental.
 - Import a fixed asset (a GLB, a WAV, a sprite atlas) with `unreal-import`; build in Unreal (Geometry Scripting, MetaSounds, Niagara) when it must respond to gameplay. Blender or Unreal for a mesh: `mesh-tool-selection` (agent-meshes).
-- Choose the route by reach: asset creation, level building and property edits are editor Python (`EditorAssetLibrary`, asset tools, editor subsystems; see [Editor Python](references/unreal-editor-python.md)); per-frame behaviour, custom solvers and new data types are C++ or Blueprint. Each reference's route table says which tasks are which.
+- Choose the route by reach: asset creation, level building and property edits are editor Python (`EditorAssetLibrary`, asset tools, editor subsystems; see [Editor Python](references/unreal-editor-python.md)); per-frame behaviour, custom solvers and new data types are C++ or Blueprint.
 
 ## Enable a feature
 
