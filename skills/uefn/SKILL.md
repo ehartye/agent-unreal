@@ -1,6 +1,6 @@
 ---
 name: uefn
-description: Author and import into UEFN (Unreal Editor for Fortnite) from an agent: Epic's MCP tools and their gaps, native Python and Sequence authoring, WAV and FBX import, saved controls and capture, and the evidence behind each claim. Not for importing into other engines (use engine-asset-import from agent-engine).
+description: Author and import into UEFN (Unreal Editor for Fortnite) from an agent: Epic's MCP tools and their gaps, native Python and Sequence authoring, WAV and FBX import, saved controls and capture, and the evidence behind each claim. Not for importing into Unreal (use unreal-import) or other engines (use engine-asset-import from agent-engine).
 when_to_use: Use when working in UEFN: missing MCP tools, native Python or Sequencer authoring, exact Reset behaviour, importing rendered WAVs, mirrored or colliderless FBX architecture, material pin failures or sky collision after property edits, moving exhibit cover, saved-device controls and screenshots, or edited native Python helpers that still produce old values in a running editor.
 ---
 
@@ -8,7 +8,7 @@ when_to_use: Use when working in UEFN: missing MCP tools, native Python or Seque
 
 UEFN 42.20 and 42.30, partly tested. Say which statements were run and which were read in documentation.
 Other engines' imports are in `engine-asset-import` (agent-engine); the FBX frame-rate
-fix and Epic's MCP server are in FBX clips and MCP (`engine-asset-import` skill, agent-engine).
+fix and Epic's MCP server are in FBX clips and MCP (`unreal-import` skill).
 
 | You are about to | Read |
 |---|---|

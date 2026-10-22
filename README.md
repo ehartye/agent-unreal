@@ -2,10 +2,11 @@
 
 A Claude Code plugin of skills for working in Unreal Engine 5.8 from a coding agent. It picks the engine system that
 fits a goal and says how an agent drives it (Python, Blueprint, C++, console variables or project settings), builds,
-packages and profiles a native C++ game, and authors for UEFN. It pairs with
-[agent-engine](https://github.com/ehartye/agent-engine), which imports [agent-meshes](https://github.com/ehartye/agent-meshes)
+packages and profiles a native C++ game, authors for UEFN, and imports [agent-meshes](https://github.com/ehartye/agent-meshes)
 models, [agent-sprites](https://github.com/ehartye/agent-sprites) atlases and
-[agent-beeps](https://github.com/ehartye/agent-beeps) sounds into Unreal and keeps the importer scripts.
+[agent-beeps](https://github.com/ehartye/agent-beeps) sounds into Unreal with a guarded importer. It pairs with
+[agent-engine](https://github.com/ehartye/agent-engine), which chooses an engine and imports into Unity, Godot and the web,
+and with agent-meshes, whose `mesh-tool-selection` decides between Blender and Unreal for a mesh.
 
 The references cover the current 5.8 systems. A legacy system gets one line saying what superseded it and its Epic
 status. Claims are backed by Epic documentation or by the engine install itself, and a statement that was run in this
@@ -13,9 +14,9 @@ repository is marked as tested.
 
 ## Status
 
-Early (0.1.3). Three skills.
+Early (0.2.0). Four skills.
 
-The skills moved here from agent-engine 0.14.0, where their history up to that tag lives. The scripts in `examples/`
+The skills moved here from agent-engine 0.14.0, where their history up to that tag lives; `unreal-import` and its importer scripts followed in 0.2.0. The scripts in `examples/`
 were run on Windows against Unreal 5.7.3, 5.8.2 and 5.8.3 as each README states; other platforms were not run.
 
 [`docs/sample-scene.md`](docs/sample-scene.md) records what Unreal 5.7, Unreal 5.8 and UEFN passed of the cross-engine
@@ -78,6 +79,7 @@ from current Fortnite cook, navigation and performance acceptance.
 |---|---|
 | `unreal-features` | Choose which Unreal 5.8 system fits a goal: rendering (Lumen, Nanite, Virtual Shadow Maps, MegaLights, Substrate, TSR), gameplay (Gameplay Ability System, Enhanced Input, AI, navigation, animation, Motion Matching), Sequencer, Movie Render Queue, networking, Niagara, Chaos, Mover, Control Rig, PCG, Water, Geometry Scripting, MetaSounds and the legacy Cascade. A selector table maps a goal to the reference; Niagara, a template catalog, editor Python and the production stack sit beside the system references. |
 | `unreal-native` | Build, run, verify, package and profile a native C++ Unreal game from an agent: the build and capture loop, content pipeline, presentation, input replay, material and UV validation, cooking, frame-time profiling against a budget and side-by-side comparison scenes. |
+| `unreal-import` | Import agent-sprites atlases, agent-meshes GLBs and agent-beeps WAVs into an Unreal 5.7 or 5.8 project from a script: Interchange and Paper2D notes, FBX clips and Epic's MCP server, a per-mesh import policy read back from the saved asset, guarded reuse and regenerated projects. The importer scripts are in the skill. |
 | `uefn` | Author and import into UEFN from an agent: Epic's MCP tools and their gaps, native Python and Sequence authoring, WAV and FBX import, saved controls and capture, with the evidence behind each claim. |
 
 ## Examples
@@ -89,9 +91,9 @@ from current Fortnite cook, navigation and performance acceptance.
 
 ## Importing assets
 
-Importing GLB, sprite and audio output into Unreal is the `engine-asset-import` skill in agent-engine, which also holds
-the importer scripts, the per-mesh import policy and guarded reuse. Choosing a game engine is `engine-selection` in
-agent-engine.
+Importing GLB, sprite and audio output into Unreal is the `unreal-import` skill, which holds the importer scripts
+(`skills/unreal-import/scripts/unreal-import.mjs`), the per-mesh import policy and guarded reuse. Import into Unity, Godot
+and the web, and choosing a game engine, are `engine-asset-import` and `engine-selection` in agent-engine.
 
 ## Checking the skills
 
@@ -101,7 +103,7 @@ non-required Linux observer on ready pull requests, and also runs weekly, manual
 `node scripts/check.mjs` runs the dependency-free merge checks: the Node tests and the skill lint. Native-engine
 acceptance (building, cooking and running Unreal) is separate and needs the documented engine setup.
 `scripts/lint-skills.mjs` checks frontmatter, relative links, the "You are about to / Read" table, size budgets,
-placeholders and evidence labels. `unreal-native` passes the strict rules and `uefn` passes the default rules; `unreal-features` is checked for
+placeholders and evidence labels. `unreal-native` passes the strict rules and `uefn` passes the default rules; `unreal-features` and `unreal-import` are checked for
 structure and size. Structural checks do not
 establish that a skill improves an agent's work.
 

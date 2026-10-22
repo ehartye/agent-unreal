@@ -25,7 +25,7 @@ Target: Unreal Engine 5.8, Windows. MetaSounds is a node-graph, sample-accurate 
 
 ## Use something else when
 
-- Use an imported WAV (Sound Wave asset) when the sound is fixed and rendered offline. The sibling plugin agent-beeps renders game sounds and songs as WAV; import them with the `engine-asset-import` skill. A MetaSound can still play the imported wave through its Wave Player node when it needs triggers, loop points or pitch-scale modulation.
+- Use an imported WAV (Sound Wave asset) when the sound is fixed and rendered offline. The sibling plugin agent-beeps renders game sounds and songs as WAV; import them with the `unreal-import` skill. A MetaSound can still play the imported wave through its Wave Player node when it needs triggers, loop points or pitch-scale modulation.
 - Build a MetaSound when the sound must respond to live parameters. Render a WAV with agent-beeps when the sound is a one-shot cue, a loop or a song.
 - Use Sound Cues only to maintain existing legacy content; they are not sample-accurate and cannot run arbitrary DSP.
 - Use the Audio Modulation plugin when runtime-adjustable parameter buses should replace static Sound Class and Sound Mix settings. MetaSounds can read its parameter buses.

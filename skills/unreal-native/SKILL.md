@@ -1,13 +1,13 @@
 ---
 name: unreal-native
-description: Build, run, verify, package and profile a native C++ Unreal game from an agent: the build and capture loop, content-only versus native construction, presentation, input replay, material and UV validation, cooking and staging, frame-time profiling against a budget, and side-by-side comparison scenes. Not for importing assets (use engine-asset-import from agent-engine) or for choosing an Unreal system or scripting the editor from Python (use unreal-features).
+description: Build, run, verify, package and profile a native C++ Unreal game from an agent: the build and capture loop, content-only versus native construction, presentation, input replay, material and UV validation, cooking and staging, frame-time profiling against a budget, and side-by-side comparison scenes. Not for importing assets (use unreal-import) or for choosing an Unreal system or scripting the editor from Python (use unreal-features).
 when_to_use: Use when building native C++ for an Unreal game, running real gameplay and checking screenshots or automation results, cooking or staging a Windows build, replaying input in native tests, rejecting default-material cook fallbacks, diagnosing procedural-road or collision losses, profiling an Unreal game's frame time, hitting a frame budget such as 120 fps, costing +25% to +50% more content, or comparing implementations side by side on a stage.
 ---
 
 # Native Unreal games
 
 Unreal 5.8 on Windows, driven by an agent. Each reference holds the commands, the evidence behind them
-and what was not verified. Importing assets is `engine-asset-import` (agent-engine);
+and what was not verified. Importing assets is `unreal-import`;
 choosing a system, Niagara and scripting the editor from Python are
 [unreal-features](../unreal-features/SKILL.md).
 
