@@ -23,7 +23,7 @@ bpy.ops.import_scene.gltf(filepath=src)
 armatures = [o for o in bpy.data.objects if o.type == "ARMATURE"]
 meshes = [o for o in bpy.data.objects if o.type == "MESH"]
 actions = [a.name for a in bpy.data.actions]
-print("AGENT_ENGINE_CONVERT armatures=%d meshes=%d bones=%s actions=%s" % (
+print("AGENT_UNREAL_CONVERT armatures=%d meshes=%d bones=%s actions=%s" % (
     len(armatures), len(meshes), [len(a.data.bones) for a in armatures], actions))
 
 bpy.ops.export_scene.fbx(
@@ -38,4 +38,4 @@ bpy.ops.export_scene.fbx(
     path_mode="COPY",
     embed_textures=False,
 )
-print("AGENT_ENGINE_CONVERT wrote", dst)
+print("AGENT_UNREAL_CONVERT wrote", dst)

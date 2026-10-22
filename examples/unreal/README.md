@@ -8,7 +8,7 @@ Verified on Unreal Engine 5.7.3 and 5.8.3, Windows (5.8.3 needed three changes, 
 run it with real rendering. Read the `engine-asset-import`, `unreal-native` and `engine-selection` skills
 before changing them.
 
-Set `AGENT_ENGINE_SCENES` to a workspace folder with this layout:
+Set `AGENT_UNREAL_SCENES` to a workspace folder with this layout:
 
 ```text
 assets/meshes/fox.glb              agent-meshes creature gallery, vulpine/model.glb

@@ -12,9 +12,9 @@ import time
 
 import unreal
 
-ROOT = os.environ.get("AGENT_ENGINE_SCENES")
+ROOT = os.environ.get("AGENT_UNREAL_SCENES")
 if not ROOT:
-    raise RuntimeError("set AGENT_ENGINE_SCENES to the scenes workspace folder (it holds assets/ and unreal/)")
+    raise RuntimeError("set AGENT_UNREAL_SCENES to the scenes workspace folder (it holds assets/ and unreal/)")
 REPORT = ROOT.replace("\\", "/").rstrip("/") + "/unreal/report-run.json"
 SETTLE_SECONDS = 20.0   # let shaders compile and the first frames render before sampling
 SAMPLE_GAP = 2.0
@@ -116,7 +116,7 @@ def tick(dt):
         if n == 1 and not state["shot_requested"]:
             state["shot_requested"] = True
             try:
-                unreal.AutomationLibrary.take_high_res_screenshot(1280, 720, "agent_engine_sample_scene.png")
+                unreal.AutomationLibrary.take_high_res_screenshot(1280, 720, "agent_unreal_sample_scene.png")
                 unreal.log("[run] screenshot requested")
             except Exception as exc:
                 unreal.log_error("[run] screenshot failed: " + str(exc))

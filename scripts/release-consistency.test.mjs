@@ -61,7 +61,7 @@ const HYGIENE = [
 ];
 
 test('plugin content names no home directory, GPU model, non-plugin repository or wiki path', () => {
-  const termsFile = process.env.AGENT_UNREAL_PRIVATE_TERMS_FILE ?? process.env.AGENT_ENGINE_PRIVATE_TERMS_FILE;
+  const termsFile = process.env.AGENT_UNREAL_PRIVATE_TERMS_FILE;
   const extra = termsFile
     ? readFileSync(termsFile, 'utf8').split(/\r?\n/).map((t) => t.trim()).filter(Boolean)
     : [];

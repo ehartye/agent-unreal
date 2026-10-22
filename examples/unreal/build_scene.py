@@ -11,9 +11,9 @@ import traceback
 
 import unreal
 
-ROOT = os.environ.get("AGENT_ENGINE_SCENES")
+ROOT = os.environ.get("AGENT_UNREAL_SCENES")
 if not ROOT:
-    raise RuntimeError("set AGENT_ENGINE_SCENES to the scenes workspace folder (it holds assets/ and unreal/)")
+    raise RuntimeError("set AGENT_UNREAL_SCENES to the scenes workspace folder (it holds assets/ and unreal/)")
 ROOT = ROOT.replace("\\", "/").rstrip("/")
 REPORT = ROOT + "/unreal/report-build.json"
 report = {"engine": unreal.SystemLibrary.get_engine_version(), "steps": []}
