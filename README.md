@@ -13,10 +13,59 @@ repository is marked as tested.
 
 ## Status
 
-Early (0.1.0). Three skills.
+Early (0.1.1). Three skills.
 
 The skills moved here from agent-engine 0.14.0, where their history up to that tag lives. The scripts in `examples/`
 were run on Windows against Unreal 5.7.3, 5.8.2 and 5.8.3 as each README states; other platforms were not run.
+
+## Verification status
+
+Epic's MCP plugin was tried on Unreal 5.8.3 and UEFN 42.20: it drives the editor and returns screenshots, but has no
+audio import and rejects GLB.
+
+One consuming UEFN 42.30 project additionally reported native Python authoring,
+scoped actor saves, editor captures, automatic timeline playback and server controller-method
+results, and native Python imports of Wave/Cue pairs with per-player playback settings (observed there, not
+reproduced in this repo). A launch reached server cook but ended without a connected
+game client. Physical button use, rendered reset poses, audible audio, multiplayer and performance remain open;
+this does not establish a complete UEFN sample-scene pass.
+
+The UEFN references cover [authoring routes](skills/uefn/references/uefn-authoring.md)
+and [saved controls and capture](skills/uefn/references/uefn-native-operations.md),
+plus [native FBX coordinates and collision](skills/uefn/references/uefn-native-fbx.md)
+and [native audio import](skills/uefn/references/uefn-native-audio.md).
+The saved-controls reference also records the measured Fortnite Button component
+reconstruction trap and a verified whole-vector MCP write with complete readback.
+It also documents the measured native rotation constructor trap: use named axes
+and verify the visible mesh's world front and up directions before scoped saves.
+The [moving exhibit cover reference](skills/uefn/references/uefn-native-cover.md)
+records the source-fitted chair pilot, bone-policy ordering, study-owned collision,
+independent source-corner checks and failures that self-derived surface rays missed.
+Its saved/editor proof remains separate from Fortnite gameplay and performance.
+The saved-controls reference also records exact disposable-proof ownership,
+hash-bound cleanup reconciliation and the observed Python-before-Unreal GC recovery,
+with preserved failed receipts and no force-deletion or automatic replay.
+
+The [Python helper reference](skills/uefn/references/uefn-python-helper-freshness.md)
+records stale imports in a running editor, source identity checks and binding
+functions after an owned helper reload, backed by a disposable native probe.
+
+The [native Unreal game recipe](skills/unreal-native/references/unreal-native-game.md)
+records a separate 5.8.2 C++ build and actual offscreen game-camera loop, with fresh automation JSON checks
+because failed tests can exit zero. Its [presentation companion](skills/unreal-native/references/unreal-native-presentation.md)
+covers the measured font/Slate commandlet crash, crisp Canvas glyph sizing, physical camera exposure and HDR palette traps.
+The [Windows packaging reference](skills/unreal-native/references/unreal-native-packaging.md)
+records an actual staged Game EXE separately from Editor-game evidence, including the UAT Application Control failure.
+The [content pipeline](skills/unreal-native/references/unreal-native-content-pipeline.md)
+records the tested content-only bake/native Game split, short-path cook fix and recipe/hash validation.
+The [comparison scene reference](skills/unreal-native/references/unreal-native-compare-scene.md) and its [example](examples/unreal/compare-scene/README.md)
+set several implementations of one visible thing side by side in a native game, film them and time each alone.
+
+The [native exterior reference](skills/uefn/references/uefn-native-exterior.md)
+records installed material pin discovery, sky collision readback, automatically
+derived LevelBounds and a separately identified folder save. It keeps exact
+package ownership, source-font dependencies and editor point queries distinct
+from current Fortnite cook, navigation and performance acceptance.
 
 ## Skills
 
