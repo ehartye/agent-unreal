@@ -4,8 +4,8 @@ For a native C++ game rather than this import sample, see [native Unreal build a
 
 For comparing several implementations of one visible thing side by side in a native game, see [compare-scene](compare-scene/README.md).
 
-Verified on Unreal Engine 5.7.3 and 5.8.3, Windows (5.8.3 needed three changes, listed in the Unreal import notes (`engine-asset-import` skill, agent-engine)). They build the [Unreal sample scene](../../docs/sample-scene.md), the Unreal build of the shared scene spec in agent-engine, and
-run it with real rendering. Read the `engine-asset-import`, `unreal-native` and `engine-selection` skills
+Verified on Unreal Engine 5.7.3 and 5.8.3, Windows (5.8.3 needed three changes, listed in the Unreal import notes (`unreal-import` skill)). They build the [Unreal sample scene](../../docs/sample-scene.md), the Unreal build of the shared scene spec in agent-engine, and
+run it with real rendering. Read the `unreal-import` and `unreal-native` skills
 before changing them.
 
 Set `AGENT_UNREAL_SCENES` to a workspace folder with this layout:

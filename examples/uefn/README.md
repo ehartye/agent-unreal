@@ -9,7 +9,7 @@ blender --background --python glb_to_fbx.py -- fox.glb fox.fbx
 
 It sets the scene to 30 fps **before** importing the glTF, so clips whose length is a whole number of frames at 30 fps
 (the fox's 0.8 s and 1.2 s) survive Unreal's importer, which drops any clip that is not frame-aligned. Setting the rate
-after the import shrinks every clip. See FBX clips and MCP (`engine-asset-import` skill, agent-engine).
+after the import shrinks every clip. See FBX clips and MCP (`unreal-import` skill).
 
 Verified with Blender 5.2.2 on the sample fox: Epic's MCP `import_file` on Unreal 5.8.3 produced the mesh, the
 skeleton and both clips. Re-run in UEFN 42.20 on 2026-10-01: the saved import contains `walk` at 1.2 seconds / 36 frames
