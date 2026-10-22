@@ -27,7 +27,7 @@ Target: Unreal Engine 5.8, Windows. `UProceduralMeshComponent` is a renderable c
 
 - Use [unreal-geometry-scripting.md](unreal-geometry-scripting.md) and its Dynamic Mesh Component when you want to edit a mesh with high-level operations (Booleans, remeshing, simplification, repair, UV and normal tools) instead of managing arrays. Epic describes `UDynamicMeshComponent` as similar to `UProceduralMeshComponent` but backed by a `UDynamicMesh`, with in-editor and runtime updates.
 - Use Geometry Scripting's Copy Mesh To Static Mesh, or Create New Static Mesh Asset From Mesh (editor only), when the result must become a Static Mesh asset.
-- Use agent-meshes (GLB import) for authored models such as characters and props.
+- Use Blender through agent-meshes (the `mesh-tool-selection` skill decides) for authored models such as characters and props; the switch rule is under Use something else when in [Geometry Scripting](unreal-geometry-scripting.md).
 - Use [unreal-pcg.md](unreal-pcg.md) when the goal is placing many pieces of content in a world rather than building one mesh.
 
 ## How an agent drives it
