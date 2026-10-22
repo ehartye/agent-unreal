@@ -12,14 +12,13 @@ const tests = readdirSync(join(root, 'scripts'))
   .map(name => `scripts/${name}`);
 tests.push('examples/unreal/niagara-validate.test.mjs', 'examples/unreal/engine-plugins.test.mjs');
 
-// unreal-native passes the strict rules. unreal-features states plain practices backed by Epic documentation, so it
-// is checked for structure and size only; uefn keeps four oversized references, and its size budget is held at their
-// current ceiling so they cannot grow.
+// unreal-native passes the strict rules and uefn passes the default rules (labels, size, structure). unreal-features
+// states plain practices backed by Epic documentation, so it is checked for structure and size only.
 for (const args of [
   ['--test', ...tests],
   ['scripts/lint-skills.mjs', 'skills/unreal-native', '--require-claims', '--skill-md-labels'],
   ['scripts/lint-skills.mjs', 'skills/unreal-features', '--label-pattern', '.'],
-  ['scripts/lint-skills.mjs', 'skills/uefn', '--label-pattern', '.', '--max-ref-bytes', '21600'],
+  ['scripts/lint-skills.mjs', 'skills/uefn'],
 ]) {
   const result = spawnSync(process.execPath, args, { cwd: root, stdio: 'inherit' });
   if (result.error) console.error(result.error);
