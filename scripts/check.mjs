@@ -1,6 +1,6 @@
 // The same dependency-free merge checks run locally and in CI. Native-engine
 // acceptance (building, cooking and running Unreal) is separate and needs its documented engine setup.
-import { readdirSync } from 'node:fs';
+import { readdirSync, statSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
@@ -10,8 +10,13 @@ const tests = readdirSync(join(root, 'scripts'))
   .filter(name => name.endsWith('.test.mjs'))
   .sort()
   .map(name => `scripts/${name}`);
-tests.push('examples/unreal/niagara-validate.test.mjs', 'examples/unreal/engine-plugins.test.mjs',
-  'examples/unreal/stylized/stylized-validate.test.mjs', 'examples/unreal/world/world-validate.test.mjs');
+// Every *.test.mjs under examples/ runs, so a new example scene adds its test by existing.
+const walk = dir => readdirSync(join(root, dir)).sort().flatMap(name => {
+  const rel = `${dir}/${name}`;
+  if (statSync(join(root, rel)).isDirectory()) return walk(rel);
+  return name.endsWith('.test.mjs') ? [rel] : [];
+});
+tests.push(...walk('examples'));
 
 // unreal-native passes the strict rules and uefn passes the default rules (labels, size, structure). unreal-features and
 // unreal-import state plain practices backed by Epic documentation, so they are checked for structure and size only.
