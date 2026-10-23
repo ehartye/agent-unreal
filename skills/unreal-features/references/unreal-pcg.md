@@ -1,6 +1,6 @@
 # Procedural Content Generation (PCG) in Unreal 5.8: when to use it and how to drive it
 
-Target: Unreal Engine 5.8, Windows. PCG is a node-graph "visual scripting framework for procedurally populating worlds with content in editor and/or at run-time" (plugin descriptor). Epic describes it as a toolset for building procedural content from small asset utilities to whole worlds.
+Target: Unreal Engine 5.8, Windows. PCG is a node-graph "visual scripting framework for procedurally populating worlds with content in editor and/or at run-time" (plugin descriptor).
 
 ## Enable it
 
@@ -57,11 +57,13 @@ Epic's forest example:
 5. Add a Static Mesh Spawner with weighted Mesh Entries.
 6. Click Generate; inspect each node's point data with debug rendering.
 
-Pick the generation mode per component:
-- On demand: the Generate button or `PCGComponent.generate`.
-- Partitioned: enable Is Partitioned to generate across a grid for World Partition streaming; the grid size lives on the PCGWorldActor, and changing it requires cleanup and regeneration.
-- Hierarchical: enable in Graph Settings, set HiGen Default Grid Size, and place the Grid Size node before samplers; it requires partitioned components.
-- Runtime: set Generation Trigger to Generate at Runtime; components generate inside the Generation Radius of a PCG Generation Source and clean up outside the radius times the Cleanup Radius Multiplier. Radii should increase with each grid size. It runs in editor, PIE and standalone. Tune with `pcg.RuntimeGeneration.NumGeneratingComponents` (default 16) and `pcg.FrameTime` (default 16.667 ms). Enable Treat Editor Viewport as Generation Source on the PCGWorldActor to test in the viewport.
+Generation modes `[documented]` (Epic, [Using PCG Generation Modes](https://dev.epicgames.com/documentation/en-us/unreal-engine/using-pcg-generation-modes-in-unreal-engine)): Non-partitioned (default), Partitioned, Hierarchical and Runtime. A large grid suits large meshes such as trees and boulders; a small grid suits grass, flowers and stones.
+- Non-partitioned: one component generates its whole domain, on demand with the Generate button or `PCGComponent.generate`. Meshes stay inside the domain, which Epic says can slow a large area.
+- Partitioned: tick Is Partitioned to split data across a grid that World Partition and Level Instancing can stream. Partition Grid Size is on the PCGWorldActor; after changing it click Cleanup on each PCG asset, then Generate.
+- Hierarchical: requires partitioned components. Tick Use Hierarchical Generation in Graph Settings and set HiGen Default Grid Size. The Grid Size node (HiGen Grid Size) sets the grid for every node after it, so place it before the samplers. Nodes with no Grid Size node use the default; data flows from a larger grid to a smaller one, not back; a node fed by several grids outputs at the smallest; subgraphs use their parent's or input's grid.
+- Runtime: set Generation Trigger to Generate at Runtime; Epic pairs it with Hierarchical. It runs in editor, PIE and standalone. Generation sources are the editor viewport (Treat Editor Viewport as Generation Source on the PCGWorldActor), player controllers, World Partition streaming sources and PCG Generation Source components. A component generates inside the Generation Radius for its grid size (Override Generation Radii per component) and cleans up beyond that radius times Cleanup Radius Multiplier; each radius should exceed the next smaller grid's. The page also covers Unbounded grid size, scheduling and frustum culling.
+- Console variables `[tested]`, 5.8.2 defaults: `pcg.RuntimeGeneration.Enable` true, `.EnablePooling` true, `.BasePoolSize` 100, `.NumGeneratingComponents` 16, `.EnableDebugging` false, `pcg.FrameTime` 5.0 ms, `pcg.EditorFrameTime` 15.0 ms. Epic's page lists 16.667 and 50 ms and a `.FramesBetweenGraphSchedules` variable; the 5.8.2 plugin source declares other defaults and no such variable.
+- A running game needs more than the editor does: see [PCG in a running game](unreal-pcg-game-process.md).
 
 GPU execution:
 - Supported nodes: Attribute Partition, Copy Points, Cull Points Outside Actor Bounds, Custom HLSL, Data Count, Normal to Density, Static Mesh Spawner, Transform Points.
@@ -74,7 +76,6 @@ World Partition: assign PCG assets to a Data Layer and HLOD Layer and the genera
 
 - [Procedural Content Generation Framework](https://dev.epicgames.com/documentation/unreal-engine/procedural-content-generation-framework-in-unreal-engine)
 - [Procedural Content Generation Overview](https://dev.epicgames.com/documentation/unreal-engine/procedural-content-generation-overview)
-- [Using PCG Generation Modes](https://dev.epicgames.com/documentation/unreal-engine/using-pcg-generation-modes-in-unreal-engine)
 - [Using PCG with World Partition](https://dev.epicgames.com/documentation/unreal-engine/using-pcg-with-world-partition-in-unreal-engine)
 - [Using PCG with GPU Processing](https://dev.epicgames.com/documentation/unreal-engine/using-pcg-with-gpu-processing-in-unreal-engine)
 - [PCG Biome Core and Sample Plugins](https://dev.epicgames.com/documentation/unreal-engine/procedural-content-generation-pcg-biome-core-and-sample-plugins-in-unreal-engine)
