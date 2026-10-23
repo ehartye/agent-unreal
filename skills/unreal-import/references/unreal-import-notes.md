@@ -36,3 +36,10 @@ screenshot read by eye) after three changes. Each failed quietly on the first tr
   run showed an empty scene. Call `EditorAssetLibrary.save_directory(dest, only_if_is_dirty=False, recursive=True)`
   after each import, and check what the render shows, not what the build claims.
 - **FBX clips need whole-frame lengths.** See [FBX clips and MCP](./unreal-fbx-and-mcp.md).
+
+## Unreal 5.8.2: an Interchange error line that is not a failed import (tested)
+
+- A GLB with a `BLEND` or `MASK` material, imported through an owned `InterchangeGenericAssetsPipeline` (the pattern `unreal-import` uses), logs `LogInterchangeEngine: Error: [ : '', Unknown] Invalid input AlphaMode for material expression node MF_Default_Body.` once per such material, and a commandlet then exits with 1.
+- The import is correct anyway. Every static mesh, material, skeletal mesh, skeleton and animation sequence arrived, and the blend modes were right (translucent for `BLEND`; masked, with the file's cutoff, for `MASK`). Check the saved assets and the report, not the exit code.
+- Cause (`Engine/Plugins/Interchange/Runtime/Source/Import/Private/Gltf/InterchangeGLTFMaterial.cpp:439`, `.../Private/Material/InterchangeMaterialFactory.cpp:297`): the importer sets an `AlphaMode` input on the body function for every non-opaque material, and `MF_Default_Body` has no input of that name.
+- An opaque material logs nothing, and neither does the engine's default glTF stack, which imports material instances. [`epf_validate.mjs`](../../../examples/unreal/editor_python_friction/README.md) runs this on generated files.
