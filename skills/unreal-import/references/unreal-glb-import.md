@@ -22,6 +22,15 @@ Documented by agent-meshes, not re-verified here:
 - Interchange builds one SkeletalMesh and Skeleton per skin, unless the skins share joint nodes. (On 5.8.3 the
   default stack split a GLB whose skins share joints into one mesh per skin anyway; see [Unreal import notes](unreal-import-notes.md).)
 
+## Emissive glow
+
+glTF carries a glow as `emissiveFactor`, with an optional `KHR_materials_emissive_strength` multiplier. Tested on Unreal 5.8.2 with one model of four boxes (no glow, colour only, strength 4, strength 0.5) captured in a lit scene:
+
+- [tested] Imported with the importer's explicit pipeline (`importMaterials` on, its default), each glTF material becomes a `Material` asset. The emissive colour is a linear constant and a strength other than 1 is a second constant wired into the same input. The captures glowed, brighter at strength 4 and darker at 0.5 (red channel of the centre pixel about 1.21 for colour only, 5.59 at strength 4, 0.55 at strength 0.5; the lit surface adds its own light, so the ratios are near 4 and 0.5, not exact).
+- [tested] Imported with Interchange's default glTF pipeline, each material is an instance of `MI_Default_Opaque` with the colour in the `EmissiveFactor` vector parameter. A strength other than 1 is stored as the scalar `EmissiveStrength`, and the render ignores it unless the instance's `bHasEmissiveTexture` static switch is on, which the import leaves off when there is no emissive texture. With the switch on, strength 4 rendered brighter and 0.5 darker. Turn the switch on in the instance, or assign a project material that sets the brightness.
+- [general] Check which route produced an asset by its class: `Material` from the importer, `MaterialInstanceConstant` from the default pipeline.
+- [general] Not verified: whether the switch stays on in a saved instance after a reimport.
+
 Whether the geometry should be authored in Blender or generated in Unreal is decided by `mesh-tool-selection` in
 agent-meshes; the Nanite, collision and LOD settings of the imported StaticMesh are in
 [import policy and read-back](unreal-import-policy.md).
