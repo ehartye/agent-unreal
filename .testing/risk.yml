@@ -1,0 +1,49 @@
+# Owner-confirmed 2026-10-23: sole user, fast pre-release iteration.
+# Keep phase as one plain top-level enum. First matching area wins.
+phase: dev
+consumers:
+  - The owner's plugin installations and personal projects; no external users or production support promise.
+  - Preserve the owner's saved projects and source/output safety; phase alone does not authorize deleting data or breaking APIs.
+weights:
+  wait: 1
+  agent: 1
+  ci: 1
+  churn: 1
+lanes:
+  edit:
+    runs: affected-files
+    trigger: agent-edit
+  merge:
+    runs: node scripts/check.mjs locally; quick non-blocking Linux observer on ordinary PRs
+    trigger: pull-request
+    os: [ubuntu]
+  scheduled:
+    runs: all
+    trigger: weekly-cron
+    os: [ubuntu, windows]
+  release:
+    runs: identity-only tag check in dev; engine scene runs stay manual owner acceptance
+    trigger: version-tag
+    os: [ubuntu]
+areas:
+  - path: scripts/check.mjs
+    tier: critical
+    why: The single merge gate that CI and local runs share.
+  - path: scripts/release-consistency.test.mjs
+    tier: critical
+    why: Keeps private names, machine paths and hardware names out of the public plugin.
+  - path: scripts/unreal-import*
+    tier: critical
+    why: The importer writes into a user's Unreal project and reads every setting back.
+  - path: .claude-plugin/**
+    tier: critical
+    why: Plugin and marketplace manifests that installations resolve.
+  - path: skills/**
+    tier: standard
+    why: Selector and reference text that routes agents; byte budgets and evidence labels are linted.
+  - path: examples/**
+    tier: low
+    why: Engine scenes and their check logic; pure checks run in the merge lane, engine runs are manual.
+  - path: docs/**
+    tier: low
+    why: Sample-scene record and images.

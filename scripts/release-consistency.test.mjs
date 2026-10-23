@@ -1,3 +1,4 @@
+/** @lane merge @subject .claude-plugin/plugin.json @subject .claude-plugin/marketplace.json */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync, existsSync } from 'node:fs';
