@@ -39,3 +39,17 @@ All 30 checks passed (the 17 from release 0.3.0 and 13 new).
 ## Landscape size rule
 
 `world-validate-checks.mjs` holds the eleven sizes from Epic's Landscape technical guide and checks, without the engine, that quads per component times components per side plus 1 equals the overall vertices, that section vertices are a power of two up to 256, and that the component count stays within 1024.
+
+## Results from release 0.3.0
+
+The first 17 checks showed on 5.8.2:
+- The Open World template copy is partitioned: 138 descriptors, one Landscape actor (not spatially loaded, no components) and 64 spatially loaded proxies in an 8 by 8 grid, 2 by 2 components of 126 quads each, edit layers Base Landscape and Flat Middle. The default template and the Water sample map have no descriptors.
+- Converting the Water sample map (2 by 2 components of 255 quads) gave one proxy at the default `LandscapeGridSize=4` and four proxies at 1. The commandlet refuses to run without `-AllowCommandletRendering`. Converted water actors: lake and river spatially loaded; zone and brush manager not.
+- Python has no function that creates a Landscape (only render-target import and export).
+- A river in the commandlet stops the engine (Slate assertion); in the editor it works. The first river adds the Water brush manager and a Water edit layer. `unreal.WaterMeshActor` is the Water Zone class.
+- A Landmass manager and brush placed from Python are not attached to the Landscape (`get_landscape()` is None, the brush logs `Accessed None` for `BrushManager`).
+- The river carved the flat terrain from 0 to exactly river Z minus depth (-1000) in the partitioned map, read with `render_heightmap` into an 8-bit target.
+- A PCG volume set to partitioned adds the PCG World Actor (25,600 cm grid) and four spatially loaded grid actors.
+- The overhead image shows the carved trench along the river. The water surface drew only in part in the offscreen capture; the carve is confirmed by the numbers, not by the image.
+
+Not covered: carving of proxies that are not loaded (the editor loads every proxy, and `unload_actors` unloaded none), attaching Landmass brushes from Python, and running a PCG graph on the partitioned Landscape.

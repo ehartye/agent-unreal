@@ -58,6 +58,7 @@ Use a fresh output directory. Reject stale/missing PNG or JSON, invalid PNG dime
 
 - [general] A failing automation test returned **process exit code 0** under `-TestExit="Automation Test Queue Empty"`. Fresh `index.json` correctly reported failed=1. The engine's queue-empty exit is not a passing test result.
 - [general] The project wrapper therefore parses fresh automation JSON and rejects failed, incomplete, zero-test or unexpected-filter reports, in addition to checking process exit/timeout. Dependency-free tooling checks should exercise those rejection paths using deliberate invalid artifacts.
+- [general] Writing a test and reading its report: [automation tests](unreal-native-automation-tests.md).
 - [general] After the guard fix, fresh automation reported all tests succeeded and none failed. Such bounded behaviours do not replace play-through, handling or physical-input checks.
 
 ```powershell

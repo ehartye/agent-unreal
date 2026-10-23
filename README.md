@@ -14,7 +14,7 @@ repository is marked as tested.
 
 ## Status
 
-Early (0.3.0). Four skills.
+Early (0.4.0). Four skills.
 
 The skills moved here from agent-engine 0.14.0, where their history up to that tag lives; `unreal-import` and its importer scripts followed in 0.2.0. The scripts in `examples/`
 were run on Windows against Unreal 5.7.3, 5.8.2 and 5.8.3 as each README states; other platforms were not run.
@@ -64,6 +64,7 @@ The [Windows packaging reference](skills/unreal-native/references/unreal-native-
 records an actual staged Game EXE separately from Editor-game evidence, including the UAT Application Control failure.
 The [content pipeline](skills/unreal-native/references/unreal-native-content-pipeline.md)
 records the tested content-only bake/native Game split, short-path cook fix and recipe/hash validation.
+The [World Partition reference](skills/unreal-features/references/unreal-world-partition.md) covers making and converting a partitioned map, the builder commandlets, the Landscape proxy grid and large Water setups, with scenes run on 5.8.2. [PCG in a running game](skills/unreal-features/references/unreal-pcg-game-process.md) lists what a game process needs that the editor supplies. The [Python to C++ bridge](skills/unreal-features/references/unreal-python-cpp-bridge.md) shows an editor module that creates a Landscape from a height array, and [automation tests](skills/unreal-native/references/unreal-native-automation-tests.md) shows how to write, run and read a 5.8 C++ test.
 The [comparison scene reference](skills/unreal-native/references/unreal-native-compare-scene.md) and its [example](examples/unreal/compare-scene/README.md)
 set several implementations of one visible thing side by side in a native game, film them and time each alone.
 
@@ -87,7 +88,7 @@ from current Fortnite cook, navigation and performance acceptance.
 - [`examples/unreal`](examples/unreal/README.md): a plugin lister (`engine_plugins.mjs`), a Python surface dump (`unreal_surface.py`), a probe level, Niagara authoring and validation scripts, a stage builder for any list of Niagara systems and a headless runner.
 - [`examples/unreal/niagara-showcase`](examples/unreal/niagara-showcase/README.md): an explorable arena with eight Niagara stations, a free-fly camera and an automatic tour.
 - [`examples/unreal/compare-scene`](examples/unreal/compare-scene/README.md): a project-neutral C++ game mode that sets several implementations of one visible thing side by side, films them and times each alone.
-- [`examples/unreal/stylized`](examples/unreal/stylized/stylized_validate.mjs) and [`examples/unreal/world`](examples/unreal/world/world_validate.mjs): test scenes that check the toon, cel and drawn-flipbook guidance and the World Partition landscape, water and PCG guidance on an installed engine; see [example scenes](skills/unreal-features/references/unreal-example-scenes.md).
+- [`examples/unreal/stylized`](examples/unreal/stylized/README.md), [`world`](examples/unreal/world/README.md), [`pcg_game`](examples/unreal/pcg_game/README.md), [`editor_python`](examples/unreal/editor_python/README.md), [`landscape_bridge`](examples/unreal/landscape_bridge/README.md) and [`automation_test`](examples/unreal/automation_test/README.md): test scenes that check the toon and cel guidance, the World Partition, water and PCG guidance, PCG in a game process, editor Python practices, the C++ bridge and the automation-test recipe on an installed engine; see [example scenes](skills/unreal-features/references/unreal-example-scenes.md).
 - [`examples/uefn`](examples/uefn/README.md): a GLB-to-FBX converter and a helper-freshness probe.
 
 ## Importing assets
