@@ -5,9 +5,9 @@ Observed in one consuming Unreal **5.8.2 CL56702186** project on Windows; not re
 ## Why the split was used
 
 - [general] Windows Application Control refused the rebuilt game's Editor module (`UnrealEditor-MyGame.dll`) with GetLastError 4551 / HRESULT 0x800711C7. Unchanged retries failed, including a retry after the user accepted App Control prompts. The normal project exited before its MCP server or Python module-check callback started. A compiler success was insufficient evidence of OS load permission.
-- [general] A later Game build was also refused despite the earlier Game EXE working. After the user independently changed Smart App Control, the same refused executable started and the existing Editor DLL loaded. Native MCP initialization and StartPIE succeeded; a live scene query returned the named vehicle actors in the PIE world. Historical refusals remain valid evidence; the agent did not change policy. The Editor viewport image showed the empty editor view, so it was not counted as a game-camera frame.
+- [general] A later Game build was also refused despite the earlier Game EXE working. After the user independently changed Smart App Control, the same refused executable started and the existing Editor DLL loaded. Native MCP initialization and StartPIE succeeded; a live scene query returned the named vehicle actors in the PIE world. The agent did not change policy. The Editor viewport image showed the empty editor view, so it was not counted as a game-camera frame.
 - [general] A separate content-only project with **no Modules entry** loaded the installed Editor, built/saved native materials and font assets, and cooked them. It never renamed, moved or loaded the refused native Editor module. The independently rebuilt native **Game EXE** was allowed and actually rendered the staged game.
-- [general] Do not interpret this result as permission to bypass Application Control or as a guarantee that any later executable will be allowed. Preserve policy failures, and test each relevant executable through its normal launch path.
+- [general] This is not permission to bypass Application Control, and each later executable needs its own test through its normal launch path. Preserve policy failures.
 
 ## Keep construction and runtime contracts explicit
 
@@ -37,6 +37,12 @@ Check each native exit code and fresh receipt before proceeding. The [presentati
 - [general] A deeply nested timestamped bake directory caused an actual Cook filename to reach **262 characters**, failing Windows MAX_PATH 260 validation. A short project-local path such as `Build/ab-e458df02` fixed this without suppressing cook errors. Full dependency cook then completed in seconds on a warm cache; that is an observed timing, not an estimate for a fresh machine.
 - [general] The project wrappers added content recipe fingerprints over the font sources, material/builder Python scripts and relevant config, plus fingerprints of the actual cooked files. Reuse checks reject changed recipes, changed cooked assets, failed cooks and a cooked-root/receipt mismatch. Dependency-free tooling tests should exercise these rejection paths.
 - [general] Reuse cooked assets for a C++-only Game build only while those inputs remain unchanged. Preserve the original asset receipt independently from the new code build identity. HEAD alone cannot describe a dirty worktree, a previous executable or content generated from another recipe.
+
+## Keep a rebuilt content folder free of constructor-time loads
+
+- [tested] With the editor open on Windows, a C++ actor that loads a mesh and a material in its constructor with `ConstructorHelpers::FObjectFinder` keeps both asset files locked: open for write, rename, overwrite and delete from another process all fail. Python reports `PermissionError: [WinError 32] The process cannot access the file because it is being used by another process` for a delete or rename and `[Errno 13] Permission denied` for an overwrite. The editor loads the class default object at startup, so the lock exists before any level opens.
+- [tested] Assets loaded with `LoadObject` in `PostInitializeComponents`, or with `TSoftObjectPtr::LoadSynchronous`, stayed free until an actor ran that function. Spawning the actors in the editor world did not; a Play-In-Editor session did, and those files stayed locked after the session ended and garbage was collected. The locks ended with the editor process.
+Do: run a stage that deletes or rewrites a content folder with the editor closed, and keep the folder's assets out of `ConstructorHelpers`. Read a `PermissionError` from the stage as a lock. Example: `examples/unreal/constructor_locks/`.
 
 ## Rigid GLB controls and native WAVs through the same bake
 
