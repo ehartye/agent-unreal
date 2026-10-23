@@ -86,6 +86,29 @@ try:
             first = proxy_descs[0].bounds
             info["proxy_grid"] = [len({m[0] for m in mins}), len({m[1] for m in mins})]
             info["proxy_size_cm"] = [round(first.max.x - first.min.x), round(first.max.y - first.min.y)]
+            # The proxy unit: components per proxy side, and the proxy side in quads and in metres (scale is cm per quad).
+            side = int(round(max(counts) ** 0.5))
+            info["components_per_proxy_side"] = side
+            info["proxy_side_quads"] = round(info["proxy_size_cm"][0] / scale.x)
+            info["proxy_side_m"] = round(info["proxy_size_cm"][0] / 100)
+            info["landscape_quads_side"] = info["proxy_side_quads"] * info["proxy_grid"][0]
+        # What Python can reach for the grid size: neither a subsystem class nor a component quad count.
+        names = [n.lower() for n in dir(unreal)]
+        sample = next((c for h in holders for c in h.get_components_by_class(unreal.LandscapeComponent)), None)
+        readable = []
+        for prop in ("component_size_quads", "subsection_size_quads", "num_subsections"):
+            try:
+                sample.get_editor_property(prop)
+                readable.append(prop)
+            except Exception:
+                pass
+        info["python_surface"] = {
+            "landscape_subsystem_class": any("landscapesubsystem" in n for n in names),
+            "landscape_info_class": any(n == "landscapeinfo" for n in names),
+            "grid_members": sorted({m for cls in (unreal.Landscape, unreal.LandscapeProxy, unreal.LandscapeStreamingProxy, unreal.LandscapeComponent)
+                                    for m in dir(cls) if "grid" in m.lower()}),
+            "quad_properties_readable": readable,
+        }
         report["landscape"] = info
 except Exception:
     report["error"] = traceback.format_exc()[-900:]

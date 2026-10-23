@@ -1,57 +1,67 @@
-# Example scenes that verify the stylized and large-world guidance
+# Example scenes that verify the guidance
 
-Each scene builds a throwaway project in the OS temp folder, runs scripts on an installed Unreal 5.8, measures what it produced and prints PASS or FAIL per claim. They are manual runs, not part of `node scripts/check.mjs`, which runs only the pure check logic. Run them on a machine with Unreal 5.8 installed; the commands pass the engine folder. A line in a reference marked [tested] is one of these checks.
+Each scene builds a throwaway project in the OS temp folder, runs scripts on an installed Unreal 5.8, measures what it produced and prints PASS or FAIL per claim. They are manual runs, not part of `node scripts/check.mjs`, which runs only the pure check logic. The commands pass the engine folder. A line in a reference marked [tested] is one of these checks. Each folder has a README with the full results.
 
-## Stylized looks (ink, cel, toon)
+## Stylized looks (ink, cel, toon) (`examples/unreal/stylized/`)
 
-[`examples/unreal/stylized/`](../../../examples/unreal/stylized/stylized_validate.mjs) backs the Drawn, ink and cel looks section of [Niagara](unreal-niagara.md) and the Substrate Toon bullets of [Substrate](unreal-substrate.md). It builds one probe level with six stations (each has its own camera and a backdrop wall) from a throwaway project and measures engine screenshots; no external art.
+Backs the Drawn, ink and cel looks section of [Niagara](unreal-niagara.md) and the Substrate Toon bullets of [Substrate](unreal-substrate.md).
 
 ```text
 node examples/unreal/stylized/stylized_validate.mjs --engine "C:/Program Files/Epic Games/UE_5.8" [--keep] [--shots <folder>]
 ```
 
-It makes a project in the OS temp folder with `r.Substrate=True` and the Blendable GBuffer, plus a bare project, and runs five scripts: `stylized_cvar.py` (what a bare project gets), `stylized_build.py` (commandlet: procedural 4x4 ink-blob flipbook PNG, Toon Profile, Toon and unlit materials, six Niagara systems authored through the toolsets, the level), `stylized_render.py` (offscreen Play-In-Editor, one engine screenshot per look, a simulation-cache read of `SubImageIndex`, compile states) and `stylized_persist.py` twice (write, then read in a new process). About 2.5 minutes on 5.8.2; exit code 0 when all 17 checks pass. Pass `--shots` to copy nine screenshots out. The run is manual; `node scripts/check.mjs` runs only the pure part: `png-tools.mjs` (a small PNG reader, luminance bands, colour counts), `stylized-measure.mjs`, `stylized-validate-checks.mjs` and `stylized-validate.test.mjs`.
+It builds a project with `r.Substrate=True` and the Blendable GBuffer plus a bare project, and prints 17 checks in about 2.5 minutes. Result on 5.8.2: 17 of 17 pass. A Toon sphere draws 2 flat bands against 0 for a plain lit sphere; Toon on a masked and a translucent sprite draws 3 and 2 flat bands with one silhouette; a self-emissive flipbook sprite gives identical pixels under a bright and a dark backdrop; a floor-quantized ramp draws 3 flat bands against 16 luminance levels. A Toon Profile override set with the console `Set` command survived an editor restart. The [folder README](../../../examples/unreal/stylized/README.md) lists every station.
 
-Stations and what they showed on 5.8.2:
+## World Partition automation (`examples/unreal/world/`)
 
-| Station | Check | Measured |
-|---|---|---|
-| `meshes`: Toon sphere beside a plain lit sphere | flat bands vs gradient | Toon 2 flat bands (53% of its pixels), plain 0 |
-| `toon_masked`, `toon_translucent`: Toon BSDF on a sprite | lit and stepped, same silhouette | 3 and 2 flat bands; both 164,144 sprite pixels; no log errors |
-| `drawn`: age-driven flipbook | frames advance | 5 to 7 distinct drawn areas in 8 shots (it varies with capture timing); `SubImageIndex` rose 0.27 to 16.0 in 120 steps (16 distinct frames) |
-| `frame_2`, `frame_9`, `frame_13`: SubUV Direct Index | the chosen cell shows | on-screen fill area / cell area spread 0.001 across the three |
-| `frame_9` bright and dark | sprite ignores light | same 38,201 pixels and centre colour with sun 10 and a light backdrop vs sun 0 and a dark one |
-| `stepped`, `smooth`: floor-quantized ramp | flat bands | 3 bands (Dynamic Material Parameter 3; material default 4) vs 16 luminance levels |
-
-Other results: all six systems compile `UpToDate`; a bare project has `r.Substrate=0` and the Adaptive GBuffer; the Python name `toon_profile_override` does not exist, and a `Set <instance name> ToonProfileOverride` override survived a save and a new editor process (`GetAll` with `-LogCmds="global Log"`). Not run: Toon on the Adaptive GBuffer, linking Direct Frame Index to a user parameter (the frame stayed age-driven), frame cost.
-
-## World Partition landscape with water and PCG 
-
-One scene ([`examples/unreal/world/`](../../../examples/unreal/world/world_validate.mjs)) builds a large landscape with a river in a World Partition map and checks the guidance in [Landmass](unreal-landmass.md) and [Water](unreal-water.md). It makes a throwaway project in the OS temp folder (Python, Landmass, Water, PCG) and runs the scripts below. It needs Unreal 5.8 and takes about four minutes (no GPU needed for the commandlets; the last step renders offscreen).
+Scenes that back [World Partition](unreal-world-partition.md): the Open World template and a Water sample map, plus a four-cube level made with `LevelEditorSubsystem.new_level`, converted and rebuilt by commandlet, and read back by JSON report.
 
 ```
-node examples/unreal/world/world_validate.mjs --engine "C:/Program Files/Epic Games/UE_5.8" [--keep] [--shot overview.png]
+node examples/unreal/world/world_validate.mjs --engine "C:/Program Files/Epic Games/UE_5.8" [--keep]
 ```
 
-Exit code 0 means all 17 checks passed. The judging logic is `world-validate-checks.mjs`, tested without Unreal by `world-validate.test.mjs` (part of `node scripts/check.mjs`).
+It builds a throwaway project in the OS temp folder, runs hidden editors and commandlets, and prints PASS or FAIL for 30 claims (the 17 from 0.3.0 and 13 new). The Landscape size rule is a pure Node check that runs in `node scripts/check.mjs`.
 
-| Script | Runs in | Does |
-|---|---|---|
-| `world_maps.py` | commandlet | loads the engine Open World template and a Water sample map, Save As into the project |
-| `WorldPartitionConvertCommandlet` | commandlet | converts the sample map (not partitioned) into a partitioned map; run again with `LandscapeGridSize=1` in its `.ini` |
-| `world_inspect.py` | commandlet | reports descriptors, Landscape actor, proxies, components, edit layers, runtime grids and Data Layers of a map |
-| `world_place_commandlet.py` | commandlet | places a Water Zone, then a River; the River spawn stops the process (expected) |
-| `world_place.py` | editor `-nullrhi` | places Zone, River, a River moved to a runtime grid and a Data Layer, Landmass manager and brush, a partitioned PCG volume; saves, reopens, reads descriptors |
-| `world_carve.py` | editor `-RenderOffScreen` | reads heights along the river path, places the river, reads again, captures an overhead image |
+Checks: `new_level(path, True)` in the editor, `-run=pythonscript` and `-ExecutePythonScript`; the blank map against the template; the proxy unit (2 by 2 components of 126 quads, 252 m); the conversion flags `-ReportOnly`, `-GenerateIni`, `-ConversionSuffix`; the Resave Actors, Foliage and MiniMap builders; the `wp.Runtime.` console commands; Water Zone Local Tessellation; every size in Epic's Landscape table.
 
-What it showed on Unreal 5.8.2:
-- The Open World template copy is partitioned: 138 descriptors, one Landscape actor (not spatially loaded, no components) and 64 spatially loaded proxies in an 8 by 8 grid, 2 by 2 components of 126 quads each, edit layers Base Landscape and Flat Middle. The default template and the Water sample map have no descriptors.
-- Converting the Water sample map (2 by 2 components of 255 quads) gave one proxy at the default `LandscapeGridSize=4` and four proxies at 1. The commandlet refuses to run without `-AllowCommandletRendering`. Converted water actors: lake and river spatially loaded; zone and brush manager not.
-- Python has no function that creates a Landscape (only render-target import and export).
-- A river in the commandlet stops the engine (Slate assertion); in the editor it works. The first river adds the Water brush manager and a Water edit layer. `unreal.WaterMeshActor` is the Water Zone class.
-- A Landmass manager and brush placed from Python are not attached to the Landscape (`get_landscape()` is None, the brush logs `Accessed None` for `BrushManager`).
-- The river carved the flat terrain from 0 to exactly river Z minus depth (-1000) in the partitioned map, read with `render_heightmap` into an 8-bit target.
-- A PCG volume set to partitioned adds the PCG World Actor (25,600 cm grid) and four spatially loaded grid actors.
-- The overhead image shows the carved trench along the river. The water surface drew only in part in the offscreen capture; the carve is confirmed by the numbers, not by the image.
+Headline (5.8.2): all 30 pass. A partitioned `new_level` works in all three modes and holds only a Data Layers and a minimap actor. The grid size counts components per proxy side, the opposite of Epic's import-page wording. `-ActorClass` is ignored (use `-ActorClassName`), `MaxLoadingLevelStreamingCells` is not registered (the name is `MaxLoadingStreamingCells`), and the MiniMap builder exits 1 under `-nullrhi`.
 
-Not covered: carving of proxies that are not loaded (the editor loads every proxy, and `unload_actors` unloaded none), attaching Landmass brushes from Python, and running a PCG graph on the partitioned Landscape.
+## PCG in a game process (`examples/unreal/pcg_game/`)
+
+A small engine Landscape map gets two PCG volumes and five variants of the PCG World Actor and its Landscape cache. The scripts generate in the editor and in a game process (the editor binary with `-game`), run an experiment harness (graph variants generated on a test volume, instances counted) and check every claim in [PCG in a running game](unreal-pcg-game-process.md).
+
+```
+node examples/unreal/pcg_game/pcg_validate.mjs --engine "C:/Program Files/Epic Games/UE_5.8" [--keep] [--shot <png>]
+```
+
+About ten minutes, GPU needed for the offscreen runs; `pcg-validate.test.mjs` runs in `node scripts/check.mjs`. See the [folder README](../../../examples/unreal/pcg_game/README.md).
+
+It checks: the two Landscape cache error texts and the fix (`ALWAYS_SERIALIZE`, then `pcg.BuildLandscapeCache`); the material flag on instanced meshes; the Static Mesh Spawner Python limits; Spatial Noise scale, Attribute Noise mode and the Edge Mask chain; asynchronous generation.
+
+Result on 5.8.2: with the cache serialized the game process spawns instances; without it nothing spawns and the log names the cause. The cache build adds 12.6 MB to the map. Unflagged materials draw as the default material in the game process. A 40 m volume empties an Edge Mask chain because the default blend distance is 100 m. A save in the same tick as `generate()` holds no instances.
+
+## Editor Python scene (`examples/unreal/editor_python/`)
+
+`examples/unreal/editor_python/` has helpers (`soft_set`, a generator stage runner, `recreate_map`, `place_above_ground`, `allow_instancing`) and a validating scene. `ep_probe.py` runs headless; `ep_stages.py` and `ep_ground.py` run in a rendering editor (`-ExecCmds="py ..."`). Reference: [Editor Python](unreal-editor-python.md).
+
+```text
+node examples/unreal/editor_python/ep_validate.mjs --engine "C:/Program Files/Epic Games/UE_5.8" [--keep] [--shots <folder>]
+```
+
+It builds a throwaway project, copies the Open World template (the Landscape source), and checks 21 claims. Result on 5.8.2: 21 of 21 pass in about two minutes of engine time.
+
+- `delete_asset` on the open level keeps the `.umap`, so `new_level` fails; open `/Engine/Maps/Entry`, delete, remove the file, rescan, create.
+- Wrong property names raise `Failed to find property`; `soft_set` logs a warning instead. `Vector` has no `rotation()`; use `make_rot_from_x`.
+- A screenshot file appears 2 ticks after the call; the stage runner skips re-entrant ticks.
+- A plane cut that misses the mesh leaves 0 triangles and asset creation returns `FAILURE`; count triangles first.
+- A Custom node takes `#define` macros, not helper functions; the instancing flag is `False` until set or drawn.
+- A fixed camera Z was under the Landscape at 12 of 81 points; `place_above_ground` was 200 cm up at all 81.
+
+## C++ bridge and automation test (`landscape_bridge/`, `automation_test/`)
+
+Two throwaway code projects, built with Unreal Build Tool (compiler and SDK discovered, not hard-coded), then run headless on 5.8.2.
+
+- `node examples/unreal/landscape_bridge/landscape_bridge.mjs --engine <UE_5.8 folder>`: an editor-only module exposes `ALandscapeProxy::Import` as `unreal.LandscapeBridgeLibrary.create_landscape_from_heights`. A 505 by 505 height array becomes a Landscape of 16 components (quad size 100); sampled heights match the input within half a height step (worst 0.379 cm). Same result in a non-partitioned map and in a `new_level(path, True)` World Partition map: grid size 0 keeps all 16 components on the Landscape actor, grid size 2 makes 4 streaming proxies. 19 of 19 checks. Reference: [Python to C++ bridge](unreal-python-cpp-bridge.md).
+- `node examples/unreal/automation_test/automation_test.mjs --engine <UE_5.8 folder>`: a passing and a deliberately failing `IMPLEMENT_SIMPLE_AUTOMATION_TEST` (`EditorContext | ProductFilter`), run with `-ExecCmds="Automation RunTests <filter>; Quit"`. The failing test is reported as `failed: 1`, state `Fail`, with message and line; exit codes are 255 with `; Quit` and 0 with `-TestExit`, so `automation_report.mjs` decides from `index.json`. 9 of 9 checks. Reference: [Automation tests](../../unreal-native/references/unreal-native-automation-tests.md).
+
+Both folders have a README and a pure Node test that runs in `node scripts/check.mjs`; the engine runs take three to five minutes each.

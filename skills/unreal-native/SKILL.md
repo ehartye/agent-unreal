@@ -14,6 +14,7 @@ choosing a system, Niagara and scripting the editor from Python are
 | You are about to | Read |
 |---|---|
 | Build native C++, run real gameplay, verify screenshots and automation results | [Native game loop](references/unreal-native-game.md) |
+| Write a C++ automation test for 5.8, run it headless and read its report | [Automation tests](references/unreal-native-automation-tests.md) |
 | Generate materials and fonts, draw crisp Canvas text, diagnose exposure and palette | [Native presentation](references/unreal-native-presentation.md) |
 | Cook and stage Windows; tell UAT policy failures from real Game EXE proof | [Native packaging](references/unreal-native-packaging.md) |
 | Separate content-only asset construction from native gameplay and preserve cooked provenance | [Native content pipeline](references/unreal-native-content-pipeline.md) |
