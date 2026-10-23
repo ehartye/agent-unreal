@@ -10,7 +10,7 @@ Unreal 5.8 on Windows. Pick the feature from the goal, enable only its plugin, t
 
 | You are about to | Read |
 |---|---|
-| Make fire, smoke, sparks, trails, liquid, sand or any particle effect (Niagara; fluids in NiagaraFluids; on) | [Niagara](references/unreal-niagara.md), [Niagara templates](references/unreal-niagara-templates.md) |
+| Make fire, smoke, trails, liquid, sand or any particle effect (Niagara; fluids in NiagaraFluids; on) | [Niagara](references/unreal-niagara.md), [Niagara templates](references/unreal-niagara-templates.md), [Toolsets](references/unreal-niagara-toolsets.md) |
 | Keep or convert existing Cascade particle content (Cascade on in the editor; converter off, beta) | [Cascade](references/unreal-cascade.md) |
 | Drive effects from destruction or physics events (ChaosNiagara; on, beta) | [Chaos Niagara](references/unreal-chaos-niagara.md) |
 | Break walls or props apart: fracture, debris, fields (Geometry Collections and Fracture; off, beta) | [Chaos destruction](references/unreal-chaos-destruction.md) |
@@ -45,9 +45,9 @@ Unreal 5.8 on Windows. Pick the feature from the goal, enable only its plugin, t
 ## Rules of thumb
 
 - When two features fit equally, choose the one whose plugin is on by default. A beta or experimental plugin is a deliberate opt-in.
-- Use Niagara for new particle work and Cascade only for existing content. Each reference says what its system supersedes and its beta or experimental label.
+- Use Niagara for new particle work, Cascade only for existing content. Each reference states what it supersedes and its beta or experimental label.
 - Import a fixed asset (GLB, WAV, sprite atlas) with `unreal-import`; build in Unreal (Geometry Scripting, MetaSounds, Niagara) when it must respond to gameplay. Blender or Unreal for a mesh: `mesh-tool-selection`.
-- Choose the route by reach: asset creation, level building and property edits are editor Python ([Editor Python](references/unreal-editor-python.md)); per-frame behaviour, custom solvers, new data types are C++ or Blueprint.
+- Route by reach: asset creation, level building and property edits are [editor Python](references/unreal-editor-python.md); per-frame behaviour, custom solvers and new data types are C++ or Blueprint.
 
 ## Enable a feature
 
