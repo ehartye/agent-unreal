@@ -7,7 +7,7 @@ Each statement below is backed by Epic documentation, the installed engine's sou
 | Need | Route |
 |---|---|
 | Make a system from an engine template, tune properties, place it | Python: AssetTools, `EditorAssetLibrary`, `get_editor_property` |
-| Add emitters, renderers, modules, set stack inputs, read compile state | Python through `unreal.ToolsetRegistry.execute_tool` (Experimental NiagaraToolsets), else C++ |
+| Add emitters, renderers, modules, set stack inputs, read compile state | Python through `unreal.ToolsetRegistry.execute_tool` (Experimental NiagaraToolsets; [call shapes](unreal-niagara-toolsets.md)), else C++ |
 | Drive a running effect (user parameters, mesh overrides) | Python on `NiagaraComponent` |
 | Prove an effect spawned N particles without a screenshot | Python simulation cache |
 | Simulation stages, event handlers, custom data interfaces, graph edits | C++ |
@@ -25,12 +25,7 @@ Use the cheapest route that covers the need. [`niagara_build.py`](../../../examp
 
 ## Author the stack from Python (NiagaraToolsets)
 
-- `NiagaraToolsets` is an Experimental, editor-only plugin under `Plugins/Experimental/Toolsets`, disabled by default; enabling it loads `ToolsetRegistry`. `NiagaraToolset_System` has 46 tools: create from a template, read schema and topology, add or remove emitters, renderers and modules, set stack inputs, read compile state and stack issues.
-- Call a tool with `unreal.ToolsetRegistry.execute_tool("NiagaraToolsets.NiagaraToolset_System", "AddEmitter", json_input)`. Tools are `AICallable`, not Python members. The result's `value` is JSON `{"returnValue": ...}`, objects are `{"refPath": "/Package/Path.Name"}`, and `ToolsetRegistry.get_toolset_json_schema(unreal.NiagaraToolset_System)` returns each tool's input schema.
-- Synchronous tools (`CreateNiagaraSystem`, `GetSystemSummary`, `AddEmitter`) complete in a commandlet. Tools that wait for a compile (`GetSystemCompileState`, `GetStackIssues`) complete from an editor tick: poll `result.is_complete` as [`niagara_verify.py`](../../../examples/unreal/niagara_verify.py) does, and expect `UpToDate`.
-- Give a recreated system a new name rather than deleting and recreating the same one.
-- Verify an authored system with a simulation cache (below) before building on it. [`niagara_toolset_author.py`](../../../examples/unreal/niagara_toolset_author.py) shows the add-emitter flow; the showcase adds modules to an emitter of a system that already emits ([README](../../../examples/unreal/niagara-showcase/README.md)).
-- Simulation stages, event handlers and local modules are C++ work.
+Epic's Experimental NiagaraToolsets plugin adds emitters, renderers and modules and sets stack inputs through `unreal.ToolsetRegistry.execute_tool`. The call shapes, a worked create, edit-input and set-material example, the delete-and-recreate rule and the start-up log are in [Niagara toolsets from Python](unreal-niagara-toolsets.md). [`niagara_toolset_author.py`](../../../examples/unreal/niagara_toolset_author.py) shows the add-emitter flow; the showcase adds modules to an emitter of a system that already emits ([README](../../../examples/unreal/niagara-showcase/README.md)). Simulation stages, event handlers and local modules are C++ work.
 
 ## C++
 

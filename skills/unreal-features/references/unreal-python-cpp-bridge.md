@@ -60,6 +60,11 @@ All three runs used `UnrealEditor.exe -nullrhi -ExecCmds="py <script>"` (no rend
 - [tested] In the non-partitioned map a grid size of 2 produced no proxies, because the call is guarded by `IsGridBased()`.
 - [tested] The new Landscape has one edit layer, named `Layer`.
 
+## A second example: Animation Blueprints
+
+- [tested] `examples/unreal/anim_bridge/` ([README](../../../examples/unreal/anim_bridge/README.md)) uses the same layout for an `AnimBridge` editor module and a `SlotClip` runtime module. Probe Python first: on 5.8.2 `unreal.BlueprintGraphEditor` already places Slot, Sequence Player and Blend Space Player nodes, so the bridge only adds what `dir()` and the action list do not reach: `AddState`, `AddTransition` and `ResampleBlendSpace`. Routes, numbers and the Animation Blueprint rules are in [Animation Blueprints](unreal-animation-blueprints.md).
+- [tested] A bridge function that returns a `USTRUCT` reaches Python as a struct with snake_case fields (`unreal.SlotBridgeResult`), and a `UEdGraph*` parameter accepts the state machine graph Python found with `BlueprintEditorLibrary.list_graphs`.
+
 ## Not verified
 
 Landscape materials, weight layers, Nanite, Water and Landmass brushes on a bridged Landscape, heights beyond what `uint16` stores, and the module in a packaged game or a commandlet were not run.

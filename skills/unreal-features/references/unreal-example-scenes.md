@@ -65,3 +65,13 @@ Two throwaway code projects, built with Unreal Build Tool (compiler and SDK disc
 - `node examples/unreal/automation_test/automation_test.mjs --engine <UE_5.8 folder>`: a passing and a deliberately failing `IMPLEMENT_SIMPLE_AUTOMATION_TEST` (`EditorContext | ProductFilter`), run with `-ExecCmds="Automation RunTests <filter>; Quit"`. The failing test is reported as `failed: 1`, state `Fail`, with message and line; exit codes are 255 with `; Quit` and 0 with `-TestExit`, so `automation_report.mjs` decides from `index.json`. 9 of 9 checks. Reference: [Automation tests](../../unreal-native/references/unreal-native-automation-tests.md).
 
 Both folders have a README and a pure Node test that runs in `node scripts/check.mjs`; the engine runs take three to five minutes each.
+
+## Content and tooling scenes (`niagara_toolsets/`, `editor_python_friction/`, `constructor_locks/`, `anim_bridge/`, `contention/`)
+
+Throwaway projects on 5.8.2; each folder has a README with the command and every check. Pure checks run in `node scripts/check.mjs`; the engine runs are manual.
+
+- [`niagara_toolsets`](../../../examples/unreal/niagara_toolsets/README.md) (14 checks): create a system, edit an input, set the material, delete and recreate. Backs [Niagara toolsets](unreal-niagara-toolsets.md).
+- [`editor_python_friction`](../../../examples/unreal/editor_python_friction/README.md) (8): `unreal.Box` construction and the benign Interchange alpha-mode log line.
+- [`constructor_locks`](../../../examples/unreal/constructor_locks/README.md) (11): constructor-loaded asset files are locked while the editor is open. Backs [Content pipeline](../../unreal-native/references/unreal-native-content-pipeline.md).
+- [`anim_bridge`](../../../examples/unreal/anim_bridge/README.md) (22): slot-only Animation Blueprints from Python and C++; states, transitions and blend-space resampling need C++. Backs [Animation Blueprints](unreal-animation-blueprints.md).
+- [`contention`](../../../examples/unreal/contention/README.md): a helper that stamps other-editor count and free memory into a receipt. Backs [profiling facts](../../unreal-native/references/unreal-native-profiling-facts.md).

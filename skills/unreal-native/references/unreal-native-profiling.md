@@ -16,7 +16,7 @@ Observed in one consuming Unreal **5.8.2 CL56702186** project on Windows (packag
 ## The diagnosis harness (heavier than shipping a fix needs)
 
 - [general] A script runs one packaged scenario with `-trace=cpu,frame,counters,bookmark,region,log` (plus `gpu` when rendered), then exports per-timer statistics with `UnrealInsights.exe`. A matrix script loops phases and appends one line per run to a progress file; summarize scripts aggregate; an export script condenses the runs into a committed CSV.
-- [general] One run at a time, never two rendered runs at once. A run whose mean is over 1.25 times the median of its earlier repeats is flagged, and a rerun phase repeats flagged runs. A row that writes no receipt is logged as FAILED; a minimum-free-disk guard skips runs rather than failing mid-write.
+- [general] One run at a time, never two rendered runs at once; measure on a quiet machine ([how](unreal-native-profiling-facts.md#measure-on-a-quiet-machine)). A run whose mean is over 1.25 times the median of its earlier repeats is flagged, and a rerun phase repeats flagged runs. A row that writes no receipt is logged as FAILED; a minimum-free-disk guard skips runs rather than failing mid-write.
 - [general] Phases ran overnight: baselines on all scenes, rendered and headless ablation on the heaviest and lightest, prototypes, and fixes combined with +50% content growth. That scale answered "where does the time go"; it is not the bar for shipping a fix.
 - [general] Switches (for example `-MyExp=noeffects,noscenery,noactors,noaudio,flames=0.5,scenery=1.5,effects=1.5`) live on a branch marked EXPERIMENT ONLY and never merged. State what a scale switch scales: `effects=` scaled the spawn rate only, because the pooled meshes are built per slot.
 
