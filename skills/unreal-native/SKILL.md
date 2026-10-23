@@ -1,7 +1,7 @@
 ---
 name: unreal-native
 description: Build, run, verify, package and profile a native C++ Unreal game from an agent: the build and capture loop, content-only versus native construction, presentation, input replay, material and UV validation, cooking and staging, frame-time profiling against a budget, and side-by-side comparison scenes. Not for importing assets (use unreal-import) or for choosing an Unreal system (use unreal-rendering, unreal-effects, unreal-animation, unreal-gameplay or unreal-procedural) or scripting the editor from Python (use unreal-editor-scripting).
-when_to_use: Use when building native C++ for an Unreal game, running real gameplay and checking screenshots or automation results, cooking or staging a Windows build, replaying input in native tests, rejecting default-material cook fallbacks, writing or running automation tests, a content step that fails with locked asset files (PermissionError), diagnosing lost procedural geometry or collision, profiling an Unreal game's frame time on a quiet machine, hitting a frame budget, costing extra content, or comparing implementations side by side on a stage.
+when_to_use: Use when building native C++ for an Unreal game, running real gameplay and checking screenshots or automation results, cooking or staging a Windows build, replaying input in native tests, rejecting default-material cook fallbacks, writing or running automation tests, a build that passes and then fails on code you did not change (adaptive unity), a content step that fails with locked asset files (PermissionError), diagnosing lost procedural geometry or collision, profiling an Unreal game's frame time on a quiet machine, hitting a frame budget, costing extra content, or comparing implementations side by side on a stage.
 ---
 
 # Native Unreal games
@@ -15,6 +15,7 @@ choosing a system and Niagara are the domain skills (for example
 | You are about to | Read |
 |---|---|
 | Build native C++, run real gameplay, verify screenshots and automation results | [Native game loop](references/unreal-native-game.md) |
+| Fix C2374, C2086, C4459 or C2872 in code you did not change, or a build that passes then fails (adaptive unity), and gate replay and test steps on the build | [Unity builds](references/unreal-native-unity-builds.md) |
 | Write a C++ automation test for 5.8, run it headless and read its report | [Automation tests](references/unreal-native-automation-tests.md) |
 | Generate materials and fonts, draw crisp Canvas text, diagnose exposure and palette | [Native presentation](references/unreal-native-presentation.md) |
 | Cook and stage Windows; tell UAT policy failures from real Game EXE proof | [Native packaging](references/unreal-native-packaging.md) |

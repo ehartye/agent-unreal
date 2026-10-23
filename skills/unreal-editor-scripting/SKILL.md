@@ -13,6 +13,7 @@ Unreal 5.8 on Windows. Pick the feature from the goal, then read that system's r
 | Run the example scenes | [Example scenes](references/unreal-example-scenes.md) |
 | Script the editor from Python: run modes, cameras, input, whole-map builds, process cleanup | [Editor Python](references/unreal-editor-python.md) |
 | Add what Python lacks, such as Landscape creation, with an editor C++ module | [Python to C++ bridge](references/unreal-python-cpp-bridge.md) |
+| Read back what was saved: a callable's signature, a saved Niagara system, saved meshes and materials | [Editor Python](references/unreal-editor-python.md#read-back-what-was-saved), [editor_probes](../../examples/unreal/editor_probes/README.md) |
 
 ## Rules of thumb
 

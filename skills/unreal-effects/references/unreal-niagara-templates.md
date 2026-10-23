@@ -30,6 +30,33 @@ Every template system carries a one-line `template_asset_description`, the text 
 - `Grid3D_Flip_Hose`: a static pool plus constant emission. `Grid3D_Flip_Pool`: a static pool; moving static meshes act as collisions and cause splashes. `Grid3D_Flip_Splash`: one splash burst. `Grid3D_FLIP_Coupled` and `SandSystem` ship without a description.
 - Core (`/Niagara/DefaultAssets/Templates/Systems`): `DirectionalBurst` (a burst of sprites in a direction), `RadialBurst` (omnidirectional burst with ribbon trails), `SimpleExplosion` (sprite core, velocity-aligned sparks, oriented meshes). `AttributeReaderTrails` and the three lightweight systems ship without a description.
 
+## Template emitters: which one covers which effect
+
+The 14 emitters in `/Niagara/DefaultAssets/Templates/Emitters/` go into a system with `AddEmitter` ([Niagara toolsets](unreal-niagara-toolsets.md)). [`nts_author.py`](../../../examples/unreal/niagara_toolsets/nts_author.py) adds all 14 and reads each one's description, renderer, modules, spawn rate or burst count and loop behaviour; [`nts_validate.mjs`](../../../examples/unreal/niagara_toolsets/README.md) checks the [tested] lines below on 5.8.2.
+
+| Emitter | Shipped description | Renderer, spawn |
+|---|---|---|
+| `SingleLoopingParticle` | Emits a single particle whose lifetime is linked to emitter loop duration | Sprite, burst of 1 per loop (`Once`) |
+| `SimpleSpriteBurst` | A simple sprite burst with no location or velocity, ready for customization | Sprite, burst of 1 |
+| `OmnidirectionalBurst` | An Omnidirectional Burst | Sprite, burst of 100 |
+| `DirectionalBurst` | Emits a burst of sprites in the specified direction | Sprite, burst of 75 |
+| `ConfettiBurst` | A template which utilizes aerodynamic drag to emulate the tumbling, organic motion of a burst of lightweight flat particles such as confetti, paper, or leaves. | Sprite on the GPU, burst of 100 |
+| `UpwardMeshBurst` | An burst of meshes spawning upwards in an explosive shape | Mesh, burst of 80 |
+| `Fountain` | A looping fountain spray | Sprite, 90 per second (`Infinite`) |
+| `HangingParticulates` | Hanging Particulates Swirling in a rectangular area | Sprite, 50 per second |
+| `BlowingParticles` | A template which emulates blowing leaves or other flat particle shapes such as paper. Utilizes aerodynamic drag and wind turbulence for a natural, organic look. | Sprite on the GPU, 15 per second |
+| `RecycleParticlesInView` | Looping particles being recycled in view | Sprite on the GPU, burst of 1000, a `ViewRecycler` module |
+| `StaticBeam` | Basic Static Beam without dynamically recalculated start and endpoints | Ribbon, burst of 100, `SpawnBeam` |
+| `DynamicBeam` | (none shipped) | Ribbon, as `StaticBeam` plus `UpdateBeam` |
+| `LocationBasedRibbon` | (none shipped) | Ribbon, no spawn module |
+| `Minimal` | A minimal, almost empty Emitter that helps you with building an Emitter from scratch | Sprite, no spawn module |
+
+- [tested] Choose by what spawns and what renders: a burst is `SpawnBurst_Instantaneous`, a stream is `SpawnRate`, a beam or ribbon needs the `Ribbon` renderer. Every template emitter runs in world space (`bLocalSpace` false); switch to local space for anything that moves with its owner ([inputs](unreal-niagara-toolset-inputs.md)).
+- [tested] For a held orb, glow or marker use `SingleLoopingParticle`: its `Lifetime` is linked to `Emitter.CurrentLoopDuration` (1 s), so replace the lifetime as a whole for a fixed time, or set `Loop Duration` after `Life Cycle Mode` is `Self` ([inputs](unreal-niagara-toolset-inputs.md)).
+- [tested] For a burst use `OmnidirectionalBurst` or `DirectionalBurst`; for a stream use `Fountain`. In world space a stream's particles stay where they spawned, so on a moving emitter they form a trail.
+- [tested] For a straight light column use `StaticBeam`: `Beam Start` is the `SimulationPosition` dynamic input and `Beam End` is (200, 0, 0), which you change for the column's length and direction; its width is a `FloatFromCurve` dynamic input.
+- [tested] `LocationBasedRibbon` has a `Ribbon` renderer and no spawn module, so nothing creates its particles until a spawn module is added.
+
 ## Choosing
 
 - Use the 2D gas templates for games and real-time effects and the 3D ones for hero effects and cinematics; 3D costs more memory and GPU time (Epic's Niagara Fluids reference).

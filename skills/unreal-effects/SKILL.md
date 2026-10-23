@@ -10,7 +10,7 @@ Unreal 5.8 on Windows. Pick the feature from the goal, then read that system's r
 
 | You are about to | Read |
 |---|---|
-| Make fire, smoke, trails, liquid, sand or any particle effect (Niagara; fluids in NiagaraFluids; on) | [Niagara](references/unreal-niagara.md), [Niagara templates](references/unreal-niagara-templates.md), [Toolsets](references/unreal-niagara-toolsets.md) |
+| Make fire, smoke, trails, liquid, sand or any particle effect (Niagara; fluids in NiagaraFluids; on) | [Niagara](references/unreal-niagara.md), [Niagara templates](references/unreal-niagara-templates.md), [Toolsets](references/unreal-niagara-toolsets.md), [Toolset inputs](references/unreal-niagara-toolset-inputs.md) |
 | Keep or convert existing Cascade particle content (Cascade on in the editor; converter off, beta) | [Cascade](references/unreal-cascade.md) |
 | Drive effects from destruction or physics events (ChaosNiagara; on, beta) | [Chaos Niagara](references/unreal-chaos-niagara.md) |
 | Break walls or props apart: fracture, debris, fields (Geometry Collections and Fracture; off, beta) | [Chaos destruction](references/unreal-chaos-destruction.md) |

@@ -36,9 +36,9 @@ Target: Unreal Engine 5.8, Windows. Epic's AI page lists StateTree, Behavior Tre
 
 | Task | Route | What to call |
 |---|---|---|
-| Create a StateTree asset | editor UI; Python | Content Browser > Artificial Intelligence > StateTree, pick the schema; `unreal.StateTreeFactory` is named in the Python API surface (use AssetTools `create_asset`, see `examples/unreal/build_scene.py`) |
+| Create a StateTree asset | editor UI; C++ editor module | Content Browser > Artificial Intelligence > StateTree, pick the schema; or `UStateTreeFactory::SetSchemaClass` then AssetTools `CreateAsset`. Python `create_asset` with `unreal.StateTreeFactory` returns `None` because the schema cannot be set [tested] |
 | Read tree structure | Python | `unreal.StateTreeEditorData.get_editor_data`, `sub_trees`, `evaluators`, `global_tasks`, `root_parameters`; `unreal.StateTreeState` (`children`, `tasks`, `transitions`, `enter_conditions`); all named in the Python API surface |
-| Author states and bindings | editor UI | StateTree editor (no scripted route documented) |
+| Author states and bindings | C++ editor module; editor UI | An editor module builds and compiles a tree (`AddChildState`, `AddTask<T>`, `AddTransition`, `CompileStateTree`), and a Context property binds on its own [tested]: [StateTree authoring](unreal-statetree-authoring.md). Python cannot compile or fill a node; otherwise the StateTree editor |
 | Custom task, evaluator, condition | Blueprint | parents `StateTreeTaskBlueprintBase`, `StateTreeEvaluatorBlueprintBase`, `StateTreeConditionBlueprintBase` (Epic) |
 | Run a tree | Blueprint; Python | Run State Tree node; `unreal.GameplayStateTreeLibrary.run_state_tree`; components `StateTreeComponent`, `StateTreeAIComponent` (`get_state_tree_run_status`, `is_running`) |
 | Behavior Tree | editor UI; Blueprint; C++ | Blackboard and Behavior Tree assets; AIController Event On Possess > Run Behavior Tree (Epic); `AAIController::RunBehaviorTree` in the 5.8 install |
