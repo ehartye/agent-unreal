@@ -19,6 +19,15 @@ Companion to [native profiling](unreal-native-profiling.md) (one consuming Unrea
 - [documented] `UInstancedStaticMeshComponent` has `InstanceStartCullDistance`, `InstanceEndCullDistance` and `bUseGpuLodSelection` (`r.InstancedStaticMeshes.GpuLod`). Component-level draw distance tests the component's bounds, so a culled chunk must be smaller than the cull distance.
 - [general] `ParallelFor` over game-thread work is only exact if each index reads an immutable snapshot and writes its own output slot, with no shared accumulator or random stream. The project did not use it; apply the exact-proof counters before shipping one.
 
+## Measure on a quiet machine
+
+- [general] Other editors, commandlets or games on the same machine share CPU, GPU and memory with the run being measured. A receipt recorded beside them can look like a regression in the game. Record the count of other Unreal processes and the free physical memory in every capture and profiling receipt, before the run and again after it, because another editor can start mid-run.
+- [general] Wait a bounded time for the other processes to leave, then refuse to record unless contention is allowed explicitly. A receipt recorded with the allow flag keeps `contended: true`; a budget comparison rejects a contended receipt or one with no block.
+- [tested] Helper: [editor contention](../../../examples/unreal/contention/README.md) (`wait`, `sample`, `verify`, and `waitForQuiet` / `stampReceipt` / `judgeReceipt` for scripts). It lists processes through a hidden PowerShell call, counts `UnrealEditor*.exe`, `UnrealEditor-Cmd.exe` and the game executables you name, leaves out your own process tree and any scratch project you name, and writes `{otherUnrealProcesses, freeMemoryMB, contended, reasons}` into the receipt.
+- [tested] On 5.8.2 a headless `UnrealEditor-Cmd.exe -nullrhi` editor in a near-empty project held about 3 GB of working set, so each one removes that much free memory. The default floor is 4096 MB.
+- [tested] A fixed CPU-only workload timed beside one and two idle or busy headless editors moved by a few percent at the median and more in the tail (p95 and max); the helper flagged every such phase. A rendering editor or game also shares the GPU; that case was not measured.
+- [general] Contention from builds, cooks and shader compilation is not detected; run those before the measurement, not during it.
+
 ## Tooling traps
 
 - [general] Unreal Insights tracing works on a Development build: `-trace=cpu,frame,counters,bookmark,region,log` (add `gpu` for rendered) with `-tracefile=` and `-statnamedevents`. A Test-configuration build cannot be taken on this engine distribution; UBT reports "Targets cannot be built in the Test configuration with this engine distribution". Trace Development and measure the overhead against untraced runs (5 to 8%).
