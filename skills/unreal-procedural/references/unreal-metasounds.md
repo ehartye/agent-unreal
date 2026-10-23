@@ -29,7 +29,7 @@ Target: Unreal Engine 5.8, Windows. MetaSounds is a node-graph, sample-accurate 
 - Build a MetaSound when the sound must respond to live parameters. Render a WAV with agent-beeps when the sound is a one-shot cue, a loop or a song.
 - Use Sound Cues only to maintain existing legacy content; they are not sample-accurate and cannot run arbitrary DSP.
 - Use the Audio Modulation plugin when runtime-adjustable parameter buses should replace static Sound Class and Sound Mix settings. MetaSounds can read its parameter buses.
-- Use the audio analysis plugin (AudioSynesthesia) when audio data should drive gameplay or visuals, in real time or offline; Epic lists Niagara and Blueprint as consumers, see [unreal-niagara.md](unreal-niagara.md).
+- Use the audio analysis plugin (AudioSynesthesia) when audio data should drive gameplay or visuals, in real time or offline; Epic lists Niagara and Blueprint as consumers, see [unreal-niagara.md](../../unreal-effects/references/unreal-niagara.md).
 
 ## How an agent drives it
 

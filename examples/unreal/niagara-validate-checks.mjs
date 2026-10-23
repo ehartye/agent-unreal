@@ -1,5 +1,5 @@
 // Pure checks for niagara_validate.mjs: turns the JSON reports of the Niagara scripts into pass or fail results,
-// one per claim in skills/unreal-features/references/unreal-niagara.md. No Unreal, no files: the tests in
+// one per claim in skills/unreal-effects/references/unreal-niagara.md. No Unreal, no files: the tests in
 // niagara-validate.test.mjs feed it canned reports, and niagara_validate.mjs feeds it real ones.
 
 const AUTHORING_VERBS = /^(add|remove|create|set_emitter|set_renderer)_/;

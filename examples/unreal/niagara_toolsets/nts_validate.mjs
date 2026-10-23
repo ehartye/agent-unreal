@@ -1,5 +1,5 @@
 // node nts_validate.mjs --engine "C:/Program Files/Epic Games/UE_5.8" [--keep]
-// Validates skills/unreal-features/references/unreal-niagara-toolsets.md against a real Unreal 5.8 install.
+// Validates skills/unreal-effects/references/unreal-niagara-toolsets.md against a real Unreal 5.8 install.
 // It makes a throwaway project in the OS temp folder (PythonScriptPlugin, EditorScriptingUtilities, Niagara, NiagaraToolsets), authors a
 // system through the toolsets (nts_author.py), reads it back in a new process (nts_readback.py), and runs four delete-and-recreate
 // phases (nts_recreate.py), two of which end in an editor crash on purpose, and a start-up run with a project init_unreal.py that raises. The reports, progress notes, exit codes and logs are judged

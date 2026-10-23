@@ -21,7 +21,7 @@ Target: Unreal Engine 5.8, Windows. Enhanced Input is the input system built fro
 
 ## Use something else when
 
-- A script only reads raw device state each tick, such as editor tooling or a camera tour: read keys from the player controller, as in [Editor Python](unreal-editor-python.md).
+- A script only reads raw device state each tick, such as editor tooling or a camera tour: read keys from the player controller, as in [Editor Python](../../unreal-editor-scripting/references/unreal-editor-python.md).
 - A plugin supplies its own input path: [Mover](unreal-mover.md) takes an input command produced by your code each tick.
 - The Combo trigger is deprecated in 5.8 (`InputTriggers.h`); build sequences from the other triggers.
 

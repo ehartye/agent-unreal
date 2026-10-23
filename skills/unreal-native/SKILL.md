@@ -1,6 +1,6 @@
 ---
 name: unreal-native
-description: Build, run, verify, package and profile a native C++ Unreal game from an agent: the build and capture loop, content-only versus native construction, presentation, input replay, material and UV validation, cooking and staging, frame-time profiling against a budget, and side-by-side comparison scenes. Not for importing assets (use unreal-import) or for choosing an Unreal system or scripting the editor from Python (use unreal-features).
+description: Build, run, verify, package and profile a native C++ Unreal game from an agent: the build and capture loop, content-only versus native construction, presentation, input replay, material and UV validation, cooking and staging, frame-time profiling against a budget, and side-by-side comparison scenes. Not for importing assets (use unreal-import) or for choosing an Unreal system (use unreal-rendering, unreal-effects, unreal-animation, unreal-gameplay or unreal-procedural) or scripting the editor from Python (use unreal-editor-scripting).
 when_to_use: Use when building native C++ for an Unreal game, running real gameplay and checking screenshots or automation results, cooking or staging a Windows build, replaying input in native tests, rejecting default-material cook fallbacks, writing or running automation tests, a content step that fails with locked asset files (PermissionError), diagnosing lost procedural geometry or collision, profiling an Unreal game's frame time on a quiet machine, hitting a frame budget, costing extra content, or comparing implementations side by side on a stage.
 ---
 
@@ -8,8 +8,9 @@ when_to_use: Use when building native C++ for an Unreal game, running real gamep
 
 Unreal 5.8 on Windows, driven by an agent. Each reference holds the commands, the evidence behind them
 and what was not verified. Importing assets is `unreal-import`;
-choosing a system, Niagara and scripting the editor from Python are
-[unreal-features](../unreal-features/SKILL.md).
+choosing a system and Niagara are the domain skills (for example
+[unreal-effects](../unreal-effects/SKILL.md)); scripting the editor from Python is
+[unreal-editor-scripting](../unreal-editor-scripting/SKILL.md).
 
 | You are about to | Read |
 |---|---|
@@ -24,4 +25,4 @@ choosing a system, Niagara and scripting the editor from Python are
 | Profile frame time against a budget (120 fps), decompose game thread, render thread and GPU, run an ablation matrix and cost per item | [Native profiling](references/unreal-native-profiling.md); method in profiling method (`engine-phaser` skill, agent-engine) |
 | Prove a performance fix exact, check engine source before predicting a cost, avoid Insights, nullrhi and PowerShell pitfalls | [Profiling facts](references/unreal-native-profiling-facts.md) |
 | Put several ways of doing one visible thing side by side on a stage, film them, time each alone at N copies and write a receipt | [Comparison scene](references/unreal-native-compare-scene.md); source and runner in `examples/unreal/compare-scene` |
-| Script the editor from Python: run modes, cameras, keyboard and gamepad input, process cleanup | [Editor Python](../unreal-features/references/unreal-editor-python.md) |
+| Script the editor from Python: run modes, cameras, keyboard and gamepad input, process cleanup | [Editor Python](../unreal-editor-scripting/references/unreal-editor-python.md) |

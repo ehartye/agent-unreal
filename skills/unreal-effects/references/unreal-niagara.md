@@ -1,6 +1,6 @@
 # Niagara in Unreal 5.8: author, drive and verify from an agent
 
-Each statement below is backed by Epic documentation, the installed engine's source or Python API, or a script in [`examples/unreal`](../../../examples/unreal/README.md). `node examples/unreal/niagara_validate.mjs --engine <UE_5.8 folder>` runs the scripts and checks 15 of the statements. Template choice is in [Niagara templates](unreal-niagara-templates.md); running editor Python is in [Editor Python](unreal-editor-python.md).
+Each statement below is backed by Epic documentation, the installed engine's source or Python API, or a script in [`examples/unreal`](../../../examples/unreal/README.md). `node examples/unreal/niagara_validate.mjs --engine <UE_5.8 folder>` runs the scripts and checks 15 of the statements. Template choice is in [Niagara templates](unreal-niagara-templates.md); running editor Python is in [Editor Python](../../unreal-editor-scripting/references/unreal-editor-python.md).
 
 ## Pick a route
 
@@ -52,7 +52,7 @@ Choose by what must stay drawn. [`stylized_validate.mjs`](../../../examples/unre
 - [documented] Turn Sub UV Blending Enabled off for hard cuts: on, it blends with the next cell by the fractional index (`NiagaraSpriteRendererProperties.h`).
 - Stepped light on an unlit particle: quantize a light term, `floor(term x N) / (N - 1)`, into a Lerp. [tested] It drew flat bands next to a smooth control.
 - [tested] The Dynamic Material Parameters module's Index 0 Param 1 (3) reached the material's Dynamic Parameter node (default 4): three bands rendered.
-- Lit toon on a particle: [tested] Substrate Toon works on sprites ([Substrate](unreal-substrate.md)).
+- Lit toon on a particle: [tested] Substrate Toon works on sprites ([Substrate](../../unreal-rendering/references/unreal-substrate.md)).
 - Not verified: linking Direct Frame Index to a user parameter; the frame stayed age-driven.
 
 ## Fluids
@@ -66,4 +66,4 @@ Choose by what must stay drawn. [`stylized_validate.mjs`](../../../examples/unre
 
 - Count what spawned: `NiagaraSimCacheFunctionLibrary.create_niagara_sim_cache`, then `capture_niagara_sim_cache_immediate(cache, params, component, True, dt)` in Play-In-Editor, then `read_position_attribute("Position", emitter, frame)`. Call `activate(True)` on a one-shot burst before capturing. A stateless (lightweight) template keeps no per-particle data, so read stateful templates this way.
 - Cost and scalability: Effect Types share scalability rules; the Niagara Debugger (`fx.Niagara.Debug.Hud`, `fx.Budget.*`) and Unreal Insights with `-StatNamedEvents` are interactive tools. See [profiling facts](../../unreal-native/references/unreal-native-profiling-facts.md).
-- Particle counts show that an effect ran. Pair them with a native screenshot and the review in [Unreal production stack](unreal-production-stack.md).
+- Particle counts show that an effect ran. Pair them with a native screenshot and the review in [Unreal production stack](../../unreal-rendering/references/unreal-production-stack.md).

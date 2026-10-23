@@ -1,4 +1,4 @@
-"""Check the Niagara API facts that skills/unreal-features/references/unreal-niagara.md states, in a headless Unreal 5.8 commandlet.
+"""Check the Niagara API facts that skills/unreal-effects/references/unreal-niagara.md states, in a headless Unreal 5.8 commandlet.
 
   UnrealEditor-Cmd.exe Project.uproject -run=pythonscript -script=<this file> -unattended -nullrhi -nosplash -nopause -nosound -notraceserver
 Set NIAGARA_PROBE_REPORT for the JSON report (default: Saved/niagara-traps.json in the project). niagara_validate.mjs reads it.

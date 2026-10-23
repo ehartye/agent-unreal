@@ -1,5 +1,5 @@
 // Pure checks for nts_validate.mjs: turn the JSON reports, progress notes, exit codes and log text of the Niagara toolset scripts into
-// pass or fail results, one per claim in skills/unreal-features/references/unreal-niagara-toolsets.md. No Unreal, no files:
+// pass or fail results, one per claim in skills/unreal-effects/references/unreal-niagara-toolsets.md. No Unreal, no files:
 // nts-validate.test.mjs feeds it canned reports, and nts_validate.mjs feeds it real ones.
 
 const has = (text, pattern) => pattern.test(String(text || ''));

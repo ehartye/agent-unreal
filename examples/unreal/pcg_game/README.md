@@ -1,6 +1,6 @@
 # PCG in a game process (Unreal 5.8)
 
-A test scene and an experiment harness behind [PCG in a running game](../../../skills/unreal-features/references/unreal-pcg-game-process.md). It copies a small engine Landscape map into a throwaway project, builds maps that differ only in the PCG World Actor and its Landscape cache, generates PCG in the editor and in a game process (the editor binary with `-game`), and checks every claim in that reference.
+A test scene and an experiment harness behind [PCG in a running game](../../../skills/unreal-procedural/references/unreal-pcg-game-process.md). It copies a small engine Landscape map into a throwaway project, builds maps that differ only in the PCG World Actor and its Landscape cache, generates PCG in the editor and in a game process (the editor binary with `-game`), and checks every claim in that reference.
 
 ## Run it
 

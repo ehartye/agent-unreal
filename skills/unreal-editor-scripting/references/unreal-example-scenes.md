@@ -4,7 +4,7 @@ Each scene builds a throwaway project in the OS temp folder, runs scripts on an 
 
 ## Stylized looks (ink, cel, toon) (`examples/unreal/stylized/`)
 
-Backs the Drawn, ink and cel looks section of [Niagara](unreal-niagara.md) and the Substrate Toon bullets of [Substrate](unreal-substrate.md).
+Backs the Drawn, ink and cel looks section of [Niagara](../../unreal-effects/references/unreal-niagara.md) and the Substrate Toon bullets of [Substrate](../../unreal-rendering/references/unreal-substrate.md).
 
 ```text
 node examples/unreal/stylized/stylized_validate.mjs --engine "C:/Program Files/Epic Games/UE_5.8" [--keep] [--shots <folder>]
@@ -14,7 +14,7 @@ It builds a project with `r.Substrate=True` and the Blendable GBuffer plus a bar
 
 ## World Partition automation (`examples/unreal/world/`)
 
-Scenes that back [World Partition](unreal-world-partition.md): the Open World template and a Water sample map, plus a four-cube level made with `LevelEditorSubsystem.new_level`, converted and rebuilt by commandlet, and read back by JSON report.
+Scenes that back [World Partition](../../unreal-procedural/references/unreal-world-partition.md): the Open World template and a Water sample map, plus a four-cube level made with `LevelEditorSubsystem.new_level`, converted and rebuilt by commandlet, and read back by JSON report.
 
 ```
 node examples/unreal/world/world_validate.mjs --engine "C:/Program Files/Epic Games/UE_5.8" [--keep]
@@ -28,7 +28,7 @@ Headline (5.8.2): all 30 pass. A partitioned `new_level` works in all three mode
 
 ## PCG in a game process (`examples/unreal/pcg_game/`)
 
-A small engine Landscape map gets two PCG volumes and five variants of the PCG World Actor and its Landscape cache. The scripts generate in the editor and in a game process (the editor binary with `-game`), run an experiment harness (graph variants generated on a test volume, instances counted) and check every claim in [PCG in a running game](unreal-pcg-game-process.md).
+A small engine Landscape map gets two PCG volumes and five variants of the PCG World Actor and its Landscape cache. The scripts generate in the editor and in a game process (the editor binary with `-game`), run an experiment harness (graph variants generated on a test volume, instances counted) and check every claim in [PCG in a running game](../../unreal-procedural/references/unreal-pcg-game-process.md).
 
 ```
 node examples/unreal/pcg_game/pcg_validate.mjs --engine "C:/Program Files/Epic Games/UE_5.8" [--keep] [--shot <png>]
@@ -70,8 +70,8 @@ Both folders have a README and a pure Node test that runs in `node scripts/check
 
 Throwaway projects on 5.8.2; each folder has a README with the command and every check. Pure checks run in `node scripts/check.mjs`; the engine runs are manual.
 
-- [`niagara_toolsets`](../../../examples/unreal/niagara_toolsets/README.md) (14 checks): create a system, edit an input, set the material, delete and recreate. Backs [Niagara toolsets](unreal-niagara-toolsets.md).
+- [`niagara_toolsets`](../../../examples/unreal/niagara_toolsets/README.md) (14 checks): create a system, edit an input, set the material, delete and recreate. Backs [Niagara toolsets](../../unreal-effects/references/unreal-niagara-toolsets.md).
 - [`editor_python_friction`](../../../examples/unreal/editor_python_friction/README.md) (8): `unreal.Box` construction and the benign Interchange alpha-mode log line.
 - [`constructor_locks`](../../../examples/unreal/constructor_locks/README.md) (11): constructor-loaded asset files are locked while the editor is open. Backs [Content pipeline](../../unreal-native/references/unreal-native-content-pipeline.md).
-- [`anim_bridge`](../../../examples/unreal/anim_bridge/README.md) (22): slot-only Animation Blueprints from Python and C++; states, transitions and blend-space resampling need C++. Backs [Animation Blueprints](unreal-animation-blueprints.md).
+- [`anim_bridge`](../../../examples/unreal/anim_bridge/README.md) (22): slot-only Animation Blueprints from Python and C++; states, transitions and blend-space resampling need C++. Backs [Animation Blueprints](../../unreal-animation/references/unreal-animation-blueprints.md).
 - [`contention`](../../../examples/unreal/contention/README.md): a helper that stamps other-editor count and free memory into a receipt. Backs [profiling facts](../../unreal-native/references/unreal-native-profiling-facts.md).

@@ -28,9 +28,9 @@ Use `ChaosModularVehicle` when:
 
 ## Use something else when
 
-- Use [unreal-chaos-destruction.md](unreal-chaos-destruction.md) when the object breaks or collapses but is not driven.
+- Use [unreal-chaos-destruction.md](../../unreal-effects/references/unreal-chaos-destruction.md) when the object breaks or collapses but is not driven.
 - Use [unreal-mover.md](unreal-mover.md) when you need character movement; `ChaosMover` is the descriptor's Chaos-physics character movement on the Mover framework.
-- Use [unreal-chaos-niagara.md](unreal-chaos-niagara.md) when a vehicle crash needs secondary particle effects from Chaos events.
+- Use [unreal-chaos-niagara.md](../../unreal-effects/references/unreal-chaos-niagara.md) when a vehicle crash needs secondary particle effects from Chaos events.
 
 ## How an agent drives it
 
@@ -47,7 +47,7 @@ Use `ChaosModularVehicle` when:
 | Simulation modules | Editor UI | `VehicleSimSuspension` under each wheel part, `VehicleSimWheel` under each suspension, `VehicleSimEngine` under the chassis, `VehicleSimClutch` under the engine, `VehicleSimTransmission` under the clutch; also Thruster and Aerofoil |
 | Modular input | Editor UI | Enhanced Input actions (Brake, Handbrake, Reverse, Steering, Throttle) mapped on the Vehicle Simulation component's Vehicle Input array |
 | Inspect modular classes | Python | `unreal.ModularVehicleClusterPawn`, `unreal.ModularVehicleBaseComponent`, `unreal.ClusterUnionVehicleComponent`, `unreal.VehicleSimWheelComponent`, `unreal.VehicleSimEngineComponent`, `unreal.VehicleSimSuspensionComponent`, `unreal.ModularVehicleAnimationInstance` |
-| Parts as Geometry Collections | Editor UI | Fracture mode > Generate > New for each part ([destruction reference](unreal-chaos-destruction.md)) |
+| Parts as Geometry Collections | Editor UI | Fracture mode > Generate > New for each part ([destruction reference](../../unreal-effects/references/unreal-chaos-destruction.md)) |
 
 Authoring Blueprints, Animation Blueprints, Physics Assets and curves is editor UI; the Python rows above name classes the editor module exposes.
 

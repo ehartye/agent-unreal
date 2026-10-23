@@ -42,7 +42,7 @@ $play = @("`"$proj`"", "/Game/Maps/NiagaraStage", "-game", "-windowed", "-ResX=1
 Start-Process "$ue\UnrealEditor.exe" -ArgumentList $play
 ```
 
-`$proj` is the `.uproject` path and `$here` uses forward slashes. `NIAGARA_SHOWCASE_GAME=1` selects the game-window path, where the script finds the world with `ObjectIterator`; leave it unset to run in the editor, which starts Play-In-Editor itself (click the viewport for focus). Details of the run modes are in [Editor Python](../../../skills/unreal-features/references/unreal-editor-python.md).
+`$proj` is the `.uproject` path and `$here` uses forward slashes. `NIAGARA_SHOWCASE_GAME=1` selects the game-window path, where the script finds the world with `ObjectIterator`; leave it unset to run in the editor, which starts Play-In-Editor itself (click the viewport for focus). Details of the run modes are in [Editor Python](../../../skills/unreal-editor-scripting/references/unreal-editor-python.md).
 
 ## The stage
 
@@ -55,7 +55,7 @@ Start-Process "$ue\UnrealEditor.exe" -ArgumentList $play
 | `NIAGARA_STAGE_MOON` | directional light in lux, 0 for none | 0.4 |
 | `NIAGARA_STAGE_LIGHT` | point light at each system in candela, 0 for none | 300 |
 
-For example, `$env:NIAGARA_STAGE_SYSTEMS = "/Niagara/DefaultAssets/Templates/Systems/SimpleExplosion@255,200,120@6;/Niagara/DefaultAssets/Templates/Systems/RadialBurst@255,255,255@5"` builds a stage with two bursts that restart. [`niagara_templates.py`](../niagara_templates.py) lists the available templates and [Niagara templates](../../../skills/unreal-features/references/unreal-niagara-templates.md) says what each is for.
+For example, `$env:NIAGARA_STAGE_SYSTEMS = "/Niagara/DefaultAssets/Templates/Systems/SimpleExplosion@255,200,120@6;/Niagara/DefaultAssets/Templates/Systems/RadialBurst@255,255,255@5"` builds a stage with two bursts that restart. [`niagara_templates.py`](../niagara_templates.py) lists the available templates and [Niagara templates](../../../skills/unreal-effects/references/unreal-niagara-templates.md) says what each is for.
 
 ## Controls
 
@@ -82,6 +82,6 @@ A system compiles the first time it is activated, from a fraction of a second up
 
 `NIAGARA_SHOWCASE_SELFTEST=1` replaces the device with scripted input, checks the motion maths (full-stick speed, strafing, turn rate, the pitch limit, boost), glides to every station and checks the switching rules (the station is the nearest, it is running, at most three run). It logs `[showcase_explore] selftest PASS` or `FAIL ...` and, in a game process, quits. Add `-RenderOffScreen -unattended -abslog=<file>` to the launch to run it without a visible window. `NIAGARA_SHOWCASE_SHOTS=1` (editor only) also writes one screenshot per station under `Saved/Screenshots`, after `NIAGARA_SHOWCASE_SETTLE` seconds at the station (default 4; an offscreen editor runs a few frames per second, so the fluids need about 12).
 
-Verified on Unreal 5.8.2, Windows, in a game process: the arena (12 checks, eight stations), the default stage (four systems) and a one-system stage. The self-test drives the same input code the devices feed, with scripted values; reading a physical gamepad and mouse uses the player-controller calls listed in [Editor Python](../../../skills/unreal-features/references/unreal-editor-python.md).
+Verified on Unreal 5.8.2, Windows, in a game process: the arena (12 checks, eight stations), the default stage (four systems) and a one-system stage. The self-test drives the same input code the devices feed, with scripted values; reading a physical gamepad and mouse uses the player-controller calls listed in [Editor Python](../../../skills/unreal-editor-scripting/references/unreal-editor-python.md).
 
 The scenes show Epic's templates at their default settings and make no performance claim: only systems near the camera run, at most three at once.

@@ -18,12 +18,17 @@ const walk = dir => readdirSync(join(root, dir)).sort().flatMap(name => {
 });
 tests.push(...walk('examples'));
 
-// unreal-native passes the strict rules and uefn passes the default rules (labels, size, structure). unreal-features and
+// unreal-native passes the strict rules and uefn passes the default rules (labels, size, structure). the six domain skills and
 // unreal-import state plain practices backed by Epic documentation, so they are checked for structure and size only.
 for (const args of [
   ['--test', ...tests],
   ['scripts/lint-skills.mjs', 'skills/unreal-native', '--require-claims', '--skill-md-labels'],
-  ['scripts/lint-skills.mjs', 'skills/unreal-features', '--label-pattern', '.'],
+  ['scripts/lint-skills.mjs', 'skills/unreal-effects', '--label-pattern', '.'],
+  ['scripts/lint-skills.mjs', 'skills/unreal-animation', '--label-pattern', '.'],
+  ['scripts/lint-skills.mjs', 'skills/unreal-gameplay', '--label-pattern', '.'],
+  ['scripts/lint-skills.mjs', 'skills/unreal-procedural', '--label-pattern', '.'],
+  ['scripts/lint-skills.mjs', 'skills/unreal-rendering', '--label-pattern', '.'],
+  ['scripts/lint-skills.mjs', 'skills/unreal-editor-scripting', '--label-pattern', '.'],
   ['scripts/lint-skills.mjs', 'skills/uefn'],
   ['scripts/lint-skills.mjs', 'skills/unreal-import', '--label-pattern', '.'],
 ]) {

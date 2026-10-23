@@ -26,9 +26,9 @@ Animation Blueprints are part of the engine; no plugin is needed. Plugins:
 
 ## Use something else when
 
-- Use [Motion Matching](unreal-motion-matching.md) when poses should be searched from animation data instead of wired through state-machine transitions. Epic documents state machines separately.
+- Use [Motion Matching](unreal-motion-matching.md) when poses are searched from animation data instead of wired through state-machine transitions.
 - Use [Control Rig](unreal-control-rig.md) for procedural pose edits and IK inside the graph.
-- Use [Mover](unreal-mover.md) for movement; the Animation Blueprint reads its results.
+- Use [Mover](../../unreal-gameplay/references/unreal-mover.md) for movement; the graph reads its results.
 
 ## How an agent drives it
 

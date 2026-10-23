@@ -8,4 +8,4 @@ Observed in one consuming Unreal 5.8.2 CL56702186 project on Windows; not reprod
 
 See the [native game loop](unreal-native-game.md) for fresh artifact validation, process ownership and fixed simulation step limits.
 
-Input actions, mapping contexts and runtime context switching: [Enhanced Input](../../unreal-features/references/unreal-enhanced-input.md).
+Input actions, mapping contexts and runtime context switching: [Enhanced Input](../../unreal-gameplay/references/unreal-enhanced-input.md).

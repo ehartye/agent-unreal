@@ -29,7 +29,7 @@ Target: Unreal Engine 5.8, Windows. Groom is Epic's strand-based hair system: im
 - Use the Hair Card Generator (experimental, editor-only) to build cards from existing strands. Use cards authored in a DCC tool if the card groups are already exported in the Alembic file.
 - Use a DCC tool (XGen, Ornatrix, Yeti, Houdini and similar) to shape hair. Epic states the groom system provides import, editing, rendering and simulation, and no hair-shaping solution.
 - For simulated fabric or soft bodies, see [unreal-chaos-cloth-and-flesh.md](unreal-chaos-cloth-and-flesh.md).
-- For particle effects, see [unreal-niagara.md](unreal-niagara.md).
+- For particle effects, see [unreal-niagara.md](../../unreal-effects/references/unreal-niagara.md).
 
 ## How an agent drives it
 

@@ -1,6 +1,6 @@
 # PCG in a running game: what a game process needs that the editor supplies
 
-Target: Unreal Engine 5.8.2, Windows. A game process here is the editor binary started with `-game` ([run modes](unreal-editor-python.md)). `[tested]` marks a result of [`examples/unreal/pcg_game`](../../../examples/unreal/pcg_game/README.md); `[documented]` marks the engine install (paths under `Engine/Plugins/PCG/Source/PCG/` unless they start with `Source/`). Node choice and graph building: [PCG](unreal-pcg.md).
+Target: Unreal Engine 5.8.2, Windows. A game process here is the editor binary started with `-game` ([run modes](../../unreal-editor-scripting/references/unreal-editor-python.md)). `[tested]` marks a result of [`examples/unreal/pcg_game`](../../../examples/unreal/pcg_game/README.md); `[documented]` marks the engine install (paths under `Engine/Plugins/PCG/Source/PCG/` unless they start with `Source/`). Node choice and graph building: [PCG](unreal-pcg.md).
 
 ## Before a game process generates
 

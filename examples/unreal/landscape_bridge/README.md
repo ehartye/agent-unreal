@@ -1,6 +1,6 @@
 # Landscape from Python through a C++ bridge
 
-Backs [Bridging editor Python to C++](../../../skills/unreal-features/references/unreal-python-cpp-bridge.md). Unreal Engine 5.8.2, Windows, Visual Studio 2022 Build Tools.
+Backs [Bridging editor Python to C++](../../../skills/unreal-editor-scripting/references/unreal-python-cpp-bridge.md). Unreal Engine 5.8.2, Windows, Visual Studio 2022 Build Tools.
 
 Python has no function that creates a Landscape. `ALandscapeProxy::Import` does, but it is C++ only. This example adds a small editor-only module, `LandscapeBridge`, whose `UFUNCTION(BlueprintCallable)` statics Python calls:
 
