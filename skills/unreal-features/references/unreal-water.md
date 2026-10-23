@@ -57,14 +57,7 @@ Custom materials need the Used with Water flag. Transition-material colors are m
 
 ## Large worlds in World Partition
 
-The partitioned map, the Landscape layout and the order of steps are in [Landmass](unreal-landmass.md). Water adds:
-- [tested] Place water in the editor: `UnrealEditor.exe -nullrhi -ExecCmds="py script"`, with the edits on an editor tick. In `UnrealEditor-Cmd.exe` a Water Zone spawns, then spawning a River stops the process on a Slate assertion (`CurrentBaseApplication.IsValid`, from LandscapeEditor).
-- [tested] The Water Zone and the brush manager are always loaded; Lake and River bodies are spatially loaded. A new actor reports `runtime_grid` None and no Data Layers. A converted sample map kept the same split.
-- [tested] Do not place a Water Brush Manager: the first body on a Landscape with edit layers adds `Landscape_WaterBrushManager` and a Water edit layer. The class is `/Script/WaterEditor.WaterBrushManager`.
-- [tested] River: `river.get_water_spline()` (`clear_spline_points`, `add_spline_point` in `SplineCoordinateSpace.WORLD`), then width and depth per point with `river.get_water_body_component().set_river_width_at_spline_input_key` and `set_river_depth_at_spline_input_key`, then `spline.k2_synchronize_and_broadcast_data_change()`. In the partitioned template a river at Z -600 with depth 400 and width 3000 carved the flat terrain to -1000, so bed = river Z minus depth.
-- [tested] Partition settings persist in the saved descriptors: `set_editor_property("is_spatially_loaded", False)` and `("runtime_grid", "MainGrid")`; for a Data Layer create a `DataLayerAsset` (`AssetTools.create_asset` with `DataLayerFactory`), call `DataLayerEditorSubsystem.create_data_layer_instance(DataLayerCreationParameters)` then `add_actor_to_data_layer`.
-
-Not verified: how a river carves proxies that are not loaded; which spatial-loading setting suits a given river length.
+Placing water from Python, spatial loading, Local Tessellation and carving a partitioned Landscape are in [World Partition](unreal-world-partition.md).
 
 ## Sources
 

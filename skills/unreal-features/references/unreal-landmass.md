@@ -59,28 +59,7 @@ Tuning `CustomBrush_Landmass`:
 
 ## Large landscapes in World Partition
 
-Order for a large landscape with a river and scattered content: get a partitioned map, shape the terrain (Landmass brushes in Landscape mode, [Water](unreal-water.md) bodies), read the heights back, then scatter with [PCG](unreal-pcg.md) (partitioned generation).
-
-Get a partitioned map:
-- [tested] Copy Epic's Open World template: `EditorLoadingAndSavingUtils.load_map("/Engine/Maps/Templates/OpenWorld")`, then `save_map(world, "/Game/Maps/Name")`; Save As writes the external actor files under the new name. [documented] The template holds a 2 km by 2 km Landscape ([World Partition in Unreal Engine](https://dev.epicgames.com/documentation/unreal-engine/world-partition-in-unreal-engine)).
-- [tested] Python creates no Landscape: `Landscape` and `LandscapeProxy` expose only heightmap and weightmap render-target import and export. Use the template, or convert a Landscape map: `UnrealEditor-Cmd.exe Project -run=WorldPartitionConvertCommandlet /Game/Maps/Map -SCCProvider=None -ConversionSuffix -AllowCommandletRendering -nullrhi` writes `Map_WP` and `Map.ini`; without `-AllowCommandletRendering` it exits 1. [documented] Epic: any level can be converted.
-- [tested] A map is partitioned when `unreal.WorldPartitionBlueprintLibrary.get_actor_descs()` returns descriptors, including for unloaded actors (`is_spatially_loaded`, `runtime_grid`, `data_layer_assets`, `bounds`); the default template and the Water sample map return none.
-
-How the Landscape is built there:
-- [tested] One Landscape actor, always loaded, holding no components, plus spatially loaded `LandscapeStreamingProxy` actors holding them. The template has 64 proxies in an 8 by 8 grid, each 25,200 cm square with 2 by 2 components of 126 quads (256 components); edit layers Base Landscape and Flat Middle. A converted Landscape of 2 by 2 components of 255 quads became one proxy.
-- [tested] `LandscapeGridSize` in the `Map.ini` the commandlet writes is the components per proxy side: 4 gave one proxy for that Landscape, 1 gave four.
-- [tested] In a commandlet no proxy is in the world until `WorldPartitionBlueprintLibrary.load_actors` is called with the proxy descriptor guids. The rendering editor loaded all 64 proxies at open.
-
-Read the result:
-- [tested] In a rendering editor (`-RenderOffScreen`), `landscape.render_heightmap(Transform(), Box2D, render_target)` into an `RTF_RGBA8` target (float formats return False) gives the final heights after `force_layers_full_update()` and editor ticks (the example waits 25 s): height = R*256 + G, world Z = Landscape Z + (height - 32768) / 128 * scale Z.
-- [tested] Python spawns `LandmassBrushManager` and `CustomBrush_Landmass` (`EditorAssetLibrary.load_blueprint_class`); neither is spatially loaded, and neither attaches: the manager's `get_landscape()` stays None, `Landscape` has no brush members in Python, the brush logs `Accessed None` for `BrushManager`. Add Landmass brushes in Landscape mode.
-
-Scatter afterwards:
-- [tested] Setting `is_component_partitioned` on a PCG volume's component adds the PCG World Actor (always loaded, 25,600 cm grid) and spatially loaded `PCGPartitionGridActor` actors. Generation modes are in [PCG](unreal-pcg.md).
-
-Not verified: carving of proxies that are not loaded (the editor loaded every proxy and `unload_actors` did not unload them); attaching a Landmass brush to an edit layer from Python; running a PCG graph on the partitioned Landscape.
-
-The scene that checks all of this is `examples/unreal/world/world_validate.mjs`.
+The partitioned map, the Landscape proxy layout, reading heights back and what Python cannot attach are in [World Partition](unreal-world-partition.md).
 
 ## Sources
 
