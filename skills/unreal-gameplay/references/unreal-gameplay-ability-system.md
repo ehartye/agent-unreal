@@ -36,10 +36,10 @@ Target: Unreal Engine 5.8, Windows. The Gameplay Ability System (GAS) is "a fram
 | Bind owner and avatar | C++ | `InitAbilityActorInfo(Owner, Avatar)` and `SetReplicationMode(Minimal / Mixed / Full)`; neither is named in Epic's 5.7 Python page for `unreal.AbilitySystemComponent` |
 | Define attributes | C++ only | `UAttributeSet` with `FGameplayAttributeData` properties (Epic) |
 | Register a set | C++ / Blueprint | The server adds sets; for an Actor Blueprint, add the set type to the ASC Default Starting Data (Epic) |
-| Add tags | Project Settings / `.ini` / Data Table | Gameplay Tag Manager, `Config/DefaultGameplayTags.ini` or `Config/Tags` (restart after text edits), `GameplayTagTableRow` tables; native tags need the `GameplayTags` module in `Build.cs` (Epic) |
+| Add tags | Project Settings / `.ini` / Data Table | Gameplay Tag Manager, `Config/DefaultGameplayTags.ini` or `Config/Tags` (restart after text edits), `GameplayTagTableRow` tables; native tags need the `GameplayTags` module in `Build.cs` (Epic); declare and define macros in [C++ effects](unreal-gas-native-effects.md) |
 | Create an ability asset | Python (named in Epic's 5.7 Python pages) | `unreal.GameplayAbilitiesBlueprintFactory` with `parent_class` and `blueprint_type`, as the factory for an asset-tools `create_asset` call |
 | Write ability logic | Blueprint / C++ | Event Activate Ability, Ability Tasks, `EndAbility`; custom Ability Tasks are commonly C++ (Epic) |
-| Author effects | Blueprint (data-only) / editor UI | Gameplay Effect assets: duration, modifiers, stacking, components, cues. Custom GE components and executions are native code (Epic) |
+| Author effects | Blueprint (data-only) / editor UI | Gameplay Effect assets: duration, modifiers, stacking, components, cues. Custom GE components and executions are native code (Epic). A C++ effect class adds components with `CreateDefaultSubobject`, not `AddComponent` ([C++ effects](unreal-gas-native-effects.md)) |
 | Grant, activate, apply | Blueprint / C++ / Python (named in Epic's 5.7 Python pages) | `unreal.AbilitySystemComponent`: `give_ability`, `try_activate_ability_by_class`, `apply_gameplay_effect_to_self`; granting happens on the server |
 | Author cosmetic feedback | Blueprint | Gameplay Cue Notify assets keyed by a tag that starts with `GameplayCue` |
 | Debug | Gameplay Debugger / console / Visual Logger | `'` opens the debugger; `AbilitySystem.Ability.Grant`, `.Activate`, `AbilitySystem.Effect.Apply`, `AbilitySystem.DisplayGameplayCues` |

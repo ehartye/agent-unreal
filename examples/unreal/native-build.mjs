@@ -3,6 +3,7 @@
 //     compiler version is written into a script. Override with the options { compiler, sdk } or the flags the runners pass on.
 //   - writeCodeProject(): writes a throwaway Unreal code project (descriptor, two target files, module sources).
 //   - buildEditor(): runs Epic's Build.bat for the project's Editor target, hidden, logging to a file.
+//   - runIfBuilt(): runs a follow-on step (a replay, a test run) only when the build succeeded, and says so when it skipped it.
 import { spawn, spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, openSync, closeSync, readdirSync, writeFileSync, cpSync } from 'node:fs';
 import { join } from 'node:path';
@@ -27,9 +28,9 @@ export function compilerFlagVersion(productVersion) {
 }
 
 /** The Build.bat argument list for an Editor target. */
-export function buildArguments({ target, uproject, compiler, sdk }) {
+export function buildArguments({ target, uproject, compiler, sdk, extraArgs = [] }) {
   return [target, 'Win64', 'Development', `-Project=${uproject}`, '-WaitMutex', '-NoHotReloadFromIDE', '-2022',
-    ...(compiler ? [`-CompilerVersion=${compiler}`] : []), ...(sdk ? [`-WindowsSDKVersion=${sdk}`] : [])];
+    ...(compiler ? [`-CompilerVersion=${compiler}`] : []), ...(sdk ? [`-WindowsSDKVersion=${sdk}`] : []), ...extraArgs];
 }
 
 const programFilesX86 = () => process.env['ProgramFiles(x86)'] || 'C:/Program Files (x86)';
@@ -95,10 +96,10 @@ public class ${name}${suffix}Target : TargetRules
   return join(root, `${name}.uproject`);
 }
 
-/** Runs Build.bat for `<name>Editor` hidden; resolves { exit, seconds, timedOut }. Output goes to `logPath`. */
-export function buildEditor({ engine, uproject, name, toolchain, logPath, timeoutMs = 1800000 }) {
+/** Runs Build.bat for `<name>Editor` hidden; resolves { exit, seconds, timedOut }. Output goes to `logPath`. `extraArgs` are appended to the Build.bat arguments (for example "-ForceUnity"). */
+export function buildEditor({ engine, uproject, name, toolchain, logPath, timeoutMs = 1800000, extraArgs = [] }) {
   const bat = join(engine, 'Engine', 'Build', 'BatchFiles', 'Build.bat').replace(/\//g, '\\');
-  const args = buildArguments({ target: `${name}Editor`, uproject: uproject.replace(/\//g, '\\'), compiler: toolchain.compiler, sdk: toolchain.sdk });
+  const args = buildArguments({ target: `${name}Editor`, uproject: uproject.replace(/\//g, '\\'), compiler: toolchain.compiler, sdk: toolchain.sdk, extraArgs });
   const line = `""${bat}" ${args.map((a) => (/[\s]/.test(a) ? `"${a}"` : a)).join(' ')}"`;
   const fd = openSync(logPath, 'w');
   const started = Date.now();
@@ -108,4 +109,24 @@ export function buildEditor({ engine, uproject, name, toolchain, logPath, timeou
     const timer = setTimeout(() => { timedOut = true; spawnSync('taskkill', ['/PID', String(child.pid), '/T', '/F'], { windowsHide: true }); }, timeoutMs);
     child.on('exit', (code) => { clearTimeout(timer); closeSync(fd); resolve({ exit: code, seconds: Math.round((Date.now() - started) / 1000), timedOut }); });
   });
+}
+
+/** True when a buildEditor() result is a success: exit code 0 and no timeout. Anything else (including a killed build, exit null) is not. */
+export function buildSucceeded(build) {
+  return !!build && build.exit === 0 && !build.timedOut;
+}
+
+/**
+ * Runs `step` (a replay, a test run, a capture; sync or async) only when the build succeeded. After a failed build the previous
+ * binary is still on disk, so an unconditional follow-on step would test it and report on the old code. Resolves
+ * { ran: true, result } or { ran: false, reason }; a skipped step is reported through `log` (default console.log), never silent.
+ */
+export async function runIfBuilt(build, step, { label = 'follow-on step', log = console.log } = {}) {
+  if (!buildSucceeded(build)) {
+    const why = build?.timedOut ? 'timed out' : `failed (exit ${build?.exit ?? 'unknown'})`;
+    const reason = `build ${why}`;
+    log(`${label} skipped: ${reason}; the previous binary is still on disk and was not tested`);
+    return { ran: false, reason };
+  }
+  return { ran: true, result: await step() };
 }

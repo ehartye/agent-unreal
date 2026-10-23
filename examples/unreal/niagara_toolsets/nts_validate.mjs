@@ -1,14 +1,16 @@
 // node nts_validate.mjs --engine "C:/Program Files/Epic Games/UE_5.8" [--keep]
 // Validates skills/unreal-effects/references/unreal-niagara-toolsets.md against a real Unreal 5.8 install.
 // It makes a throwaway project in the OS temp folder (PythonScriptPlugin, EditorScriptingUtilities, Niagara, NiagaraToolsets), authors a
-// system through the toolsets (nts_author.py), reads it back in a new process (nts_readback.py), and runs four delete-and-recreate
-// phases (nts_recreate.py), two of which end in an editor crash on purpose, and a start-up run with a project init_unreal.py that raises. The reports, progress notes, exit codes and logs are judged
+// system through the toolsets (nts_author.py: call shapes, bound and hidden inputs, local space, sort order, ribbon material, the template
+// emitters), reads it back in a new process (nts_readback.py, with the input audit), asks the editor tick for the stack issues
+// (nts_issues.py), and runs four delete-and-recreate phases (nts_recreate.py), two of which end in an editor crash on purpose, and a
+// start-up run with a project init_unreal.py that raises. The reports, progress notes, exit codes and logs are judged
 // by nts-validate-checks.mjs. Exit code 0 when every check passes. Takes a few minutes. Not part of node scripts/check.mjs; the pure
 // checks are tested there. Hidden windows; only processes whose command line names the throwaway project are stopped afterwards.
 import { spawnSync } from 'node:child_process';
 import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, existsSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join, resolve } from 'node:path';
+import { join, resolve, sep } from 'node:path';
 import { evaluate, summarize } from './nts-validate-checks.mjs';
 
 const args = process.argv.slice(2);
@@ -17,6 +19,7 @@ const keep = args.includes('--keep');
 const engine = flag('--engine') || process.env.UE_ROOT;
 if (!engine) { console.error('usage: node nts_validate.mjs --engine <UE_5.8 folder> [--keep]'); process.exit(2); }
 const cmd = join(engine, 'Engine', 'Binaries', 'Win64', 'UnrealEditor-Cmd.exe');
+const editor = join(engine, 'Engine', 'Binaries', 'Win64', 'UnrealEditor.exe');
 if (!existsSync(cmd)) { console.error(`not found: ${cmd}`); process.exit(2); }
 
 const here = import.meta.dirname;
@@ -47,6 +50,16 @@ function run(label, script, name, env = {}, timeout = 600000) {
   return null;
 }
 
+// The editor (not the commandlet) with a tick callback: GetStackIssues completes from the editor tick. The script quits the editor.
+function runEditor(label, script, name, timeout = 300000) {
+  const started = Date.now();
+  const result = spawnSync(editor, [project, `-ExecCmds=py ${resolve(here, script).replaceAll(sep, '/')}`, `-abslog=${logPath(name)}`,
+    '-unattended', '-nullrhi', '-nosplash', '-nopause', '-nosound', '-notraceserver'],
+  { env: { ...process.env, NTS_REPORT: reportPath(name) }, stdio: 'ignore', timeout, windowsHide: true });
+  console.log(`  ${label}: exit ${result.status}${result.error ? ` (${result.error.message})` : ''}, ${Math.round((Date.now() - started) / 1000)} s`);
+  return result.status;
+}
+
 // Stop editors that were started with this project (and nothing else).
 function stopProjectProcesses() {
   if (process.platform !== 'win32') return;
@@ -60,6 +73,7 @@ console.log(`Niagara toolset validation in ${root}`);
 const exits = {};
 run('author', 'nts_author.py', 'author');
 run('read back (new process)', 'nts_readback.py', 'readback');
+runEditor('stack issues (editor tick)', 'nts_issues.py', 'issues');
 exits.make = run('make three systems on disk', 'nts_recreate.py', 'make', { NTS_PHASE: 'make' });
 for (const phase of ['same_process', 'stale', 'rescan_only', 'remove_rescan']) {
   exits[phase] = run(`recreate: ${phase}`, 'nts_recreate.py', phase, { NTS_PHASE: phase });
@@ -78,7 +92,7 @@ stopProjectProcesses();
 
 const phases = ['make', 'same_process', 'stale', 'rescan_only', 'remove_rescan'];
 const checks = evaluate({
-  author: readJson(reportPath('author')), readback: readJson(reportPath('readback')), authorLog: readText(logPath('author')),
+  author: readJson(reportPath('author')), readback: readJson(reportPath('readback')), issues: readJson(reportPath('issues')), authorLog: readText(logPath('author')),
   startup: readJson(reportPath('startup')), startupLog: readText(logPath('startup')), startupExit,
   notes: Object.fromEntries(phases.map((p) => [p, readLines(join(saved, `${p}.jsonl`))])), exits,
   logs: Object.fromEntries(phases.map((p) => [p, readText(logPath(p))])),

@@ -10,6 +10,26 @@ const DEFAULT_MATERIAL = { refPath: '/Niagara/DefaultAssets/DefaultSpriteMateria
 const MATERIAL = { refPath: '/Game/FX/M_Worked.M_Worked' };
 const CRASH_LOG = '[2026.10.23-05.04.35:343][  0]LogWindows: Error: Unhandled Exception: EXCEPTION_ACCESS_VIOLATION reading address 0x0000000000000000';
 
+const FLOAT = '/Script/Niagara.NiagaraFloat';
+const LINKED_KIND = 'NiagaraExt_StackInputData_Linked', DYNAMIC_KIND = 'NiagaraExt_StackInputData_DynamicInput';
+const template = (renderer, spawn, extra = {}) => ({ description: '', renderer, sim_target: 'CPUSim', spawn_modules: spawn, modules: ['EmitterState', ...spawn, 'ParticleState'], spawn_rate: null, beam_end: null, beam_start: null,
+  local_space: false, burst_count: null, lifetime_link: null, loop_behavior: 'Infinite', ...extra });
+const SPRITE = 'NiagaraSpriteRendererProperties', RIBBON = 'NiagaraRibbonRendererProperties';
+const MADE = {
+  BlowingParticles: template(SPRITE, ['SpawnRate']), ConfettiBurst: template(SPRITE, ['SpawnBurst_Instantaneous'], { burst_count: 100, loop_behavior: 'Once' }),
+  DirectionalBurst: template(SPRITE, ['SpawnBurst_Instantaneous'], { burst_count: 75, loop_behavior: 'Once' }), DynamicBeam: template(RIBBON, ['SpawnBurst_Instantaneous', 'SpawnBeam'], { modules: ['EmitterState', 'SpawnBeam', 'UpdateBeam'] }),
+  Fountain: template(SPRITE, ['SpawnRate'], { spawn_rate: 90 }), HangingParticulates: template(SPRITE, ['SpawnRate']), LocationBasedRibbon: template(RIBBON, [], { loop_behavior: 'Once' }),
+  Minimal: template(SPRITE, []), OmnidirectionalBurst: template(SPRITE, ['SpawnBurst_Instantaneous'], { burst_count: 100, loop_behavior: 'Once' }),
+  RecycleParticlesInView: template(SPRITE, ['SpawnBurst_Instantaneous'], { burst_count: 1000, loop_behavior: 'Once', modules: ['EmitterState', 'ViewRecycler'] }),
+  SimpleSpriteBurst: template(SPRITE, ['SpawnBurst_Instantaneous'], { burst_count: 1, loop_behavior: 'Once' }),
+  SingleLoopingParticle: template(SPRITE, ['SpawnBurst_Instantaneous'], { burst_count: 1, lifetime_link: 'Emitter.CurrentLoopDuration', loop_behavior: 'Once',
+    description: 'Emits a single particle whose lifetime is linked to emitter loop duration' }),
+  StaticBeam: template(RIBBON, ['SpawnBurst_Instantaneous', 'SpawnBeam'], { beam_start: 'SimulationPosition', beam_end: { x: 200, y: 0, z: 0 } }), UpwardMeshBurst: template('NiagaraMeshRendererProperties', ['SpawnBurst_Instantaneous'], { burst_count: 80, loop_behavior: 'Once' }),
+};
+const HIDDEN_ERROR = "Refusing to set input 'Color': input is hidden by static-switch / conditional logic and is not currently part of the executing graph. Adjust the parent switch first.";
+const DURATION_ERROR = "Refusing to set input 'Loop Duration': its VisibleCondition currently evaluates false. The input is not visible in the editor — flip the gating input first.";
+const WRONG_NAME = 'Function "SetEmitterData", input param "emitter" is required by the function input schema Json, but is missing from the incoming function input params Json.\nFunction schema Json -\n{...}';
+
 const canned = () => ({
   author: {
     engine: '5.8.2-56702186+++UE5+Release-5.8', toolset_registered: true, agent_skill_class: true, system_tool_count: 46,
@@ -24,9 +44,39 @@ const canned = () => ({
       { step: 'renderer', default_material: DEFAULT_MATERIAL, object_error: '', after_object: DEFAULT_MATERIAL, string_error: '', after_string: MATERIAL,
         sub_image_size: { x: 4, y: 4 }, wanted: MATERIAL, renderers: [0] },
       { step: 'save', system: true, material: true },
+      { step: 'templates', made: structuredClone(MADE) },
+      { step: 'bound_inputs', linked_before: 'Emitter.CurrentLoopDuration', add_key_error: '', add_key_kind: LINKED_KIND, add_key_link: 'Emitter.CurrentLoopDuration',
+        emptied_error: '', emptied_kind: LINKED_KIND, emptied_link: 'Module.None', emptied_is_empty: true, dynamic_error: '', dynamic_kind: DYNAMIC_KIND,
+        helper_lifetime: { ok: true, error: '', was: LINKED_KIND, kind: 'NiagaraFloat', value: 3 }, helper_width: { ok: true, error: '', was: DYNAMIC_KIND, kind: 'NiagaraFloat', value: 12 },
+        zero_lifetime: { ok: true, error: '', was: LINKED_KIND, kind: 'NiagaraFloat', value: 0 } },
+      { step: 'hidden_input', color_visible: false, mode_is_static_switch: true, refused_ok: false, refused_error: HIDDEN_ERROR, flip_error: '', painted_ok: true, painted_value: { r: 1, g: 0.2, b: 0.1, a: 1 },
+        duration_visible: false, duration_error: DURATION_ERROR, cycle_error: '', duration_ok: true, duration_value: { value: 6 } },
+      { step: 'local_space', before: false, wrong_name_error: WRONG_NAME, after_wrong: false, object_error: '', after_object: false, string_error: '', after_string: true },
+      { step: 'renderer_hints', sort_before: 0, sort_sprite_error: '', sort_sprite_after: 7, sort_ribbon_error: '', sort_ribbon_after: 3, ribbon_material: { refPath: '/Game/FX/M_Beam.M_Beam' },
+        flagless_error: '', flagless_material: { refPath: '/Game/FX/M_NoFlag.M_NoFlag' },
+        flags_flagged: { used_with_niagara_sprites: false, used_with_niagara_ribbons: true }, flags_default: { used_with_niagara_sprites: false, used_with_niagara_ribbons: false } },
     ],
   },
-  readback: { emitters: ['Dust', 'Motes'], lifetime_min: 2.5, material: MATERIAL, sub_image_size: { x: 4, y: 4 } },
+  readback: {
+    emitters: ['Dust', 'Motes'], lifetime_min: 2.5, material: MATERIAL, sub_image_size: { x: 4, y: 4 },
+    linked: { lifetime: { struct: { refPath: FLOAT }, value: { value: 3 } }, beam_width: { struct: { refPath: FLOAT }, value: { value: 12 } }, beam_material: { refPath: '/Game/FX/M_Beam.M_Beam' },
+      beam_sort: 3, orb_sort: 7, orb_local_space: true },
+    audit: { NS_Worked: [], NS_Linked: [], NS_Broken: [
+      { emitter: 'OrbEmpty', module: 'InitializeParticle', input: 'Lifetime', problem: 'empty link: Module.None' },
+      { emitter: 'OrbZero', module: 'InitializeParticle', input: 'Lifetime', problem: 'lifetime reads 0' }] },
+  },
+  issues: {
+    results: {
+      NS_Linked: { GetStackIssues: { error: '', value: { numErrors: 0, numWarnings: 0, numInfos: 8, issues: [{ severity: 'Info', shortDescription: 'Version upgrade note', location: { emitterName: 'Orb' } }] } },
+        GetSystemCompileState: { error: '', value: { aggregateStatus: 'UpToDate', scripts: [{ emitterName: 'Orb', lastCompileStatus: 'UpToDate', errorSummary: '' }] } } },
+      NS_Broken: { GetStackIssues: { error: '', value: { numErrors: 1, numWarnings: 1, numInfos: 14, issues: [
+        { severity: 'Error', shortDescription: 'This stage has compile errors.', location: { emitterName: 'OrbEmpty' }, stackDisplayPath: '/Particle Spawn' },
+        { severity: 'Warning', shortDescription: 'Materials might not render correctly.', stackDisplayPath: '/Render/Ribbon Renderer', location: { emitterName: 'BeamNoFlag' },
+          longDescription: "Some materials 'M_NoFlag' do not have the correct usage flags set, and will use the default material." }] } },
+        GetSystemCompileState: { error: '', value: { aggregateStatus: 'Error', scripts: [{ emitterName: 'OrbEmpty', lastCompileStatus: 'Error',
+          errorSummary: 'Node pin has an undefined type. - Node: Map Get Pin: Module.None - ' + String.fromCharCode(10) + 'Error compiling input for set node. - Node: Map Set Pin: InitializeParticle.Lifetime - ' }] } } },
+    },
+  },
   authorLog: [
     'LogToolsetRegistry: Display: Registering Toolset NiagaraToolsets.NiagaraToolset_System',
     'LogPython: Display: Running start-up script C:/Engine/NiagaraToolsets/Content/Python/init_unreal.py... took 11.925 ms',
@@ -68,7 +118,7 @@ const step = (r, name) => r.author.steps.find((s) => s.step === name);
 test('the 5.8.2 reports pass every check', () => {
   const checks = evaluate(canned());
   assert.deepEqual(failing(canned()), []);
-  assert.deepEqual(summarize(checks), { passed: 14, total: 14 });
+  assert.deepEqual(summarize(checks), { passed: 24, total: 24 });
 });
 
 test('a startup traceback or a missing toolset fails the first check', () => {
@@ -94,7 +144,66 @@ test('call-shape checks fail when the value, the shape or the persistence change
   assert.deepEqual(mutate((r) => { step(r, 'renderer').after_object = MATERIAL; }), ['SetRendererData takes propertyValues as a JSON string']);
   assert.deepEqual(mutate((r) => { step(r, 'renderer').after_string = DEFAULT_MATERIAL; }), ['SetRendererData takes propertyValues as a JSON string']);
   assert.deepEqual(mutate((r) => { r.readback.lifetime_min = 5; }), ['the edits survive a save and a new process']);
-  assert.deepEqual(mutate((r) => { r.readback = undefined; }), ['the edits survive a save and a new process']);
+  assert.deepEqual(mutate((r) => { r.readback = undefined; }), ['the edits survive a save and a new process',
+    'the read-back audit flags an empty link and a zero lifetime and passes the clean systems', 'SortOrderHint is a renderer property on sprite and ribbon renderers',
+    'a ribbon renderer takes a material with its own usage flag']);
+});
+
+test('the bound-input checks fail when an in-place edit starts to work or the helper stops replacing the data', () => {
+  const linked = 'a linked input is replaced as a whole, not edited in place', dynamic = 'a dynamic input is replaced as a whole, not edited in place';
+  const audited = 'the read-back audit flags an empty link and a zero lifetime and passes the clean systems';
+  assert.deepEqual(mutate((r) => { step(r, 'bound_inputs').add_key_link = 'Module.None'; }), [linked]);
+  assert.deepEqual(mutate((r) => { step(r, 'bound_inputs').emptied_is_empty = false; }), [linked]);
+  assert.deepEqual(mutate((r) => { step(r, 'bound_inputs').helper_lifetime.kind = LINKED_KIND; }), [linked]);
+  assert.deepEqual(mutate((r) => { step(r, 'bound_inputs').dynamic_kind = 'NiagaraFloat'; }), [dynamic]);
+  assert.deepEqual(mutate((r) => { step(r, 'bound_inputs').helper_width.value = 1; }), [dynamic]);
+  assert.deepEqual(mutate((r) => { r.readback.audit.NS_Linked = [{ emitter: 'Orb', module: 'InitializeParticle', input: 'Lifetime', problem: 'empty link: Module.None' }]; }), [audited]);
+  assert.deepEqual(mutate((r) => { r.readback.audit.NS_Broken.pop(); }), [audited]);
+  assert.deepEqual(mutate((r) => { r.readback.linked.lifetime = { struct: { refPath: FLOAT }, value: { value: 0 } }; }), [audited]);
+});
+
+test('the hidden-input checks require the whole message and the gating input', () => {
+  const hiddenInput = 'a hidden input is refused and the message names the refused input, not the gating one';
+  const condition = 'an input hidden by a visible condition is refused until its gating input is flipped';
+  assert.deepEqual(mutate((r) => { step(r, 'hidden_input').refused_error = HIDDEN_ERROR.split('.')[0]; }), [hiddenInput]);
+  assert.deepEqual(mutate((r) => { step(r, 'hidden_input').refused_error = HIDDEN_ERROR + ' Color Mode is Unset.'; }), [hiddenInput]);
+  assert.deepEqual(mutate((r) => { step(r, 'hidden_input').refused_ok = true; }), [hiddenInput]);
+  assert.deepEqual(mutate((r) => { step(r, 'hidden_input').mode_is_static_switch = false; }), [hiddenInput]);
+  assert.deepEqual(mutate((r) => { step(r, 'hidden_input').painted_ok = false; }), [hiddenInput]);
+  assert.deepEqual(mutate((r) => { step(r, 'hidden_input').duration_error = ''; }), [condition]);
+  assert.deepEqual(mutate((r) => { step(r, 'hidden_input').duration_ok = false; }), [condition]);
+});
+
+test('the renderer and emitter checks fail when a property or an argument name changes', () => {
+  const local = 'SetEmitterData switches an emitter to local space with emitter and emitterData';
+  const sort = 'SortOrderHint is a renderer property on sprite and ribbon renderers';
+  const ribbon = 'a ribbon renderer takes a material with its own usage flag';
+  const covers = 'the template emitters cover the effects the templates reference names';
+  assert.deepEqual(mutate((r) => { step(r, 'local_space').after_string = false; }), [local]);
+  assert.deepEqual(mutate((r) => { step(r, 'local_space').after_object = true; }), [local]);
+  assert.deepEqual(mutate((r) => { step(r, 'local_space').wrong_name_error = ''; }), [local]);
+  assert.deepEqual(mutate((r) => { step(r, 'templates').made.Fountain.local_space = true; }), [local]);
+  assert.deepEqual(mutate((r) => { step(r, 'renderer_hints').sort_ribbon_after = 0; }), [sort]);
+  assert.deepEqual(mutate((r) => { r.readback.linked.orb_sort = 0; }), [sort]);
+  assert.deepEqual(mutate((r) => { step(r, 'renderer_hints').flags_flagged.used_with_niagara_ribbons = false; }), [ribbon]);
+  assert.deepEqual(mutate((r) => { step(r, 'renderer_hints').flags_default.used_with_niagara_ribbons = true; }), [ribbon]);
+  assert.deepEqual(mutate((r) => { step(r, 'templates').made.LocationBasedRibbon.spawn_modules = ['SpawnRate']; }), [covers]);
+  assert.deepEqual(mutate((r) => { step(r, 'templates').made.SingleLoopingParticle.lifetime_link = null; }), [covers]);
+  assert.deepEqual(mutate((r) => { step(r, 'templates').made.StaticBeam.renderer = SPRITE; }), [covers]);
+  assert.deepEqual(mutate((r) => { step(r, 'templates').made.OmnidirectionalBurst.burst_count = 1; }), [covers]);
+  assert.deepEqual(mutate((r) => { step(r, 'templates').made.Fountain.spawn_rate = 50; }), [covers]);
+  assert.deepEqual(mutate((r) => { step(r, 'templates').made.StaticBeam.beam_end = { x: 0, y: 0, z: 200 }; }), [covers]);
+  assert.deepEqual(mutate((r) => { step(r, 'templates').made.StaticBeam.modules.push('UpdateBeam'); }), [covers]);
+  assert.deepEqual(mutate((r) => { step(r, 'templates').made.SingleLoopingParticle.description = 'A particle'; }), [covers]);
+});
+
+test('the stack-issue check needs the compile error and the usage-flag warning', () => {
+  const issues = 'the editor tick reports an emptied link and a ribbon material without its flag';
+  assert.deepEqual(mutate((r) => { r.issues.results.NS_Broken.GetStackIssues.value.numErrors = 0; }), [issues]);
+  assert.deepEqual(mutate((r) => { r.issues.results.NS_Broken.GetStackIssues.value.issues[1].longDescription = ''; }), [issues]);
+  assert.deepEqual(mutate((r) => { r.issues.results.NS_Linked.GetStackIssues.value.numWarnings = 1; }), [issues]);
+  assert.deepEqual(mutate((r) => { r.issues.results.NS_Broken.GetSystemCompileState.value.scripts[0].errorSummary = ''; }), [issues]);
+  assert.deepEqual(mutate((r) => { r.issues = undefined; }), [issues]);
 });
 
 test('the delete-and-recreate checks tell a crash from a clean exit', () => {
@@ -109,6 +218,6 @@ test('the delete-and-recreate checks tell a crash from a clean exit', () => {
 
 test('missing reports fail instead of throwing', () => {
   const checks = evaluate({});
-  assert.equal(checks.length, 14);
+  assert.equal(checks.length, 24);
   assert.ok(checks.every((c) => c.pass === false));
 });

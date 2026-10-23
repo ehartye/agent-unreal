@@ -27,7 +27,7 @@ Use Epic's wrappers and bundled dotnet. Preserve logs and receipts. Record HEAD,
 
 ## Commit and hash boundaries
 
-- [general] A dirty adaptive-unity build passed; committing regrouped files and exposed duplicate anonymous-namespace names. Distinctive helper/constants fixed the normal committed build. Recheck after working-set changes.
+- [general] A dirty build can pass where the committed one fails, because adaptive unity groups files by the git working set. Naming rules, error codes and the exit-code gate for replay and test steps: [unity builds](unreal-native-unity-builds.md).
 - [general] A concurrent art-audit writer locked a hashed input after compile. Receipt/stage correctly failed; stopping all source/art writers then rerunning succeeded. An engine-only lease does not freeze every hashed input.
 
 ## Editor assets and presentation
