@@ -1,6 +1,6 @@
 # Editor Python friction scene: unreal.Box construction and an Interchange log line
 
-Backs the `unreal.Box` note in [Scripting the Unreal editor from Python](../../../skills/unreal-features/references/unreal-editor-python.md) and the Interchange note in [Unreal import notes](../../../skills/unreal-import/references/unreal-import-notes.md). Verified on Unreal Engine 5.8.2, Windows. Nothing here needs a project or an asset of yours: the validator makes a throwaway project in the OS temp folder and writes two small glTF files itself.
+Backs the `unreal.Box` note in [Scripting the Unreal editor from Python](../../../skills/unreal-editor-scripting/references/unreal-editor-python.md) and the Interchange note in [Unreal import notes](../../../skills/unreal-import/references/unreal-import-notes.md). Verified on Unreal Engine 5.8.2, Windows. Nothing here needs a project or an asset of yours: the validator makes a throwaway project in the OS temp folder and writes two small glTF files itself.
 
 ## Run
 

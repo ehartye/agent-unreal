@@ -1,6 +1,6 @@
 # Author Niagara systems from Python with the Niagara toolsets
 
-Written for Unreal 5.8.2. [`nts_validate.mjs`](../../../examples/unreal/niagara_toolsets/README.md) runs each [tested] line on a throwaway project; [documented] lines name a file under the engine's `Engine` folder. The route table and the other Niagara routes are in [Niagara in Unreal](unreal-niagara.md); run modes for editor Python are in [Editor Python](unreal-editor-python.md).
+Written for Unreal 5.8.2. [`nts_validate.mjs`](../../../examples/unreal/niagara_toolsets/README.md) runs each [tested] line on a throwaway project; [documented] lines name a file under the engine's `Engine` folder. The route table and the other Niagara routes are in [Niagara in Unreal](unreal-niagara.md); run modes for editor Python are in [Editor Python](../../unreal-editor-scripting/references/unreal-editor-python.md).
 
 ## The plugin
 
@@ -53,7 +53,7 @@ unreal.EditorAssetLibrary.save_asset("/Game/FX/NS_Worked")
 
 - [tested] A system created and saved in the same process deletes cleanly: `delete_asset` removes the file and the registry entry, and a new system at the path saves.
 - [tested] A system saved by an earlier process does not: `delete_asset` returns `True` while the `.uasset` and the registry entry stay. `CreateNiagaraSystem` and `AddEmitter` then report success and `save_asset` ends the process with `EXCEPTION_ACCESS_VIOLATION` (exit code 3; the stack runs through Engine, CoreUObject, UnrealEd and EditorScriptingUtilities). A `scan_paths_synchronous` alone does not clear it; the same crash follows.
-- [tested] What works: after `delete_asset`, check the file. If it remains, remove it, call `AssetRegistry.scan_paths_synchronous([folder], True)` and confirm `does_asset_exist` is `False`, then create. The map-recreation order in [Editor Python](unreal-editor-python.md) is the same remove-and-rescan step.
+- [tested] What works: after `delete_asset`, check the file. If it remains, remove it, call `AssetRegistry.scan_paths_synchronous([folder], True)` and confirm `does_asset_exist` is `False`, then create. The map-recreation order in [Editor Python](../../unreal-editor-scripting/references/unreal-editor-python.md) is the same remove-and-rescan step.
 - Name a recreated system differently when the old name does not matter.
 
 ## The start-up log

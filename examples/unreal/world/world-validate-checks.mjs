@@ -1,5 +1,5 @@
 // Pure checks for world_validate.mjs: turns the JSON reports of the world scripts into pass or fail results, one per claim in
-// skills/unreal-features/references/unreal-landmass.md and unreal-water.md. No Unreal, no files: world-validate.test.mjs feeds it
+// skills/unreal-procedural/references/unreal-landmass.md and unreal-water.md. No Unreal, no files: world-validate.test.mjs feeds it
 // canned reports, and world_validate.mjs feeds it real ones.
 
 const near = (a, b, tol = 1) => typeof a === 'number' && Math.abs(a - b) <= tol;
@@ -131,7 +131,7 @@ export function evaluate(r) {
 }
 
 // ---------------------------------------------------------------------------------------------------------------------------------
-// The automation claims of skills/unreal-features/references/unreal-world-partition.md: new_level, the proxy unit, the commandlets, the
+// The automation claims of skills/unreal-procedural/references/unreal-world-partition.md: new_level, the proxy unit, the commandlets, the
 // console commands, the Water Zone setting and the Landscape size rule.
 
 /** Epic's Landscape technical guide, recommended sizes: [overall vertices, quads per section, sections per component side, components per side]. */

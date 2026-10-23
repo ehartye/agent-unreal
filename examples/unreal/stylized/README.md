@@ -1,6 +1,6 @@
 # Stylized look example scenes (Unreal 5.8)
 
-[`examples/unreal/stylized/`](stylized_validate.mjs) backs the Drawn, ink and cel looks section of [Niagara](../../../skills/unreal-features/references/unreal-niagara.md) and the Substrate Toon bullets of [Substrate](../../../skills/unreal-features/references/unreal-substrate.md). It builds one probe level with six stations (each has its own camera and a backdrop wall) from a throwaway project and measures engine screenshots; no external art.
+[`examples/unreal/stylized/`](stylized_validate.mjs) backs the Drawn, ink and cel looks section of [Niagara](../../../skills/unreal-effects/references/unreal-niagara.md) and the Substrate Toon bullets of [Substrate](../../../skills/unreal-rendering/references/unreal-substrate.md). It builds one probe level with six stations (each has its own camera and a backdrop wall) from a throwaway project and measures engine screenshots; no external art.
 
 ```text
 node examples/unreal/stylized/stylized_validate.mjs --engine "C:/Program Files/Epic Games/UE_5.8" [--keep] [--shots <folder>]

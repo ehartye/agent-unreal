@@ -106,7 +106,7 @@ Run it with `-Set mine`. The pieces:
 
 ## Optional: an authored Niagara candidate
 
-To compare a system you authored (Python through Epic's Niagara toolsets, or in the Niagara editor) rather than an engine template: save it under `/Game/FX`, add `+DirectoriesToAlwaysCook=(Path="/Game/FX")` to `Config/DefaultGame.ini`, and call the same helper with its object path, for example `/Game/FX/NS_Authored.NS_Authored`. See [Niagara in Unreal](../../../skills/unreal-features/references/unreal-niagara.md) for the authoring routes. Not run from this example.
+To compare a system you authored (Python through Epic's Niagara toolsets, or in the Niagara editor) rather than an engine template: save it under `/Game/FX`, add `+DirectoriesToAlwaysCook=(Path="/Game/FX")` to `Config/DefaultGame.ini`, and call the same helper with its object path, for example `/Game/FX/NS_Authored.NS_Authored`. See [Niagara in Unreal](../../../skills/unreal-effects/references/unreal-niagara.md) for the authoring routes. Not run from this example.
 
 ## Optional: a Niagara Fluids candidate
 
@@ -124,7 +124,7 @@ Not part of the example, because the Niagara Fluids plugin is not enabled by def
    Set.Candidates.Add(Fluid);
    ```
 
-If the plugin or the cook entry is missing, the candidate reports `available: false` and a `problem` in the receipt instead of failing the run. This addition was not run from this example; see the [Niagara facts tested on 5.8.2](../../../skills/unreal-features/references/unreal-production-stack.md) for what is known about that system.
+If the plugin or the cook entry is missing, the candidate reports `available: false` and a `problem` in the receipt instead of failing the run. This addition was not run from this example; see the [Niagara facts tested on 5.8.2](../../../skills/unreal-rendering/references/unreal-production-stack.md) for what is known about that system.
 
 ## Traps
 

@@ -1,5 +1,5 @@
 // Pure checks for epf_validate.mjs: turn the JSON reports and log text of epf_box.py and epf_import.py into pass or fail results, one per
-// claim in skills/unreal-features/references/unreal-editor-python.md (Box) and skills/unreal-import/references/unreal-import-notes.md
+// claim in skills/unreal-editor-scripting/references/unreal-editor-python.md (Box) and skills/unreal-import/references/unreal-import-notes.md
 // (the Interchange AlphaMode log line). No Unreal, no files: epf-validate.test.mjs feeds it canned reports, and epf_validate.mjs real ones.
 
 // The line itself starts with a timestamp; the log's closing error summary repeats it behind "LogInit: Display:", which is not counted.

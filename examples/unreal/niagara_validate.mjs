@@ -1,5 +1,5 @@
 // node niagara_validate.mjs --engine "C:/Program Files/Epic Games/UE_5.8" [--keep]
-// Validates skills/unreal-features/references/unreal-niagara.md against a real Unreal 5.8 install.
+// Validates skills/unreal-effects/references/unreal-niagara.md against a real Unreal 5.8 install.
 // It makes a throwaway project in the OS temp folder (PythonScriptPlugin, EditorScriptingUtilities, Niagara, NiagaraToolsets),
 // runs the Niagara scripts in this folder, reads their JSON reports and checks each claim (niagara-validate-checks.mjs).
 // Exit code 0 when every check passes. Takes several minutes; needs a GPU-less machine for the commandlets and an offscreen

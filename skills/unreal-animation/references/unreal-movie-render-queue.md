@@ -46,7 +46,7 @@ Command line (Epic's page for 5.8 documents MRQ flags and no MRG flags):
 - A saved queue: omit `-LevelSequence` and point `-MoviePipelineConfig` at the Movie Pipeline Queue asset.
 - Custom Python executor: `-MoviePipelineLocalExecutorClass=/Script/MovieRenderPipelineCore.MoviePipelinePythonHostExecutor -ExecutorPythonClass=<python class path>`.
 
-The 5.8 install ships Python examples in `Engine/Plugins/MovieScene/MovieRenderPipeline/Content/Python/`. Process handling for editor runs is in [Editor Python](unreal-editor-python.md).
+The 5.8 install ships Python examples in `Engine/Plugins/MovieScene/MovieRenderPipeline/Content/Python/`. Process handling for editor runs is in [Editor Python](../../unreal-editor-scripting/references/unreal-editor-python.md).
 
 ## Workflow
 
@@ -61,7 +61,7 @@ The 5.8 install ships Python examples in `Engine/Plugins/MovieScene/MovieRenderP
 9. Keep executor and callback objects in module-level Python variables for the render's duration (5.8 install example).
 10. Confirm outputs in `on_job_finished`: read `in_output_data.graph_data`, each shot's `render_layer_data` and its `file_paths` (Epic).
 
-Related: [TSR and anti-aliasing](unreal-temporal-super-resolution.md), [Lumen](unreal-lumen.md).
+Related: [TSR and anti-aliasing](../../unreal-rendering/references/unreal-temporal-super-resolution.md), [Lumen](../../unreal-rendering/references/unreal-lumen.md).
 
 ## Sources
 

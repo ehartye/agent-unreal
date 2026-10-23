@@ -1,5 +1,5 @@
 // node landscape_bridge.mjs --engine "C:/Program Files/Epic Games/UE_5.8" [--keep] [--compiler 14.44.35228] [--sdk 10.0.26100.0]
-// Validates skills/unreal-features/references/unreal-python-cpp-bridge.md against a real Unreal 5.8 install. It writes a throwaway
+// Validates skills/unreal-editor-scripting/references/unreal-python-cpp-bridge.md against a real Unreal 5.8 install. It writes a throwaway
 // code project in the OS temp folder with one editor-only module (module/LandscapeBridge), builds the editor target with Unreal Build
 // Tool, then starts the editor three times (bridge_probe.py): a non-partitioned map, a World Partition map with grid size 0 and a World
 // Partition map with grid size 2. Each run creates a Landscape from a height array and reads back components, quad size and heights.

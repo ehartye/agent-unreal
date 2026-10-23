@@ -25,7 +25,7 @@ Target: Unreal Engine 5.8, Windows. Sequencer is Epic's multi-track, non-linear 
 ## Use something else when
 
 - Use [Movie Render Queue](unreal-movie-render-queue.md) to render a sequence to images or video. Epic's Render Movie page is marked Deprecated.
-- Use [Niagara](unreal-niagara.md) to author the particle effect; Sequencer triggers and times it.
+- Use [Niagara](../../unreal-effects/references/unreal-niagara.md) to author the particle effect; Sequencer triggers and times it.
 - Use Blueprint or C++ for movement that gameplay decides at runtime. Python does not run at runtime, so it cannot drive a shipped game.
 
 ## How an agent drives it

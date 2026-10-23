@@ -1,5 +1,5 @@
 // node ep_validate.mjs --engine "C:/Program Files/Epic Games/UE_5.8" [--keep] [--shots <folder>]
-// Validates the editor Python guidance in skills/unreal-features/references/unreal-editor-python.md and unreal-geometry-scripting.md
+// Validates the editor Python guidance in skills/unreal-editor-scripting/references/unreal-editor-python.md and unreal-geometry-scripting.md
 // against a real Unreal 5.8 install. It makes a throwaway project in the OS temp folder (Python, Editor Scripting Utilities, Geometry
 // Script), runs ep_probe.py headless (map re-creation, property names, rotation, plane cuts, instancing flag), ep_ground_map.py headless
 // (copies the Open World template), ep_stages.py in a rendering editor (stage runner, materials, instanced boulders, picture),

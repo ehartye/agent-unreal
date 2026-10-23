@@ -1,5 +1,5 @@
 // Pure checks for pcg_validate.mjs: turns the JSON reports, log lines and file sizes of the PCG game-process scripts into pass or fail
-// results, one per claim in skills/unreal-features/references/unreal-pcg-game-process.md. No Unreal, no files: pcg-validate.test.mjs feeds it
+// results, one per claim in skills/unreal-procedural/references/unreal-pcg-game-process.md. No Unreal, no files: pcg-validate.test.mjs feeds it
 // canned reports and pcg_validate.mjs feeds it real ones.
 
 const has = (text, needle) => String(text || '').includes(needle);

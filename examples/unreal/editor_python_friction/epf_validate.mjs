@@ -1,6 +1,6 @@
 // node epf_validate.mjs --engine "C:/Program Files/Epic Games/UE_5.8" [--keep]
 // Validates two editor Python notes against a real Unreal 5.8 install: how unreal.Box is constructed
-// (skills/unreal-features/references/unreal-editor-python.md) and that the Interchange glTF log line "Invalid input AlphaMode ...
+// (skills/unreal-editor-scripting/references/unreal-editor-python.md) and that the Interchange glTF log line "Invalid input AlphaMode ...
 // MF_Default_Body" is logged while the meshes, materials and clips still import (skills/unreal-import/references/unreal-import-notes.md).
 // It makes a throwaway project in the OS temp folder, writes two small glTF files with tiny_glb.mjs (no outside assets), runs epf_box.py
 // and four Interchange imports headless (epf_import.py: static or skinned file, default stack or an owned pipeline), counts the log line

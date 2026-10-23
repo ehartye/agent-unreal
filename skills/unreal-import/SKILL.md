@@ -1,6 +1,6 @@
 ---
 name: unreal-import
-description: Import agent-sprites atlases, agent-meshes GLB models and agent-beeps WAV exports into an Unreal Engine 5.7 or 5.8 project from a script, with a guarded importer that states a per-mesh policy and reads every setting back from the saved asset. Not for UEFN (use uefn), choosing an Unreal system (use unreal-features) or a native C++ game's build and packaging (use unreal-native); import into Unity, Godot or the web is engine-asset-import in agent-engine.
+description: Import agent-sprites atlases, agent-meshes GLB models and agent-beeps WAV exports into an Unreal Engine 5.7 or 5.8 project from a script, with a guarded importer that states a per-mesh policy and reads every setting back from the saved asset. Not for UEFN (use uefn), choosing an Unreal system (use unreal-effects, unreal-animation, unreal-gameplay, unreal-procedural, unreal-rendering or unreal-editor-scripting) or a native C++ game's build and packaging (use unreal-native); import into Unity, Godot or the web is engine-asset-import in agent-engine.
 when_to_use: Use when bringing a sprite atlas, GLB, WAV or song export into an Unreal project by script or through Epic's MCP server; when an imported model is missing bones, morphs, meshes or animation clips, or its clips have different names; when an Unreal import splits one model into many meshes, leaves nothing on disk or needs a per-mesh policy (Nanite, vertex colour, UV, material, rename, collision); when reusing a saved import, or adopting the importer in a project that is regenerated each run; or when asked whether an asset "works in" Unreal.
 ---
 
@@ -38,7 +38,7 @@ and reuse references document their options.
 - Whether a mesh is authored in Blender or generated in Unreal, and the `mesh verify-unreal` scratch-project check:
   `mesh-tool-selection` and `mesh-build` in agent-meshes.
 - Import into Unity, Godot or the web, and sprite and audio import in general: `engine-asset-import` in agent-engine.
-- Nanite, Geometry Scripting and the other engine systems an imported asset meets: `unreal-features`.
+- Nanite and the other engine systems an imported asset meets: `unreal-rendering`, `unreal-procedural` (Geometry Scripting) and the other domain skills.
 - UEFN's own routes: `uefn`. Native C++ games: `unreal-native`.
 
 ## After importing

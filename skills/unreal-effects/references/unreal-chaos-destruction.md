@@ -27,9 +27,9 @@ Enable in Edit > Plugins (Physics and Geometry categories), or add `{ "Name": "G
 ## Use something else when
 
 - Use [unreal-chaos-niagara.md](unreal-chaos-niagara.md) when you need dust, debris or sparks driven by break and collision events (the `ChaosNiagara` descriptor: "Import destruction data from Chaos into Niagara to generate secondary destruction effects").
-- Use [unreal-chaos-cloth-and-flesh.md](unreal-chaos-cloth-and-flesh.md) when the object deforms (cloth, soft bodies) instead of breaking.
-- Use [unreal-chaos-vehicles.md](unreal-chaos-vehicles.md) when the object is a driven vehicle; the modular vehicle plugin builds vehicles from Geometry Collections.
-- Use [unreal-mover.md](unreal-mover.md) when you need character movement.
+- Use [unreal-chaos-cloth-and-flesh.md](../../unreal-animation/references/unreal-chaos-cloth-and-flesh.md) when the object deforms (cloth, soft bodies) instead of breaking.
+- Use [unreal-chaos-vehicles.md](../../unreal-gameplay/references/unreal-chaos-vehicles.md) when the object is a driven vehicle; the modular vehicle plugin builds vehicles from Geometry Collections.
+- Use [unreal-mover.md](../../unreal-gameplay/references/unreal-mover.md) when you need character movement.
 
 ## How an agent drives it
 

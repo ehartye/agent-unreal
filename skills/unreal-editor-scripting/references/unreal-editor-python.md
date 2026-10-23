@@ -1,6 +1,6 @@
 # Scripting the Unreal editor from Python: run modes and practices
 
-Written for Unreal 5.8 on Windows. Each statement is backed by a source listed at the end or by a script in [`examples/unreal`](../../../examples/unreal/README.md), mainly the [Niagara showcase](../../../examples/unreal/niagara-showcase/README.md).
+Written for Unreal 5.8 on Windows. Each statement is backed by a source listed at the end or by a script in [`examples/unreal`](../../../examples/unreal/README.md).
 
 ## Pick the run mode
 
@@ -35,14 +35,14 @@ Written for Unreal 5.8 on Windows. Each statement is backed by a source listed a
 Helpers and [`ep_validate.mjs`](../../../examples/unreal/editor_python/README.md), which runs each [tested] line on 5.8.2.
 
 - [tested] Use `LevelEditorSubsystem` (`new_level`, `load_level`, `save_current_level`) and `UnrealEditorSubsystem.get_editor_world()`; `EditorLevelLibrary` logs a deprecation warning. `new_level` returns `False` and logs why.
-- [tested] To re-create a map that is on disk call `recreate_map(path)`. `delete_asset` on the open level returns `False` and keeps the `.umap`; `new_level` then logs `NewLevel. Failed to validate the destination. An asset already exists at this location.` What works: `load_level("/Engine/Maps/Entry")`, `delete_asset`, delete the file (it stays), `AssetRegistry.scan_paths_synchronous([folder], True)`, `new_level`. Never save while that engine map is open: `save_current_level` rewrites the engine's file. A Niagara system left on disk by `delete_asset` needs the same remove-and-rescan ([Niagara toolsets](unreal-niagara-toolsets.md#delete-and-recreate-a-system)).
+- [tested] To re-create a map that is on disk call `recreate_map(path)`. `delete_asset` on the open level returns `False` and keeps the `.umap`; `new_level` then logs `NewLevel. Failed to validate the destination. An asset already exists at this location.` What works: `load_level("/Engine/Maps/Entry")`, `delete_asset`, delete the file (it stays), `AssetRegistry.scan_paths_synchronous([folder], True)`, `new_level`. Never save while that engine map is open: `save_current_level` rewrites the engine's file. A Niagara system left on disk by `delete_asset` needs the same remove-and-rescan ([Niagara toolsets](../../unreal-effects/references/unreal-niagara-toolsets.md#delete-and-recreate-a-system)).
 - [tested] A wrong property name raises `<Class>: Failed to find property 'x' for attribute 'x' on '<Class>'`. `enable_volumetric_fog`, `fog_inscattering_luminance` and `fog_density` are on `ExponentialHeightFogComponent`, not the fog actor or a `PostProcessVolume`; post-process values are in `volume.settings` (`bloom_intensity` plus `override_bloom_intensity`; set the struct back). `probe(obj, "fog")` filters `dir()`, which lists script-exposed attributes only: read an `EditAnywhere` name such as `MaterialExpressionCustom.code` from its header. `soft_set(obj, name, value, warnings)` turns a wrong name into a warning line.
 - [tested] `unreal.Vector` has no `rotation()`. `MathLibrary.make_rot_from_x(target - start)` (`look_at_rotation`) equals `Vector.rotator()`; the camera it aims has forward dot direction 1.
 - [tested] `run_stages(stages)` drives a generator from the post-tick callback: `yield` waits a tick, `yield 5` five, `yield from wait_until(fn)` a condition. A screenshot file appears 2 ticks after `take_high_res_screenshot`, the Play-In-Editor world 1 tick after the request: same-tick reads see neither. Slate ticks again inside `create_asset` and `recompile_material`, so the runner skips re-entrant ticks.
 - [tested] `recompile_material` returns with the compile done: `get_statistics(mat).num_pixel_shader_instructions` is above 0 on the same tick; errors are only in the log.
 - [tested] Python cannot add a component to a level actor. `make_instancer(path)` builds a Blueprint actor with an `InstancedStaticMeshComponent`; then `set_static_mesh`, `set_material`, `add_instance`.
 - [tested] `SystemLibrary.line_trace_single` returns a `HitResult` (`to_dict()`) or `None`. On the Open World template Landscape a trace hit at all 81 grid points once the proxies had loaded. `place_above_ground(world, x, y, 200)` stayed 200 cm up at all; a fixed Z was under the ground at 12.
-- Custom HLSL nodes, instancing flag: [unreal-production-stack.md](unreal-production-stack.md). Plane cuts: [unreal-geometry-scripting.md](unreal-geometry-scripting.md).
+- Custom HLSL nodes, instancing flag: [unreal-production-stack.md](../../unreal-rendering/references/unreal-production-stack.md). Plane cuts: [unreal-geometry-scripting.md](../../unreal-procedural/references/unreal-geometry-scripting.md).
 - Not verified: the runner under `-game`; a cooked game without the instancing flag.
 
 ## Run the editor from an agent on Windows

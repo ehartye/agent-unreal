@@ -1,5 +1,5 @@
 // node anim_bridge.mjs --engine "C:/Program Files/Epic Games/UE_5.8" [--keep] [--compiler 14.44.35228] [--sdk 10.0.26100.0]
-// Validates skills/unreal-features/references/unreal-animation-blueprints.md (scripting Animation Blueprints from Python, and the C++
+// Validates skills/unreal-animation/references/unreal-animation-blueprints.md (scripting Animation Blueprints from Python, and the C++
 // bridge for what Python cannot do) against a real Unreal 5.8 install. It writes a throwaway code project in the OS temp folder with two
 // modules: module/AnimBridge (editor only: adds a Slot node, states and transitions, and resamples a Blend Space) and module/SlotClip
 // (runtime: an AnimInstance parent class that plays a clip through a slot). It builds the Editor target with Unreal Build Tool and starts

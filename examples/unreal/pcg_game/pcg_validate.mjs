@@ -1,5 +1,5 @@
 // node pcg_validate.mjs --engine "C:/Program Files/Epic Games/UE_5.8" [--keep] [--shot <png path>]
-// Validates the guidance in skills/unreal-features/references/unreal-pcg-game-process.md against a real Unreal 5.8 install. It makes a
+// Validates the guidance in skills/unreal-procedural/references/unreal-pcg-game-process.md against a real Unreal 5.8 install. It makes a
 // throwaway project in the OS temp folder (Python, PCG, Water), copies a small Landscape map into it (pcg_maps.py), builds five maps that
 // differ in the PCG World Actor and its Landscape cache plus two materials (pcg_build.py), runs the experiment harness (pcg_experiments.py),
 // the asynchronous-generation contrast (pcg_async.py, three runs), the editor material-flag run (pcg_flag_editor.py, rendering offscreen),

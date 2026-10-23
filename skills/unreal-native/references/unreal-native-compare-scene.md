@@ -18,7 +18,7 @@ A reusable C++ game mode that sets several ways of doing one thing in a row on a
 
 - [tested] Copy `AECompare.h` and `AECompare.cpp` into the game module. Add `Json` and `RHI` to the module's dependency lists (`Niagara` too if a set spawns Niagara systems, as the example does). The `?game=` class path names that module: `/Script/<Module>.AECompareGameMode`.
 - [tested] Enable the plugins your candidates need in the `.uproject` (Niagara is on by default; the Niagara Fluids plugin is not). Engine-plugin content a cooked game loads by path must be cooked: add `+DirectoriesToAlwaysCook=(Path="/Niagara/DefaultAssets/Templates/Systems")` to `Config/DefaultGame.ini`.
-- [general] To compare an authored Niagara system instead of an engine template, create it in the editor project first (the Python routes are in [Niagara in Unreal](../../unreal-features/references/unreal-niagara.md)), save it under `/Game/FX`, add `+DirectoriesToAlwaysCook=(Path="/Game/FX")` to `Config/DefaultGame.ini` and pass its object path to the Niagara candidate helper. Stateless and stateful systems cost differently, which a row here measures; per-emitter particle counts come from the editor-only simulation cache, not from this packaged harness. This was not run from the example.
+- [general] To compare an authored Niagara system instead of an engine template, create it in the editor project first (the Python routes are in [Niagara in Unreal](../../unreal-effects/references/unreal-niagara.md)), save it under `/Game/FX`, add `+DirectoriesToAlwaysCook=(Path="/Game/FX")` to `Config/DefaultGame.ini` and pass its object path to the Niagara candidate helper. Stateless and stateful systems cost differently, which a row here measures; per-emitter particle counts come from the editor-only simulation cache, not from this packaged harness. This was not run from the example.
 - [tested] Register a set from its own source file, so adding a comparison touches no other file:
 
 ```cpp
@@ -61,5 +61,5 @@ static AECompare::FRegistrar MineRegistrar(TEXT("mine"),&MakeMine);
 
 ## Related
 
-- [Unreal production stack, Niagara facts tested on 5.8.2](../../unreal-features/references/unreal-production-stack.md)
+- [Unreal production stack, Niagara facts tested on 5.8.2](../../unreal-rendering/references/unreal-production-stack.md)
 - [Native game loop](unreal-native-game.md), [native profiling](unreal-native-profiling.md)

@@ -82,7 +82,7 @@ Set the Blend Mode on the root node: Opaque, Masked, Translucent - Grey Transmit
 5. Read the Substrate stats panel for simplification reasons when a material exceeds closure or bytes-per-pixel limits.
 6. For stylized work, create a Toon Profile, assign it to a Substrate Toon BSDF, and keep the project on Blendable GBuffer.
 
-Related: [Lumen](unreal-lumen.md), [Niagara](unreal-niagara.md).
+Related: [Lumen](unreal-lumen.md), [Niagara](../../unreal-effects/references/unreal-niagara.md).
 
 ## Sources
 

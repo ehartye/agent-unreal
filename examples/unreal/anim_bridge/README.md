@@ -1,6 +1,6 @@
 # Animation Blueprints from Python, and the C++ bridge for the rest
 
-Backs [Animation Blueprints](../../../skills/unreal-features/references/unreal-animation-blueprints.md) and the second example in [Bridging editor Python to C++](../../../skills/unreal-features/references/unreal-python-cpp-bridge.md). Unreal Engine 5.8.2, Windows, Visual Studio 2022 Build Tools.
+Backs [Animation Blueprints](../../../skills/unreal-animation/references/unreal-animation-blueprints.md) and the second example in [Bridging editor Python to C++](../../../skills/unreal-editor-scripting/references/unreal-python-cpp-bridge.md). Unreal Engine 5.8.2, Windows, Visual Studio 2022 Build Tools.
 
 The question: how much of an Animation Blueprint can an agent script, and what needs a small editor module? The run answers it with an engine skeleton (`/Engine/EngineMeshes/SkeletalCube`, bones `Bone01` and `Bone02`), two generated animation clips and a Play-In-Editor session that reads a bone back.
 

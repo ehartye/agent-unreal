@@ -18,7 +18,7 @@ Target: Unreal Engine 5.8, Windows. Motion Matching selects animation from a Pos
 
 - Locomotion or actions should respond to the current trajectory, and fidelity should grow by adding animation to the Database (Epic).
 - Which Databases are searched depends on gameplay context: a Chooser picks them at runtime (Epic's Game Animation Sample does this per movement state).
-- The trajectory comes from a movement component; [Mover](unreal-mover.md) offers `GetPredictedTrajectory` and ChaosMover adds trajectory prediction for motion-matching workflows (5.8 release notes).
+- The trajectory comes from a movement component; [Mover](../../unreal-gameplay/references/unreal-mover.md) offers `GetPredictedTrajectory` and ChaosMover adds trajectory prediction for motion-matching workflows (5.8 release notes).
 
 ## Use something else when
 

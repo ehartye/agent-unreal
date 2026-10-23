@@ -24,7 +24,7 @@ Target: Unreal Engine 5.8 on Windows. ChaosNiagara lets Niagara read Chaos destr
 
 - Use [unreal-chaos-destruction.md](unreal-chaos-destruction.md) to fracture, damage or configure the destructible itself.
 - Use [unreal-niagara.md](unreal-niagara.md) or [unreal-niagara-templates.md](unreal-niagara-templates.md) when the effect is not driven by Chaos data.
-- Use [unreal-chaos-vehicles.md](unreal-chaos-vehicles.md) for wheel and chassis effects on vehicles.
+- Use [unreal-chaos-vehicles.md](../../unreal-gameplay/references/unreal-chaos-vehicles.md) for wheel and chassis effects on vehicles.
 - Use [unreal-cascade.md](unreal-cascade.md) only for legacy particle assets.
 - Use Blueprint or Python event delegates (below) when the response is gameplay logic rather than particles.
 
