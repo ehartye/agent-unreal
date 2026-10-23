@@ -63,6 +63,7 @@ Target: Unreal Engine 5.8, Windows. Geometry Script is a function library for cr
 7. When creating a new Static Mesh asset, set `enable_nanite`, `enable_recompute_normals` and `enable_recompute_tangents` explicitly; the option struct defaults all three to false (collision defaults to enabled).
 8. For a runtime mesh that moves or collides, set the Dynamic Mesh Component's collision explicitly: `CollisionType` defaults to Use Simple As Complex, `bEnableComplexCollision` defaults to false, and `bDeferCollisionUpdates` skips a rebuild on every edit; call `UpdateCollision` after a batch of edits.
 9. Treat low-level list and vertex-building functions as the slow path in Blueprint and Python on large meshes; prefer the high-level operations.
+10. [tested] Count triangles before creating an asset from a cut mesh. `apply_mesh_plane_cut` leaves an empty mesh when the plane misses the mesh on the kept side (`flip_cut_side` False keeps the part below a horizontal frame, True the part above); `create_new_static_mesh_asset_from_mesh` then returns `(None, FAILURE)`. `get_num_triangle_i_ds` still reports the old ID count, so count `GeometryScript_List.get_index_list_length(get_all_triangle_i_ds(mesh)[1])` and create the asset only above 0. A Boolean subtract with a box (`append_box`, origin `CENTER`) or a low-step sphere displaced by `apply_perlin_noise_to_mesh2` (`base_layer`: `magnitude`, `frequency`, `random_seed`) makes the same prop ([`ep_validate.mjs`](../../../examples/unreal/editor_python/README.md), 5.8.2).
 
 ## Sources
 
