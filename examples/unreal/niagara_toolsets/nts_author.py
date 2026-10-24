@@ -13,7 +13,12 @@ The flow is the worked example in unreal-niagara-toolsets.md:
   6 add all fourteen template emitters to one system and record what each is made of (which effect it covers)
   7 bound inputs: a linked input and a dynamic input are replaced as a whole (set_input below), and edited in place for contrast
   8 a hidden input is refused with the toolset's own message; the gating input is found and flipped
-  9 local space (SetEmitterData with emitter and emitterData), sort order hint and the ribbon material flag
+  9 local space (SetEmitterData with emitter and emitterData)
+  10 sort order hint and the ribbon material flag, then save the systems for the read-back
+  11 AddRenderer on four emitters that already hold a sprite renderer: location rendererIndex omitted, -1, 0 and 5 (past the end).
+     Records the returned ref and the renderer order (GetEmitterTopology renderers[]) before and after, then sets and reads back
+     the Light renderer's MegaLights switches from the returned ref. The report is written once before this step, so an editor
+     crash here keeps steps 1-10; an engine error here is recorded as add_renderer.error and leaves the other steps alone.
 """
 import json
 import os
@@ -285,8 +290,78 @@ try:
 except Exception:
     report["error"] = traceback.format_exc()[-900:]
 
-path = os.environ.get("NTS_REPORT") or os.path.join(unreal.SystemLibrary.get_project_directory(), "Saved", "nts-author.json")
-os.makedirs(os.path.dirname(path), exist_ok=True)
-with open(path, "w") as fh:
-    json.dump(report, fh, indent=2, default=str)
-unreal.log("[nts_author] wrote " + path)
+
+
+def write_report():
+    path = os.environ.get("NTS_REPORT") or os.path.join(unreal.SystemLibrary.get_project_directory(), "Saved", "nts-author.json")
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, "w") as fh:
+        json.dump(report, fh, indent=2, default=str)
+    unreal.log("[nts_author] wrote " + path)
+
+
+write_report()   # steps 1-10 are on disk before step 11 can take the editor down
+
+LIGHT = "/Script/Niagara.NiagaraLightRendererProperties"
+OMITTED = "omitted"
+VARIANTS = (("LightOmitted", OMITTED), ("LightMinusOne", -1), ("LightZero", 0), ("LightPastEnd", 5))   # the location's rendererIndex
+
+
+def short(class_ref):
+    return class_ref["refPath"].rsplit(".", 1)[-1]
+
+
+def schema_entry(tool):
+    """The toolset schema's entry for one tool, so argument names are read, not guessed."""
+    tools = json.loads(unreal.ToolsetRegistry.get_toolset_json_schema(unreal.NiagaraToolset_System))["tools"]
+    entries = tools.items() if isinstance(tools, dict) else [(t.get("name", ""), t) for t in tools]
+    return next((e for n, e in entries if n.rsplit(".", 1)[-1] == tool), None)
+
+
+try:
+    # 11 AddRenderer: an emitter that already holds a sprite renderer gets a Light renderer; the location's rendererIndex is
+    # left out (the key is absent, not null), -1, 0, and 5 on an emitter with one renderer. The order comes from GetEmitterTopology
+    # renderers[] (class and index of each renderer); the engine source builds rendererClasses there as a de-duplicated list (not run), so it is not read for the order.
+    unreal.EditorAssetLibrary.make_directory(FX)
+    unreal.AssetToolsHelpers.get_asset_tools().create_asset("NS_Renderers", FX, unreal.NiagaraSystem, unreal.NiagaraSystemFactoryNew())
+    rsys = ref(f"{FX}/NS_Renderers")
+
+    def renderers(emitter):
+        out = call("GetEmitterTopology", {"emitterRef": {"system": rsys, "emitterName": emitter}})
+        return [(r["rendererIndex"], short(r["rendererClass"])) for r in out["value"]["renderers"]]
+
+    entry = schema_entry("AddRenderer")
+    variants = {}
+    for emitter, index in VARIANTS:
+        call("AddEmitter", {"system": rsys, "templateEmitter": ref(TEMPLATES + "SimpleSpriteBurst"), "emitterName": emitter})
+        location = {"system": rsys, "emitterName": emitter}
+        if index != OMITTED:
+            location["rendererIndex"] = index
+        before = renderers(emitter)
+        added_renderer = call("AddRenderer", {"newRendererLocation": location, "rendererClass": {"refPath": LIGHT}})
+        after = renderers(emitter)
+        returned = added_renderer["value"] or {}
+        returned_index = returned.get("rendererIndex")
+        in_range = isinstance(returned_index, int) and 0 <= returned_index < len(after)
+        variants[emitter] = {
+            "sent_index": index, "sent_keys": sorted(location.keys()), "error": added_renderer["error"],
+            "returned_index": returned_index, "returned_class": short(returned["rendererClass"]) if returned.get("rendererClass") else None,
+            "before": [c for _, c in before], "after": [c for _, c in after], "after_indexes": [i for i, _ in after],
+            "light_index": next((i for i, c in after if c == "NiagaraLightRendererProperties"), None),
+            "ref_in_range": in_range, "ref_is_light": in_range and after[returned_index][1] == "NiagaraLightRendererProperties",
+            "read_error": call("GetRendererData", {"rendererRef": {"system": rsys, "emitterName": emitter, "rendererIndex": returned_index}})["error"] if returned_index is not None else None,
+        }
+    # the MegaLights switches, set and read back through the ref that LightOmitted returned
+    mega_ref = {"system": rsys, "emitterName": "LightOmitted", "rendererIndex": variants["LightOmitted"]["returned_index"]}
+    mega_read = lambda: json.loads(call("GetRendererData", {"rendererRef": mega_ref})["value"]["propertyValues"])
+    mega_before = {k: mega_read().get(k) for k in ("bAllowMegaLights", "bMegaLightsCastShadows")}
+    mega_set = call("SetRendererData", {"renderer": mega_ref, "rendererData": {"propertyValues": json.dumps({"bAllowMegaLights": True, "bMegaLightsCastShadows": True})}})
+    mega_after = {k: mega_read().get(k) for k in ("bAllowMegaLights", "bMegaLightsCastShadows")}
+    arguments = ((entry or {}).get("inputSchema") or {}).get("properties") or {}
+    step("add_renderer", arguments=sorted(arguments), location_required=(arguments.get("newRendererLocation") or {}).get("required"),
+         schema_description=(entry or {}).get("description"), variants=variants,
+         megalights_before=mega_before, megalights_error=mega_set["error"], megalights_after=mega_after)   # not saved: NS_Renderers is a scratch asset
+except Exception:
+    step("add_renderer", error=traceback.format_exc()[-900:])
+
+write_report()

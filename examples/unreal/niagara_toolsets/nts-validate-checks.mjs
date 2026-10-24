@@ -119,6 +119,22 @@ export function evaluate(r) {
       && hints.ribbon_material && hints.ribbon_material.refPath === '/Game/FX/M_Beam.M_Beam' && hints.flagless_error === ''
       && hints.flagless_material && hints.flagless_material.refPath === '/Game/FX/M_NoFlag.M_NoFlag' && linked.beam_material && linked.beam_material.refPath === '/Game/FX/M_Beam.M_Beam',
     `flagged ${JSON.stringify(flags)}, new material ${JSON.stringify(bare)}`);
+  // AddRenderer on four emitters that each start with one sprite renderer: the location's rendererIndex omitted, -1, 0 and 5 (past the end)
+  const adding = step(author, 'add_renderer'), variantOf = (name) => (adding.variants || {})[name] || {}, past = variantOf('LightPastEnd');
+  const SPRITE_CLASS = 'NiagaraSpriteRendererProperties', LIGHT_CLASS = 'NiagaraLightRendererProperties', APPENDED = [SPRITE_CLASS, LIGHT_CLASS], FRONT = [LIGHT_CLASS, SPRITE_CLASS];
+  const sameList = (a, b) => JSON.stringify(a) === JSON.stringify(b), classOf = (name) => String(name).replace(/Niagara|RendererProperties/g, '');
+  const landed = (x, sent, index, order) => x.sent_index === sent && (x.sent_keys || []).includes('rendererIndex') === (sent !== 'omitted') && x.error === '' && sameList(x.before, [SPRITE_CLASS]) && sameList(x.after, order)
+    && x.returned_index === index && x.returned_class === LIGHT_CLASS && x.light_index === index && x.ref_in_range === true && x.ref_is_light === true && x.read_error === '';
+  const switches = (x, on) => Boolean(x) && x.bAllowMegaLights === on && x.bMegaLightsCastShadows === on;
+  const shape = (name, sent) => `${sent}: ref ${variantOf(name).returned_index}, ${(variantOf(name).after || []).map(classOf).join(' then ')}`;
+  check('AddRenderer appends unless the location sets rendererIndex, and the returned ref is only good in range',
+    'The schema lists rendererIndex as required yet a location without it is accepted. A Light renderer added to an emitter with one sprite renderer is appended (ref 1, Sprite then Light) when rendererIndex is omitted or -1 and moved to the front (ref 0, Light then Sprite) when it is 0; with 5 it is appended and the ref still says 5, which GetRendererData rejects as out of bounds; the MegaLights switches set through the returned ref read back',
+    Boolean(adding.variants) && !adding.error && sameList(adding.arguments, ['newRendererLocation', 'rendererClass']) && (adding.location_required || []).includes('rendererIndex')
+      && landed(variantOf('LightOmitted'), 'omitted', 1, APPENDED) && landed(variantOf('LightMinusOne'), -1, 1, APPENDED) && landed(variantOf('LightZero'), 0, 0, FRONT)
+      && past.sent_index === 5 && past.error === '' && sameList(past.before, [SPRITE_CLASS]) && sameList(past.after, APPENDED) && past.returned_index === 5 && past.returned_class === LIGHT_CLASS
+      && past.light_index === 1 && past.ref_in_range === false && past.ref_is_light === false && /^Renderer index 5 is out of bounds for emitter 'LightPastEnd' \(has 2 renderers\)\./.test(past.read_error || '')
+      && adding.megalights_error === '' && switches(adding.megalights_before, false) && switches(adding.megalights_after, true),
+    `${[shape('LightOmitted', 'omitted'), shape('LightMinusOne', '-1'), shape('LightZero', '0'), `${shape('LightPastEnd', '5')} (${past.read_error ? 'ref refused by GetRendererData' : 'ref accepted'})`].join('; ')}; MegaLights ${JSON.stringify(adding.megalights_before)} -> ${JSON.stringify(adding.megalights_after)}${adding.error ? `; step error: ${adding.error}` : ''}`);
   const results = (r.issues || {}).results || {}, issuesOf = (name) => (((results[name] || {}).GetStackIssues || {}).value || {}), compileOf = (name) => (((results[name] || {}).GetSystemCompileState || {}).value || {});
   const found = (name, severity) => (issuesOf(name).issues || []).filter((i) => i.severity === severity);
   const broken = found('NS_Broken', 'Error')[0] || {}, flagWarning = found('NS_Broken', 'Warning')[0] || {};

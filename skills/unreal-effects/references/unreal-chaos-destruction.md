@@ -38,6 +38,7 @@ Enable in Edit > Plugins (Physics and Geometry categories), or add `{ "Name": "G
 | Create a Geometry Collection from meshes | Editor UI | Fracture mode (Shift-6) > Generate > New; the source actors are replaced by the collection |
 | Fracture and cluster | Editor UI | Fracture mode tools: Uniform, Cluster, Radial, Planar, Slice, Brick (experimental), Mesh, Custom; Reset undoes a fracture |
 | Fracture in a graph | Editor UI | Dataflow asset: Static Mesh To Collection, Voronoi Fracture, Auto Cluster, Geometry Collection Terminal. Python has `unreal.DataflowAssetFactory`; the collection links the graph through `unreal.GeometryCollection` `dataflow_asset` and `dataflow_terminal` |
+| Build a collection in code (a code-built collection never breaks) | C++ | [Chaos destruction from C++](unreal-chaos-destruction-native.md): AppendStaticMesh, VoronoiFracture, GetValidConvexHullData |
 | Edit collection settings | Python | `unreal.GeometryCollection`: `damage_model`, `collision_type`, `mass`, `enable_nanite` |
 | Place a collection in a level | Python | `unreal.GeometryCollectionActor` with `unreal.GeometryCollectionComponent` |
 | Break on demand | Blueprint / C++ | `GeometryCollectionComponent`: Apply External Strain (item index, location, radius, propagation depth, propagation factor, strain), Apply Linear Velocity, Set Anchored By Index, Crumble Cluster |

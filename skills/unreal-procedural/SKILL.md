@@ -1,7 +1,7 @@
 ---
 name: unreal-procedural
-description: Choose and drive Unreal Engine 5.8 procedural world, mesh and audio systems: World Partition and large open worlds, Landscape and Landmass, Water, PCG in the editor and in a running game, Geometry Scripting, the Procedural Mesh Component, and MetaSounds. Not for lighting or rendering (use unreal-rendering), scripting the editor from Python (unreal-editor-scripting) or importing fixed assets (use unreal-import).
-when_to_use: Use when asked to build an open world, a large landscape with rivers, a partitioned map, terrain, oceans or lakes; to scatter foliage, props or biomes by rules; when PCG output is missing in a running game; to build or edit meshes from code or at runtime; for parameter-driven procedural audio; or whether Blender or Unreal should make a mesh (mesh-tool-selection decides).
+description: Choose and drive Unreal Engine 5.8 procedural world, mesh and audio systems: World Partition and large open worlds, Landscape and Landmass, Water, PCG in the editor and in a running game, Geometry Scripting, the Procedural Mesh Component, and MetaSounds. Not for lighting or rendering (use unreal-rendering), scripting the editor from Python (unreal-editor-scripting), importing fixed assets (use unreal-import) or deciding whether Blender or Unreal should make a mesh (mesh-tool-selection in agent-meshes).
+when_to_use: Use when asked to build an open world, a large landscape with rivers, a partitioned map, terrain, oceans or lakes; to scatter foliage, props or biomes by rules; when PCG output is missing in a running game; to build or edit meshes from code or at runtime; or for parameter-driven procedural audio.
 ---
 
 # Choosing an Unreal procedural system
