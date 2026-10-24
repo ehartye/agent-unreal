@@ -1,7 +1,7 @@
 ---
 name: unreal-rendering
-description: Choose and tune Unreal Engine 5.8 rendering: Lumen global illumination and reflections, MegaLights, Virtual Shadow Maps, Nanite, Substrate materials (including Toon), Temporal Super Resolution and anti-aliasing, and a production stack that combines them. Not for effects (use unreal-effects), a native game's frame-time profiling (unreal-native) or choosing a game engine (engine-selection in agent-engine).
-when_to_use: Use when asked about lighting, global illumination, ray tracing, reflections, many shadow-casting lights, shadows, dense or high-polygon geometry, materials, layered or toon and cel materials, anti-aliasing, upscaling, a sheen, glare or mirror-like patch you cannot attribute, two directional lights (a sun and a moon), a renderer message that directional lights are competing, or combining materials, lighting and profiling in one scene.
+description: Choose and tune Unreal Engine 5.8 rendering: Lumen global illumination and reflections, MegaLights, Virtual Shadow Maps, Nanite, Substrate materials (including Toon), Temporal Super Resolution and anti-aliasing, and a production stack that combines them. Not for effects (use unreal-effects), a native game's frame-time profiling or measuring what a feature costs (unreal-native) or choosing a game engine (engine-selection in agent-engine).
+when_to_use: Use when asked about lighting, global illumination, ray tracing, reflections, many shadow-casting lights, shadows, dense or high-polygon geometry, materials, layered or toon and cel materials, anti-aliasing, upscaling, a sheen, glare or mirror-like patch you cannot attribute, two directional lights (a sun and a moon), a renderer message that directional lights are competing, or combining materials, lighting and anti-aliasing into one production stack.
 ---
 
 # Choosing an Unreal rendering system
