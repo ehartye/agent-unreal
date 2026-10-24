@@ -30,6 +30,12 @@ const HIDDEN_ERROR = "Refusing to set input 'Color': input is hidden by static-s
 const DURATION_ERROR = "Refusing to set input 'Loop Duration': its VisibleCondition currently evaluates false. The input is not visible in the editor — flip the gating input first.";
 const WRONG_NAME = 'Function "SetEmitterData", input param "emitter" is required by the function input schema Json, but is missing from the incoming function input params Json.\nFunction schema Json -\n{...}';
 
+const LIGHT = 'NiagaraLightRendererProperties';
+const LOCATION_REQUIRED = ['system', 'emitterName', 'scriptName', 'moduleName', 'rendererIndex', 'inputNameStack'];   // the schema lists every field of the location as required
+const addRenderer = (sent, returned, after, extra = {}) => ({ sent_index: sent, sent_keys: sent === 'omitted' ? ['emitterName', 'system'] : ['emitterName', 'rendererIndex', 'system'], error: '', returned_index: returned, returned_class: LIGHT, before: [SPRITE], after,
+  light_index: after.indexOf(LIGHT), ref_in_range: returned < after.length, ref_is_light: returned < after.length && after[returned] === LIGHT, read_error: '', ...extra });
+const PAST_END_ERROR = "Renderer index 5 is out of bounds for emitter 'LightPastEnd' (has 2 renderers). Stack reference: System(NS_Renderers) / Emitter(LightPastEnd) / Renderer[5]";
+
 const canned = () => ({
   author: {
     engine: '5.8.2-56702186+++UE5+Release-5.8', toolset_registered: true, agent_skill_class: true, system_tool_count: 46,
@@ -55,6 +61,12 @@ const canned = () => ({
       { step: 'renderer_hints', sort_before: 0, sort_sprite_error: '', sort_sprite_after: 7, sort_ribbon_error: '', sort_ribbon_after: 3, ribbon_material: { refPath: '/Game/FX/M_Beam.M_Beam' },
         flagless_error: '', flagless_material: { refPath: '/Game/FX/M_NoFlag.M_NoFlag' },
         flags_flagged: { used_with_niagara_sprites: false, used_with_niagara_ribbons: true }, flags_default: { used_with_niagara_sprites: false, used_with_niagara_ribbons: false } },
+      { step: 'add_renderer', arguments: ['newRendererLocation', 'rendererClass'], location_required: LOCATION_REQUIRED, schema_description: 'Adds a renderer to an emitter.',
+        variants: {
+          LightOmitted: addRenderer('omitted', 1, [SPRITE, LIGHT]), LightMinusOne: addRenderer(-1, 1, [SPRITE, LIGHT]),
+          LightZero: addRenderer(0, 0, [LIGHT, SPRITE]), LightPastEnd: addRenderer(5, 5, [SPRITE, LIGHT], { read_error: PAST_END_ERROR }),
+        },
+        megalights_before: { bAllowMegaLights: false, bMegaLightsCastShadows: false }, megalights_error: '', megalights_after: { bAllowMegaLights: true, bMegaLightsCastShadows: true } },
     ],
   },
   readback: {
@@ -118,7 +130,7 @@ const step = (r, name) => r.author.steps.find((s) => s.step === name);
 test('the 5.8.2 reports pass every check', () => {
   const checks = evaluate(canned());
   assert.deepEqual(failing(canned()), []);
-  assert.deepEqual(summarize(checks), { passed: 24, total: 24 });
+  assert.deepEqual(summarize(checks), { passed: 25, total: 25 });
 });
 
 test('a startup traceback or a missing toolset fails the first check', () => {
@@ -197,6 +209,35 @@ test('the renderer and emitter checks fail when a property or an argument name c
   assert.deepEqual(mutate((r) => { step(r, 'templates').made.SingleLoopingParticle.description = 'A particle'; }), [covers]);
 });
 
+test('the AddRenderer check needs the recorded position rule, a ref that matches the order, and the past-end ref marked unusable', () => {
+  const rule = 'AddRenderer appends unless the location sets rendererIndex, and the returned ref is only good in range';
+  const variant = (r, name) => step(r, 'add_renderer').variants[name];
+  // omitted treated as 0: the Light renderer lands in front and the ref says 0
+  assert.deepEqual(mutate((r) => { Object.assign(variant(r, 'LightOmitted'), addRenderer('omitted', 0, [LIGHT, SPRITE])); }), [rule]);
+  assert.deepEqual(mutate((r) => { Object.assign(variant(r, 'LightMinusOne'), addRenderer(-1, 0, [LIGHT, SPRITE])); }), [rule]);
+  // the returned ref names the wrong renderer, or a class other than the one that was added
+  assert.deepEqual(mutate((r) => { Object.assign(variant(r, 'LightMinusOne'), addRenderer(-1, 0, [SPRITE, LIGHT])); }), [rule]);
+  assert.deepEqual(mutate((r) => { variant(r, 'LightZero').returned_class = SPRITE; }), [rule]);
+  // the order after the call is wrong
+  assert.deepEqual(mutate((r) => { Object.assign(variant(r, 'LightZero'), addRenderer(0, 0, [SPRITE, LIGHT])); }), [rule]);
+  assert.deepEqual(mutate((r) => { variant(r, 'LightOmitted').before = []; }), [rule]);
+  // the past-end ref is trusted: it is recorded as in range, or GetRendererData accepted it, or the renderer was not appended
+  assert.deepEqual(mutate((r) => { variant(r, 'LightPastEnd').ref_in_range = true; }), [rule]);
+  assert.deepEqual(mutate((r) => { variant(r, 'LightPastEnd').read_error = ''; }), [rule]);
+  assert.deepEqual(mutate((r) => { Object.assign(variant(r, 'LightPastEnd'), addRenderer(5, 1, [SPRITE, LIGHT])); }), [rule]);
+  assert.deepEqual(mutate((r) => { variant(r, 'LightPastEnd').after = [LIGHT, SPRITE]; variant(r, 'LightPastEnd').light_index = 0; }), [rule]);
+  // an engine error, wrong argument names, MegaLights switches that do not read back, and a step that never ran
+  assert.deepEqual(mutate((r) => { variant(r, 'LightZero').error = 'Cannot add renderer'; }), [rule]);
+  assert.deepEqual(mutate((r) => { step(r, 'add_renderer').arguments = ['newRendererLocation', 'rendererClass', 'rendererIndex']; }), [rule]);
+  assert.deepEqual(mutate((r) => { variant(r, 'LightOmitted').sent_keys = ['emitterName', 'rendererIndex', 'system']; }), [rule]);   // the script sent a rendererIndex after all
+  assert.deepEqual(mutate((r) => { step(r, 'add_renderer').location_required = ['system', 'emitterName']; }), [rule]);
+  assert.deepEqual(mutate((r) => { step(r, 'add_renderer').megalights_after.bMegaLightsCastShadows = false; }), [rule]);
+  assert.deepEqual(mutate((r) => { step(r, 'add_renderer').megalights_before.bAllowMegaLights = true; }), [rule]);
+  assert.deepEqual(mutate((r) => { step(r, 'add_renderer').megalights_error = 'Property not found'; }), [rule]);
+  assert.deepEqual(mutate((r) => { r.author.steps = r.author.steps.filter((s) => s.step !== 'add_renderer'); }), [rule]);
+  assert.deepEqual(mutate((r) => { r.author.steps = r.author.steps.map((s) => (s.step === 'add_renderer' ? { step: 'add_renderer', error: 'Traceback (most recent call last)' } : s)); }), [rule]);
+});
+
 test('the stack-issue check needs the compile error and the usage-flag warning', () => {
   const issues = 'the editor tick reports an emptied link and a ribbon material without its flag';
   assert.deepEqual(mutate((r) => { r.issues.results.NS_Broken.GetStackIssues.value.numErrors = 0; }), [issues]);
@@ -218,6 +259,6 @@ test('the delete-and-recreate checks tell a crash from a clean exit', () => {
 
 test('missing reports fail instead of throwing', () => {
   const checks = evaluate({});
-  assert.equal(checks.length, 24);
+  assert.equal(checks.length, 25);
   assert.ok(checks.every((c) => c.pass === false));
 });

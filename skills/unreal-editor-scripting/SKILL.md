@@ -1,6 +1,6 @@
 ---
 name: unreal-editor-scripting
-description: Script and extend the Unreal Engine 5.8 editor from an agent: editor Python run modes, cameras, whole-map builds and process cleanup; adding what Python lacks (Landscape creation, Animation Blueprint states) with an editor C++ module; enabling a plugin; seeing what Python reaches; and the example scenes that verify these references. Not for choosing a system (use the domain skills such as unreal-rendering) or a native game's build loop and content stage, including locked asset files (use unreal-native).
+description: Script and extend the Unreal Engine 5.8 editor from an agent: editor Python run modes, cameras, whole-map builds and process cleanup; adding what Python lacks, such as Landscape creation, with an editor C++ module (Animation Blueprint states are unreal-animation); enabling a plugin; seeing what Python reaches; and the example scenes that verify these references. Not for choosing a system (use the domain skills such as unreal-rendering) or a native game's build loop and content stage, including locked asset files (use unreal-native).
 when_to_use: Use when deciding whether an Unreal task can be scripted from Python or needs C++; when a Python call raises, a run mode quits early, a map will not recreate or a script needs a screenshot or camera; before enabling an Unreal plugin; or when running the example scenes.
 ---
 

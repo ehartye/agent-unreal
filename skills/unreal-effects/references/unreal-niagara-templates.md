@@ -54,6 +54,8 @@ The 14 emitters in `/Niagara/DefaultAssets/Templates/Emitters/` go into a system
 - [tested] Choose by what spawns and what renders: a burst is `SpawnBurst_Instantaneous`, a stream is `SpawnRate`, a beam or ribbon needs the `Ribbon` renderer. Every template emitter runs in world space (`bLocalSpace` false); switch to local space for anything that moves with its owner ([inputs](unreal-niagara-toolset-inputs.md)).
 - [tested] For a held orb, glow or marker use `SingleLoopingParticle`: its `Lifetime` is linked to `Emitter.CurrentLoopDuration` (1 s), so replace the lifetime as a whole for a fixed time, or set `Loop Duration` after `Life Cycle Mode` is `Self` ([inputs](unreal-niagara-toolset-inputs.md)).
 - [tested] For a burst use `OmnidirectionalBurst` or `DirectionalBurst`; for a stream use `Fountain`. In world space a stream's particles stay where they spawned, so on a moving emitter they form a trail.
+- [tested] `Fountain`'s rate is the `SpawnRate` input of its `SpawnRate` module (`scriptName` `EmitterUpdateScript`, `inputNameStack` `["SpawnRate"]`): a plain `NiagaraFloat` that reads 90.
+- [general] Set the rate with the read-change-write of a plain input in [Niagara toolsets](unreal-niagara-toolsets.md) and read it back; that recipe was run on a particle lifetime, not on this input.
 - [tested] For a straight light column use `StaticBeam`: `Beam Start` is the `SimulationPosition` dynamic input and `Beam End` is (200, 0, 0), which you change for the column's length and direction; its width is a `FloatFromCurve` dynamic input.
 - [tested] `LocationBasedRibbon` has a `Ribbon` renderer and no spawn module, so nothing creates its particles until a spawn module is added.
 

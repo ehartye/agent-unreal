@@ -14,7 +14,7 @@ repository is marked as tested.
 
 ## Status
 
-Early (0.9.1). Nine skills.
+Early (0.10.0). Nine skills.
 
 The skills moved here from agent-engine 0.14.0, where their history up to that tag lives; `unreal-import` and its importer scripts followed in 0.2.0. The scripts in `examples/`
 were run on Windows against Unreal 5.7.3, 5.8.2 and 5.8.3 as each README states; other platforms were not run.
@@ -78,11 +78,11 @@ from current Fortnite cook, navigation and performance acceptance.
 
 | Skill | Job |
 |---|---|
-| `unreal-effects` | Niagara particles, fluids and sand, a template catalog and authoring Niagara from Python; Cascade; Chaos Niagara and destruction. |
+| `unreal-effects` | Niagara particles, fluids and sand, a template catalog and authoring Niagara from Python; Cascade; Chaos Niagara and destruction, including a Geometry Collection built from C++. |
 | `unreal-animation` | Control Rig and IK Rig, Animation Blueprints (slot-only graphs from Python, a C++ bridge for state machines), Motion Matching, cloth, hair, Sequencer and Movie Render Queue. |
 | `unreal-gameplay` | Gameplay Ability System, Enhanced Input, AI, navigation, Mover, Chaos vehicles, networking and replication. |
 | `unreal-procedural` | World Partition and open worlds, Landscape, Landmass, Water, PCG (editor and running game), Geometry Scripting, Procedural Mesh Component and MetaSounds. |
-| `unreal-rendering` | Lumen, MegaLights, Virtual Shadow Maps, Nanite, Substrate and Toon, Temporal Super Resolution, and a production stack that combines them. |
+| `unreal-rendering` | Lumen, MegaLights, directional lights (a sun and a moon), Virtual Shadow Maps, Nanite, Substrate and Toon, Temporal Super Resolution, and a production stack that combines them. |
 | `unreal-editor-scripting` | Editor Python run modes, cameras and whole-map builds; the Python-to-C++ bridge; enabling a plugin; the example scenes. |
 | `unreal-native` | Build, run, verify, package and profile a native C++ Unreal game from an agent: the build and capture loop, content pipeline, presentation, input replay, material and UV validation, cooking, frame-time profiling against a budget and side-by-side comparison scenes. |
 | `unreal-import` | Import agent-sprites atlases, agent-meshes GLBs and agent-beeps WAVs into an Unreal 5.7 or 5.8 project from a script: Interchange and Paper2D notes, FBX clips and Epic's MCP server, a per-mesh import policy read back from the saved asset, guarded reuse and regenerated projects. The importer scripts are in the skill. |
