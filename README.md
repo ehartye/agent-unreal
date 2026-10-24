@@ -14,7 +14,7 @@ repository is marked as tested.
 
 ## Status
 
-Early (0.10.0). Nine skills.
+Early (0.11.0). Nine skills.
 
 The skills moved here from agent-engine 0.14.0, where their history up to that tag lives; `unreal-import` and its importer scripts followed in 0.2.0. The scripts in `examples/`
 were run on Windows against Unreal 5.7.3, 5.8.2 and 5.8.3 as each README states; other platforms were not run.
@@ -111,7 +111,7 @@ non-required Linux observer on ready pull requests, and also runs weekly, manual
 acceptance (building, cooking and running Unreal) is separate and needs the documented engine setup.
 `scripts/lint-skills.mjs` checks frontmatter, relative links, the "You are about to / Read" table, size budgets,
 placeholders and evidence labels. `unreal-native` passes the strict rules and `uefn` passes the default rules; the six domain skills and `unreal-import` are checked for
-structure and size. Structural checks do not
+structure and size. `node scripts/check.mjs --skill <name>` (repeatable or comma-separated) lints only those skills with the gate's flags and skips the tests; `--no-tests` runs every lint without the test step. The gate runs every step even after a failure and prints all findings. Every folder under `skills/` is linted, and a new skill with no strictness-table entry in `scripts/check.mjs` gets the default rules and fails until it complies or earns an entry. Structural checks do not
 establish that a skill improves an agent's work.
 
 ## Install
