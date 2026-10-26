@@ -118,6 +118,9 @@ def mesh_chain(source):
     fields.update({"mesh_path": mesh_path, "set_error": written["error"], "mesh_after": (first.get(key) or {}).get("refPath") if isinstance(first, dict) else None})
     life = c.call("SetStackInputData", {"stackInputRef": c.at(system, "Mesh", "ParticleSpawnScript", "InitializeParticle", ["Lifetime"]), "inputData": {"struct": {"refPath": c.FLOAT}, "value": {"value": 8.0}}})
     fields["lifetime_error"] = life["error"]
+    # an emitter added to a template-made system starts dead until a numeric stack input is written after the last AddEmitter (unreal-niagara-toolsets.md; Lifetime is hidden on this emitter, so the system's Loop Duration is written)
+    revive = c.call("SetStackInputData", {"stackInputRef": c.at(system, None, "SystemUpdateScript", "SystemState", ["Loop Duration"]), "inputData": {"struct": {"refPath": c.FLOAT}, "value": {"value": 5.0}}})
+    fields["revive_error"] = revive["error"]
     eal.save_asset(system)
     placed.append(("Mesh_" + sid, system, mesh_path))
     return fields
