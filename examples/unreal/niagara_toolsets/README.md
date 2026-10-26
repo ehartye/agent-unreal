@@ -16,7 +16,7 @@ It starts eight hidden headless commandlets and one hidden editor (the stack-iss
 
 ## Opt-in probes
 
-Status: Prepared 2026-10-26; not yet run on an engine. A first run tests the probe before it tests the engine.
+Status: Prepared 2026-10-26; not yet run on an engine, except the `emit` group, which ran on 5.8.2 on 2026-10-26 (see "What the emit probe showed"). A first run tests a probe before it tests the engine.
 
 `nts_probe.mjs` runs probes for questions the validator above does not answer. It is separate from `nts_validate.mjs`: the default run is unchanged, and no validator file refers to the probes (a test checks that). It is not part of `node scripts/check.mjs`; the pure checks have node tests (`nts-probe.test.mjs`) in the merge lane.
 
@@ -30,7 +30,7 @@ Each group gets its own throwaway project in the OS temp folder. A group with a 
 | Group | Question | Phases |
 |---|---|---|
 | `renderers` | `AddRenderer` between existing renderers (index 1 of two, 0, the old count, one past it, -2), renderer classes other than Light, two renderers of one class against `rendererClasses`, how many renderers each of the 14 templates holds | commandlet |
-| `emit` | which authoring step leaves a system that never emits: nine variants (factory or template system; Fountain or burst emitter; template emitters kept or removed; modules added) counted in a simulation cache, a negative control (SpawnRate 0), and a count that moves with a stack input | build, sim |
+| `emit` | which authoring step leaves an added emitter dead: 23 systems (factory or template system; Fountain or burst emitter; template emitters kept or removed; every kind of write after the add) counted in a simulation cache, a negative control (SpawnRate 0), and a count that moves with a stack input | build, sim |
 | `frame` | Direct Frame Index linked to a user parameter set from Python: the link read back, `SubImageIndex` from a simulation cache at two values, screenshots at both against a baseline | build, sim |
 | `wire` | a GLB through Interchange into a mesh renderer, and a sprite atlas into a Sub UV flipbook: particles counted, screenshots against a baseline; a Static Mesh user parameter and the runtime override call | build, sim |
 | `gradient` | the System toolset's tool and skill lists (to compare 5.8.2 with 5.8.3), and a gradient or curve input written as a whole and read back | commandlet |
@@ -47,7 +47,7 @@ Each group gets its own throwaway project in the OS temp folder. A group with a 
 | `nts_probe_emit_build.py`, `nts_probe_frame_build.py`, `nts_probe_wire_build.py` | the build halves: assets, a level, and the manifest the sim half reads |
 | `nts_probe_sim.py` | the run half: plays the level, counts particles with a simulation cache, reads attributes, takes screenshots, quits |
 
-The report shapes in the node tests are assumptions until a first run; a check that fails on its first run may need the script or the check fixed before it says anything about the engine. Engine facts the probes rely on were read from the install (symbols are cited in each script); the engine calls that were not checked are listed there.
+The report shapes in the node tests (the `emit` ones were confirmed by a run) are assumptions until a first run; a check that fails on its first run may need the script or the check fixed before it says anything about the engine. Engine facts the probes rely on were read from the install (symbols are cited in each script); the engine calls that were not checked are listed there.
 
 Not prepared: whether the Light renderer's MegaLights switches change what is drawn (needs a rendering run with lights); binding the mesh renderer to the user parameter that the override call sets (the JSON shape of `FNiagaraParameterBinding` was not confirmed, so the override is checked for acceptance, not for appearance); inputs held inside a dynamic input chain (the gradient scan reads the module inputs only); stencil outlines, ribbons and mesh particles for the stylized look, and frame cost.
 
@@ -61,6 +61,20 @@ Not prepared: whether the Light renderer's MegaLights switches change what is dr
 | `nts_recreate.py` | one delete-and-recreate phase per run (`make`, `same_process`, `stale`, `rescan_only`, `remove_rescan`), with a progress line flushed after every step so a crash leaves a trace |
 | `nts_startup.py` | with a project `init_unreal.py` that raises, shows the toolset still registers and answers |
 | `nts-validate-checks.mjs`, `nts-validate.test.mjs` | one check per claim; the command-line options and phase list, the report lines of a partial run, the `--keep` note and the flushed-line writer; the test changes one fact at a time and expects the matching check to fail, and takes the number of checks from the code |
+
+## What the emit probe showed (5.8.2)
+
+Run on 5.8.2 on 2026-10-26, 8 of 8 checks; the numbers are particle counts in a simulation cache after 40 frames.
+
+- A system made with `NiagaraSystemFactoryNew` emits with an emitter added and nothing written (Fountain 145, SimpleSpriteBurst 1). A system made with `CreateNiagaraSystem` and a template system does not: an emitter added to it with `AddEmitter` is dead until a stack input is written with a different value afterwards. The template emitters it came with keep emitting (380 in the control).
+- Dead means two things. With the template emitters kept, the cache is valid, lists the added emitter and reads 0 for it. With the template emitters removed the added emitter is the only one, the system completes at once, and the capture is refused (the log line is `SimCache Error: System already completed its simulation`; the Python call returns `None` on all 40 frames). `GetSystemCompileState` reads UpToDate for every one of these systems, so a compile state does not show that a system emits.
+- What revives it: a Float or Int stack input written with a different value after the last `AddEmitter`, anywhere in the system (the added emitter's `SpawnRate` or burst `Spawn Count`, or the system's own `SystemState` `Loop Duration`). Writing `SpawnRate` to 91 and then back to 90, the default, revives it, so it is the write and not the value. A second emitter added after a write is dead again, and the whole system completes if it has no other emitter; a write after that add revives both emitters, including the untouched one. `RemoveEmitter` after the write leaves it emitting.
+- What does not: a write before the add, a write of the value the input already holds (SpawnRate 90 on the Fountain, Loop Duration 1 on the template system), `Loop Behavior` set to Infinite, a bool input set, `SetModuleEnabled` off and on again, and three modules added with `AddModule`. Exploratory runs made while building the probe, not kept in it, also showed that the emitter's own `Loop Duration` written to 3 revives it, and that saving twice and the system's `bDeterminism` set to false do not.
+- The template system differs from a factory system in its `SystemState` (Loop Behavior Once, Loop Duration 1, against Infinite and 5), `bDeterminism` and `bInitialOwnerVelocityFromActor`. Changing those is not what revives the emitter: a Loop Duration written to 5 does, a Loop Behavior set to Infinite does not. The mechanism is not determined. What the engine source says: a Float or Int input is a rapid iteration parameter and a bool or enum input is not (`FNiagaraStackGraphUtilities::IsRapidIterationType`, `NiagaraStackGraphUtilities.cpp`); `UNiagaraStackFunctionInput::SetLocalValue` (`NiagaraStackFunctionInput.cpp`) writes a rapid iteration value into every script the input affects; the toolset's view model is built with auto compile off (`CreateSystemViewModel`, `NiagaraExternalSystemEditorUtilities.cpp`). That fits the split between numeric writes and the rest, but a missing refresh of those parameters as the cause was not tested.
+- SpawnRate moves the count: 60, 30, 15 and 0 read 97, 49, 24 and 0, and the 0 is a valid cache with the emitter listed (the negative control).
+- The default Fountain `SpawnRate` reads 90 and the default burst `Spawn Count` reads 1.
+
+Workaround until the cause is known: after the last `AddEmitter` on a system made from a template system, write one Float or Int stack input to a different value (the emitter's own `SpawnRate`, say) before saving, and check the count in a simulation cache.
 
 ## What it showed (5.8.2)
 

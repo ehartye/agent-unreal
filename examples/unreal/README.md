@@ -69,7 +69,7 @@ These were written and tested against canned reports only. Each README carries a
 
 | Folder or script | What it prepares |
 |---|---|
-| [`niagara_toolsets/nts_probe.mjs`](niagara_toolsets/README.md) | `AddRenderer` positions, a stack-authored emitter that counts no particles, Direct Frame Index linked to a user parameter, generated assets wired into Niagara, gradient inputs |
+| [`niagara_toolsets/nts_probe.mjs`](niagara_toolsets/README.md) | `AddRenderer` positions, Direct Frame Index linked to a user parameter, generated assets wired into Niagara, gradient inputs (the `emit` group, a stack-authored emitter that counts no particles, has run on 5.8.2) |
 | [`anim_bridge/anim_runtime.mjs`](anim_bridge/README.md) | a played state machine, a 2D blend space and linked layers |
 | [`chaos_break`](chaos_break/README.md) | a Geometry Collection built from code that breaks in a running game, with controls that must not |
 | [`automation_test/automation_reference.mjs`](automation_test/README.md), [`insights_capture/insights_stats.mjs`](insights_capture/README.md) | the commands the architecture and quality references name: headless Automation runs, `stat` output, traces |

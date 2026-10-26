@@ -1,7 +1,7 @@
-// Pure checks and options of the opt-in Niagara probes (nts_probe.mjs). Prepared 2026-10-26; not yet run on an engine. A first run tests the
-// probe before it tests the engine. No Unreal, no files: nts-probe.test.mjs feeds it canned reports, and nts_probe.mjs feeds it real ones.
-// None of this changes what nts_validate.mjs does. The report shapes below are the ones the nts_probe_*.py scripts write; they follow the
-// shapes of nts_author.py, but no real report of these scripts exists yet, so the first run confirms them.
+// Pure checks and options of the opt-in Niagara probes (nts_probe.mjs). Prepared 2026-10-26; not yet run on an engine, except the emit group,
+// which ran on 5.8.2 on 2026-10-26. A first run tests a probe before it tests the engine. No Unreal, no files: nts-probe.test.mjs feeds it
+// canned reports, and nts_probe.mjs feeds it real ones. None of this changes what nts_validate.mjs does. The report shapes below are the ones
+// the nts_probe_*.py scripts write; they follow the shapes of nts_author.py. Only the emit shapes have been confirmed by a run.
 import { changedPixels } from './nts-probe-assets.mjs';
 
 export const PROBE_GROUPS = ['renderers', 'emit', 'frame', 'wire', 'gradient'];
@@ -130,32 +130,60 @@ const sampled = (s) => Boolean(s) && !s.error && s.captured === true && s.valid 
 const metric = (s) => (sampled(s) && Number.isFinite(s.metric_max) ? s.metric_max : undefined);
 const attribute = (s, emitter, name) => { const a = ((s || {}).attributes || {}); const e = a[emitter] || a[Object.keys(a)[0]] || {}; const v = e[name]; return Array.isArray(v) ? v[0] : undefined; };
 
-const EMIT_IDS = ['CtlTemplate', 'FactoryFountain', 'FactoryBurst', 'Keep90', 'Keep15', 'Keep0', 'SwapFountain', 'SwapBurst', 'SwapFountainModules'];
+const EMIT_IDS = ['CtlTemplate', 'FactoryFountain', 'FactoryBurst', 'KeepUntouched', 'Keep90', 'Keep60', 'Keep30', 'Keep15', 'Keep0',
+  'SwapFountain', 'SwapBurst', 'SwapFountainModules', 'SwapSameValue', 'SwapEnum', 'SwapBool', 'SwapToggle', 'SwapWriteFirst',
+  'SwapRateTouched', 'SwapDurationTouched', 'SwapBurstTouched', 'LateAdded', 'LateTouched', 'TouchedThenRemoved'];
 
+/**
+ * Which authoring step leaves an emitter that does not emit (5.8.2). A cache that holds frames but reads 0 particles for the Probe emitter is
+ * "dead"; a cache the engine refuses to capture (the system had completed: "System already completed its simulation") is "completed at once".
+ */
 function emitChecks({ build, sim }, check) {
-  const m = (id) => metric(stepOf(sim, id, 'run'));
+  const run = (id) => stepOf(sim, id, 'run');
+  const m = (id) => metric(run(id));
   const built = (id) => ok(step(build, `variant_${id}`));
-  const count = (id) => (m(id) === undefined ? (built(id) ? 'not sampled' : 'not built') : m(id));
+  const completed = (id) => { const r = run(id); return built(id) && Boolean(r) && !r.error && r.captured === false && r.valid === false && r.num_frames === 0 && r.refused_frames > 0; };
+  const dead = (id) => { const r = run(id); return built(id) && sampled(r) && r.metric_emitter === 'Probe' && m(id) === 0; };
+  const emits = (id) => built(id) && m(id) > 0;
+  const by = (id, emitter) => { const r = run(id); return sampled(r) && r.max_by_emitter ? r.max_by_emitter[emitter] : undefined; };
+  const count = (id) => {
+    if (m(id) !== undefined) return m(id);
+    if (!built(id)) return 'not built';
+    return completed(id) ? 'completed at once' : 'not sampled';
+  };
+  const show = (ids) => ids.map((id) => `${id}: ${count(id)}`).join('; ');
   check('emit', 'the sim-cache count reads a system that must emit',
     'A system created from a template system and left alone has more than 0 particles in a valid simulation cache after 40 frames',
-    built('CtlTemplate') && m('CtlTemplate') > 0, `CtlTemplate: ${count('CtlTemplate')}`);
-  const zero = stepOf(sim, 'Keep0', 'run');
+    emits('CtlTemplate'), `CtlTemplate: ${count('CtlTemplate')}`);
+  check('emit', 'a system from the factory emits with its emitter untouched',
+    'NiagaraSystemFactoryNew with AddEmitter Fountain, or SimpleSpriteBurst, and no stack input written, has more than 0 particles in the sim cache',
+    emits('FactoryFountain') && emits('FactoryBurst'), show(['FactoryFountain', 'FactoryBurst']));
+  const zero = run('Keep0');
   check('emit', 'a spawn rate of 0 counts 0 particles in a valid cache (negative control)',
     'With SpawnRate set to 0 through SetStackInputData the cache is valid, holds frames, and the Probe emitter reads 0 particles (the read succeeded and returned an empty list), so a count of 0 means nothing spawned, not that the capture or the read failed',
     built('Keep0') && sampled(zero) && zero.metric_emitter === 'Probe' && m('Keep0') === 0,
     `Keep0: ${count('Keep0')} (valid ${zero && zero.valid}, frames ${zero && zero.num_frames}, emitter read ${zero && zero.metric_emitter}${zero && list(zero.read_errors).length ? `, read errors: ${zero.read_errors.join('; ')}` : ''})`);
   check('emit', 'a stack input changes the sim-cache count',
-    'Fountain emitters whose SpawnRate was set through SetStackInputData to 90, 15 and 0 count more particles at 90 than at 15 and more at 15 than at 0',
-    built('Keep90') && built('Keep15') && built('Keep0') && m('Keep90') > m('Keep15') && m('Keep15') > m('Keep0'),
-    `rate 90: ${count('Keep90')}; 15: ${count('Keep15')}; 0: ${count('Keep0')}`);
-  check('emit', 'a template system whose emitters were removed and a Fountain emitter added emits',
-    'CreateNiagaraSystem from a template system, AddEmitter Fountain, RemoveEmitter for each template emitter: the sim-cache count for the Fountain is above 0',
-    built('SwapFountain') && m('SwapFountain') > 0, `SwapFountain: ${count('SwapFountain')}`);
+    'Fountain emitters added to a template system, whose SpawnRate was set through SetStackInputData to 60, 30, 15 and 0, count more particles at 60 than at 30, more at 30 than at 15 and more at 15 than at 0',
+    ['Keep60', 'Keep30', 'Keep15', 'Keep0'].every(built) && m('Keep60') > m('Keep30') && m('Keep30') > m('Keep15') && m('Keep15') > m('Keep0'),
+    `rate 60: ${count('Keep60')}; 30: ${count('Keep30')}; 15: ${count('Keep15')}; 0: ${count('Keep0')}`);
+  check('emit', 'an emitter added to a template system does not emit until a stack input value is changed',
+    'CreateNiagaraSystem from a template system, then AddEmitter Fountain: the cache is valid and the Probe emitter reads 0 (template emitters kept; also when SpawnRate is written with the value it already holds, 90); with the template emitters removed the system completes at once and the engine refuses the capture, also with three modules added, and with SimpleSpriteBurst',
+    dead('KeepUntouched') && dead('Keep90') && ['SwapFountain', 'SwapBurst', 'SwapFountainModules'].every(completed),
+    show(['KeepUntouched', 'Keep90', 'SwapFountain', 'SwapBurst', 'SwapFountainModules']));
+  check('emit', 'a float or int stack input changed after the last AddEmitter makes the added emitters emit',
+    'In a system whose template emitters were removed, a SpawnRate written to 91 and back to 90 (the default again), the system SystemState Loop Duration written to 5, or a burst Spawn Count written to 5 gives particles in the cache (5 for the burst); a Late emitter added and then given a SpawnRate emits together with the untouched Probe emitter; removing the template emitters (RemoveEmitter) after the write leaves the added emitter emitting',
+    emits('SwapRateTouched') && emits('SwapDurationTouched') && m('SwapBurstTouched') === 5 && by('LateTouched', 'Probe') > 0 && by('LateTouched', 'Late') > 0 && emits('TouchedThenRemoved'),
+    `${show(['SwapRateTouched', 'SwapDurationTouched', 'SwapBurstTouched', 'TouchedThenRemoved'])}; LateTouched: Probe ${by('LateTouched', 'Probe')}, Late ${by('LateTouched', 'Late')}`);
+  check('emit', 'a write before the last AddEmitter, a same-value write, and an enum, bool or module-toggle edit do not make it emit',
+    'The system completes at once (the capture is refused) after: Loop Duration written before the add, Loop Duration written with the value it holds (1), Loop Behavior set to Infinite, a bool input set, SpawnRate disabled and enabled again, and a second emitter added after the first one was given a value',
+    ['SwapWriteFirst', 'SwapSameValue', 'SwapEnum', 'SwapBool', 'SwapToggle', 'LateAdded'].every(completed),
+    show(['SwapWriteFirst', 'SwapSameValue', 'SwapEnum', 'SwapBool', 'SwapToggle', 'LateAdded']));
   const compile = (sim || {}).compile && typeof sim.compile === 'object' ? sim.compile : {};
   const errors = Object.entries(compile).filter(([, v]) => !v || v.error || !v.value || /Error/.test(String((v.value || {}).aggregateStatus)));
-  const missing = EMIT_IDS.filter((id) => !stepOf(sim, id, 'run') || (stepOf(sim, id, 'run') || {}).error);
+  const missing = EMIT_IDS.filter((id) => !run(id) || run(id).error);
   check('emit', 'every authoring route was sampled, and the cause matrix is recorded',
-    'All nine variants (factory or template system; Fountain or burst emitter; template emitters kept or removed; modules added) have a sim-cache result; the counts say which step stops the emitter, and the systems compile',
+    `All ${EMIT_IDS.length} variants have a sim-cache result (a refused capture of a completed system is a result), and the systems compile with no error; a compile status of UpToDate does not show that the system emits`,
     missing.length === 0 && errors.length === 0,
     `${EMIT_IDS.map((id) => `${id}=${count(id)}`).join(', ')}${errors.length ? `; compile problems: ${errors.map(([k, v]) => `${k} ${(v && (v.error || (v.value || {}).aggregateStatus)) || 'no result'}`).join(', ')}` : ''}${missing.length ? `; no result: ${missing.join(', ')}` : ''}`);
 }
