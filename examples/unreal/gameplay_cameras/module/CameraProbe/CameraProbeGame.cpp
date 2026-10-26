@@ -226,6 +226,7 @@ void ACameraProbeGameMode::Finish(const TCHAR* Reason)
 	Report->SetArrayField(TEXT("errors"), Errors);
 	Report->SetArrayField(TEXT("follow_first_frames"), FirstFrames);
 	Report->SetArrayField(TEXT("follow_trace"), FollowTrace);
+	Report->SetArrayField(TEXT("teleport_frames"), TeleportFrames);
 	FString Json;
 	TSharedRef<TJsonWriter<>> Writer = TJsonWriterFactory<>::Create(&Json);
 	FJsonSerializer::Serialize(Report.ToSharedRef(), Writer);
