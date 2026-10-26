@@ -13,8 +13,9 @@ The question: how does a native Gameplay Effect get its tag-granting component, 
   - `GasNativeAbility` sets its asset tag with `SetAssetTags`, names the cost and cooldown classes, commits in `ActivateAbility` and ends after a `UAbilityTask_WaitDelay` of half a second.
   - `GasNativeProbe` has a test actor with an Ability System Component and `UGasNativeProbeCommandlet`, which makes a game world by hand, runs the scenario and writes a JSON report.
   - `GasNative.Build.cs` lists `GameplayAbilities`, `GameplayTags` and `GameplayTasks`.
+  - `GasNativeCases` holds `UGasNativeHoldAbility` (stays active until cancelled), `UGasNativeGateRequirement` (a Custom Can Apply requirement class) and `GasNativeCases::Run`, which runs the effect-component cases below. `GasNativeEffects` also has `UGasNativeBonusEffect`, the class the Additional Effects cases name.
 - `gas_native.mjs` writes a throwaway project in the OS temp folder (`../native-build.mjs`), builds the Editor target, and runs `UnrealEditor-Cmd.exe Project.uproject -run=GasNativeProbe -Report=<file> -nullrhi` hidden.
-- `gas-native-checks.mjs` judges the build, the report and the log; `gas-native.test.mjs` tests that logic with no Unreal (it runs in `node scripts/check.mjs`).
+- `gas-native-checks.mjs` judges the build, the report and the log; `gas-native-cases.mjs` holds the table of effect-component cases (expectation, source line, assert or observe) and judges them; `gas-native.test.mjs` tests that logic with no Unreal (it runs in `node scripts/check.mjs`).
 
 ## Run
 
@@ -37,6 +38,27 @@ About one to two minutes to build and 10 to 30 s for the probe.
 
 The commandlet makes its world with `UWorld::CreateWorld`, `InitializeActorsForPlay` and `BeginPlay`, and its loop increments `GFrameCounter` before each `World->Tick`: `FTimerManager::Tick` returns early when it already ticked in the current frame (`TimerManager.cpp` line 1136), which would stop the cooldown and the task from ever finishing.
 
+## Effect components other than target tags (prepared, not yet run on an engine)
+
+The same commandlet, after the scenario above, runs one case table over the other Gameplay Effect components the 5.8 install ships under `Engine/Plugins/Runtime/GameplayAbilities/Source/GameplayAbilities/Public/GameplayEffectComponents/` (each header was read first). Every case has its own actor, so no case sees another's tags or effects; every component has a control, the same effect without it. The probe records only what it observed (`component_cases` in the report); the expectation, derived from the engine source before any run, is in `gas-native-cases.mjs` with an install-relative `path:line`, and a case is `observe` when the source does not pin the outcome.
+
+| Component | Cases (effect / control) | Observable outcome |
+|---|---|---|
+| Asset Tags | 1 / 1 | the tag is on the definition, the target does not own it |
+| Immunity | 3 / 1 | a matching effect is refused and the block delegate fires; an unrelated effect applies; removing the immunity unblocks |
+| Additional Effects | 9 / 2 | the extra effect's tag on application (and with a required source tag, met is `observe`, unmet is asserted), and on completion by list (Normal, Prematurely, Always) after expiry or early removal |
+| Block Abilities with Tags | 2 / 1 | the activation of an ability with the matching asset tag is refused, and allowed again after removal |
+| Cancel Abilities with Tags | 5 / 1 | an active ability ends on application; a non-matching tag leaves it; `ComponentMode` OnExecution (private, set by reflection) is `observe` |
+| Chance To Apply | 3 / 1 | chance 0 applies 0 of 20, chance 1 applies 20 of 20; chance 0.5 over 200 is `observe` |
+| Custom Can Apply | 2 / 1 | refused without the gate tag, applied with it |
+| Remove Other Effects | 2 / 1 | the matching active effect goes, the bystander stays; an infinite remover that matches itself is `observe` |
+| Require Tags to Apply/Continue | 4 / 1 | application refused without the tag; ongoing requirement inhibits and un-inhibits; removal requirement removes and refuses again |
+| Grant Gameplay Abilities | 2 / 1 | the target owns and can activate the ability while the effect lasts, and loses it with the effect |
+
+How a component is added, from `GameplayEffect.h` in the install: `GEComponents` is protected, so a constructor needs a `UGameplayEffect` subclass member to fill it (`CreateDefaultSubobject`, then `GEComponents.Add`, as `MakeTimed` and `MakeInfinite` do). Outside a constructor, `AddComponent<T>()` and `FindOrAddComponent<T>()` are public and are what every case here uses. No component of the 11 is unreachable from C++: the others expose public members or a setter (`ImmunityQueries`, `OnApplicationGameplayEffects`, `ApplicationRequirements`, `RemoveGameplayEffectQueries`, `ApplicationTagRequirements`, `SetAndApplyBlockedAbilityTagChanges`, `SetAndApplyCanceledAbilityTagChanges`, `SetChanceToApplyToTarget`, `AddGrantedAbilityConfig`, `SetAndApplyAssetTagChanges`); only `UCancelAbilityTagsGameplayEffectComponent::ComponentMode` is private, so the OnExecution mode is written through reflection. `UGameplayEffectUIData` and its text-only subclass are also components, and are display data.
+
+Runtime: the cases add a few seconds to the probe (44 cases; the seven Additional Effects completion cases tick the world for one second each). The runner prints the observe-only cases and any case that differs from the table.
+
 ## Variants that were run once and are not shipped
 
 Each was a copy of the module with one change, built and started in a throwaway project. The run records are in the reference; none of these variants is in this folder.
@@ -46,4 +68,4 @@ Each was a copy of the module with one change, built and started in a throwaway 
 
 ## Not verified
 
-Effect components other than target tags, executions and magnitude calculations written in C++, and replicated play.
+Executions and magnitude calculations written in C++. The effect-component cases are prepared and have not run on an engine yet, so nothing in that section is `[tested]`.

@@ -2,6 +2,8 @@
 // functions, no Unreal and no dependencies; the node test feeds them reports shaped like the one written on Unreal 5.8.2.
 //   report.classes = what the constructors produced (read from class default objects)
 //   report.steps   = snapshots of the actor while the scenario ran: { sim_time, charge, cooldown_tag, ability_active, ... }
+//   report.component_cases = one row per effect-component case: { id, component, role, observed }; the expectations are in gas-native-cases.mjs
+import { COMPONENTS, CASES, judgeCases, unknownCaseIds } from './gas-native-cases.mjs';
 
 const COOLDOWN_TAG = 'GasNative.Cooldown.Pulse';
 const ABILITY_TAG = 'GasNative.Ability.Pulse';
@@ -44,6 +46,24 @@ export function evaluate({ build, report, log = '', exit }) {
   const dyn = s.runtime_add_component;
   checks.push({ name: 'AddComponent outside a constructor', claim: 'an effect made with NewObject at run time can use AddComponent, and its tag reaches the target',
     pass: dyn?.applied === true && dyn?.tag_present === true, detail: `applied ${dyn?.applied}; tag ${dyn?.tag_present}` });
+
+  // Effect components other than target tags: one check to say every case was recorded, one per component, and one for the log.
+  const judged = judgeCases(report);
+  const missing = judged.filter((r) => !r.recorded).map((r) => r.id);
+  const twice = judged.filter((r) => r.duplicate).map((r) => r.id);
+  const unknown = unknownCaseIds(report);
+  checks.push({ name: 'component cases recorded', claim: 'the probe recorded every effect-component case in the table, once each, and no case the judge does not know',
+    pass: !!report && missing.length === 0 && twice.length === 0 && unknown.length === 0,
+    detail: `${judged.length - missing.length} of ${CASES.length} recorded${missing.length ? `; missing ${missing.join(', ')}` : ''}${twice.length ? `; twice ${twice.join(', ')}` : ''}${unknown.length ? `; unknown ${unknown.join(', ')}` : ''}` });
+  for (const component of COMPONENTS) {
+    const mine = judged.filter((r) => r.component === component.name);
+    const asserted = mine.filter((r) => r.mode === 'assert');
+    const bad = mine.filter((r) => !r.ok);
+    checks.push({ name: `effect component: ${component.name}`, claim: component.claim, pass: !!report && bad.length === 0,
+      detail: `${asserted.length - asserted.filter((r) => !r.ok).length} of ${asserted.length} asserted cases held${mine.length > asserted.length ? `, ${mine.length - asserted.length} observed only` : ''}${bad.length ? `; ${bad.map((r) => r.id).join(', ')}` : ''}` });
+  }
+  checks.push({ name: 'component cases raise no ensure', claim: 'the log has no failed ensure while the component cases run',
+    pass: !!report && !/Ensure condition failed/.test(log), detail: 'searched the log for "Ensure condition failed"' });
   return checks;
 }
 

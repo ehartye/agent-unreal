@@ -4,7 +4,9 @@
 // (module/GasNative): an attribute set with one attribute, a timed Gameplay Effect that grants one native tag, a cost effect, and an
 // ability that uses them as cost and cooldown and waits on an ability task. It builds the Editor target with Unreal Build Tool, then runs
 // a commandlet (UnrealEditor-Cmd.exe -run=GasNativeProbe, headless, no map) that makes a game world, activates the ability, ticks the
-// world and writes a JSON report; gas-native-checks.mjs judges the report and the log.
+// world and writes a JSON report; gas-native-checks.mjs judges the report and the log. The same run also exercises the other Gameplay
+// Effect components (Immunity, Additional Effects, Block and Cancel Abilities, Chance To Apply, Custom Can Apply, Remove Other, Require Tags,
+// Grant Abilities, Asset Tags), each with a control; gas-native-cases.mjs holds what each case is expected to show and prints the table.
 // The compiler and Windows SDK are discovered from the installed Visual Studio (override with --compiler / --sdk).
 // Takes about two to three minutes. Exit code 0 when every check passes. Not part of node scripts/check.mjs; the checks are tested there.
 import { spawnSync } from 'node:child_process';
@@ -13,6 +15,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { discoverToolchain, writeCodeProject, buildEditor } from '../native-build.mjs';
 import { evaluate, summarize } from './gas-native-checks.mjs';
+import { judgeCases, describeCase } from './gas-native-cases.mjs';
 
 const args = process.argv.slice(2);
 const flag = (name) => { const i = args.indexOf(name); return i >= 0 ? args[i + 1] : undefined; };
@@ -52,6 +55,11 @@ if (built.exit === 0) {
 
 const checks = evaluate({ build, report, log, exit });
 for (const c of checks) console.log(`${c.pass ? 'PASS' : 'FAIL'}  ${c.name}\n      claim: ${c.claim}\n      ${c.detail}`);
+const cases = judgeCases(report);
+if (report) {
+  console.log('component cases (asserted cases print only when they differ from the table; observe-only cases always print):');
+  for (const r of cases) if (r.mode === 'observe' || !r.ok) console.log(`  ${describeCase(r)}`);
+}
 const { passed, total } = summarize(checks);
 console.log(`${passed} of ${total} checks passed`);
 if (keep) console.log(`kept ${root}`); else rmSync(root, { recursive: true, force: true });
