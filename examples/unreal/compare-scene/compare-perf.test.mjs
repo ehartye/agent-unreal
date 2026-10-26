@@ -4,7 +4,7 @@
 // check to fail, and an empty receipt fails every check.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { evaluatePerf, shapeProblems, summarize, THRESHOLDS } from './compare-perf-checks.mjs';
+import { evaluatePerf, notes, shapeProblems, summarize, THRESHOLDS } from './compare-perf-checks.mjs';
 
 const series = (mean) => ({ mean, p50: mean, p95: mean * 1.1, max: mean * 1.3 });
 const perf = ({ wall, game, render, gpu, available = true }) => ({
@@ -23,9 +23,9 @@ const rendered = () => ({
 const headless = () => ({
   scenario: 'compare', set: 'perf', null_rhi: true,
   candidates: [
-    candidate('perf-baseline', perf({ wall: 2.0, game: 1.0, render: 0, gpu: 0, available: false })),
-    candidate('perf-gpu-supersample', perf({ wall: 2.0, game: 1.0, render: 0, gpu: 0, available: false })),
-    candidate('perf-cpu-spin', perf({ wall: 6.0, game: 5.0, render: 0, gpu: 0, available: false })),
+    candidate('perf-baseline', perf({ wall: 0.11, game: 0, render: 0, gpu: 0, available: false })),
+    candidate('perf-gpu-supersample', perf({ wall: 0.11, game: 0, render: 0, gpu: 0, available: false })),
+    candidate('perf-cpu-spin', perf({ wall: 4.22, game: 0, render: 0, gpu: 0, available: false })),
   ],
 });
 
@@ -97,7 +97,21 @@ test('a CPU-side change that does not move the game thread, or that moves the GP
 test('a headless receipt that records GPU time, or whose CPU row does not move, fails', () => {
   assert.deepEqual(mutate(headless, (r) => { byId(r, 'perf-baseline').gpu_ms.max = 1.2; }), ['without a rendering RHI the GPU time reads zero']);
   assert.deepEqual(mutate(headless, (r) => { byId(r, 'perf-baseline').gpu_time_available = true; }), ['without a rendering RHI the GPU time reads zero']);
-  assert.deepEqual(mutate(headless, (r) => { byId(r, 'perf-cpu-spin').game_thread_ms.mean = 1.5; }), ['without a rendering RHI the game thread time still moves with CPU work']);
+  assert.deepEqual(mutate(headless, (r) => { byId(r, 'perf-cpu-spin').wall_ms.mean = 1.5; }), ['without a rendering RHI the wall frame time still moves with CPU work']);
+});
+
+test('a headless receipt passes when only the wall time moves and the thread times read 0, and says so in a note', () => {
+  const r = headless();
+  assert.ok(r.candidates.every((c) => c.stress.perf.game_thread_ms.max === 0 && c.stress.perf.render_thread_ms.max === 0));
+  assert.deepEqual(failing(r), []);
+  assert.equal(notes(r).length, 2);
+  assert.match(notes(r)[0], /game_thread_ms reads 0/);
+  // a note is not a check: a nonzero thread time changes the note, not the verdict
+  const q = headless();
+  byId(q, 'perf-cpu-spin').game_thread_ms = { mean: 5, p50: 5, p95: 5, max: 5 };
+  assert.deepEqual(failing(q), []);
+  assert.match(notes(q)[0], /did not read 0/);
+  assert.deepEqual(notes(rendered()), []);
 });
 
 test('an empty receipt fails the shape check and the set check instead of throwing', () => {

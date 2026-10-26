@@ -5,7 +5,7 @@
 // No Unreal, no dependencies. The logic is in compare-perf-checks.mjs and tested without Unreal.
 import { existsSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
-import { evaluatePerf, shapeProblems, summarize } from './compare-perf-checks.mjs';
+import { evaluatePerf, notes, shapeProblems, summarize } from './compare-perf-checks.mjs';
 
 const args = process.argv.slice(2);
 const target = args.find((a) => !a.startsWith('--'));
@@ -23,6 +23,7 @@ if (args.includes('--shape-only')) {
 }
 const checks = evaluatePerf(receipt);
 for (const c of checks) console.log(`${c.pass ? 'PASS' : 'FAIL'}  ${c.name}\n      claim: ${c.claim}\n      ${c.detail}`);
+for (const n of notes(receipt)) console.log(`NOTE  ${n}`);
 const { passed, total } = summarize(checks);
 console.log(`${passed} of ${total} checks passed`);
 process.exit(passed === total ? 0 : 1);
