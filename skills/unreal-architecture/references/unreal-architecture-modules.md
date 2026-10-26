@@ -14,12 +14,14 @@ Source for every `[documented]` line here: Epic's 5.8 pages "Unreal Engine Modul
 - `[documented]` `Default` loading phase suits most gameplay modules; a plugin whose classes the editor often fails to find can try `PreDefault`. Load order inside one phase is not deterministic, so a required order uses `LoadModule` or `LoadModuleChecked`.
 - `[documented]` The `Modules` list in `.uproject` and `.uplugin` sets which modules load and how. A module that is in no dependency chain is not compiled.
 - `[documented]` Plugins and modules sit in hierarchical levels and can only depend on others at the same level or higher; an Engine module cannot depend on a project module because the Engine "must be able to build without a Project". Editor modules load only when the editor starts and Developer modules never in shipping (see [layout](unreal-architecture-layout.md)).
+- `[documented]` Module type decides which applications can load a module: "Runtime modules will be loaded in all cases, even in shipped games", and "Developer modules will only be loaded in development runtime or Editor builds, but never in shipping builds". Epic's Build Configurations page says Shipping "strips out console commands, stats, and profiling tools"; per-target switches such as `bUseConsoleInShipping` and `bUseExecCommandsInShipping` tune this.
 
 ## Judgements built on it
 
 - `[general]` Dependencies point from the game toward lower-level and optional code: no Runtime module depends on an Editor module, because Editor modules load only when the editor starts and so are absent from a packaged game.
 - `[general]` A game plugin that the project can run without should not depend on the game's primary module; Epic documents this direction for Engine versus project code, and the same reasoning applies. The game depends on the plugin, or both depend on a small shared module.
 - `[general]` Epic gives no rule for how many modules a project needs or how to name them. Split a module when a boundary is real (a different load condition, an optional feature, an editor-only tool), not to look tidy.
+- `[general]` Test, replay and capture code compiled into a Runtime module ships with the game and its command-line switches stay reachable unless guarded; a Developer-type module or `UE_BUILD_SHIPPING` and `WITH_DEV_AUTOMATION_TESTS` guards keep it out. A game that deliberately ships diagnostics is a decision for the owner, not a finding.
 - `[general]` Turning on `bEnforceIWYU` in an existing module surfaces monolithic includes as warnings you can fix one module at a time.
 
 ## How to inspect
@@ -28,5 +30,6 @@ Source for every `[documented]` line here: Epic's 5.8 pages "Unreal Engine Modul
 2. `[general]` Draw the edges. Flag any edge from a Runtime module to an Editor module, any edge from a plugin to the game module, and any cycle, including one hidden by `CircularlyReferencedDependentModules`.
 3. `[general]` For each public dependency, search the module's `Public` headers for a type from it. No hit means the dependency can move to private.
 4. `[general]` Search headers for `#include "Engine.h"` and other monolithic includes, and for `Public` headers that include a sibling module's `Private` path.
+5. `[general]` In the primary Runtime module, search for `UE_BUILD_SHIPPING`, `WITH_EDITOR`, `WITH_DEV_AUTOMATION_TESTS`, command-line parsing (`FParse::Param`, `FParse::Value`) and console command registration. Count the unguarded development entry points and note where they live.
 
 Next: [state ownership](unreal-architecture-ownership.md) for what the module holds, or the [audit](unreal-architecture-audit.md) for how to report it.
