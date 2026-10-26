@@ -40,12 +40,16 @@ const renderersReport = () => ({
   ],
 });
 
-const EMIT_IDS = ['CtlTemplate', 'FactoryFountain', 'FactoryBurst', 'Keep90', 'Keep15', 'Keep0', 'SwapFountain', 'SwapBurst', 'SwapFountainModules'];
-const COUNTS = { CtlTemplate: 100, FactoryFountain: 0, FactoryBurst: 0, Keep90: 30, Keep15: 5, Keep0: 0, SwapFountain: 31, SwapBurst: 1, SwapFountainModules: 29 };
 const run = (max, extra = {}) => ({ captured: true, valid: true, num_frames: 40, metric_max: max, metric_emitter: 'Probe', max_total: max, emitters: ['Probe'], read_errors: [], totals: [max], last: { Probe: max }, ...extra });
+const EMIT_COMPLETED = ['SwapFountain', 'SwapBurst', 'SwapFountainModules', 'SwapSameValue', 'SwapEnum', 'SwapBool', 'SwapToggle', 'SwapWriteFirst', 'LateAdded'];
+const EMIT_COUNTS = { CtlTemplate: 380, FactoryFountain: 145, FactoryBurst: 1, KeepUntouched: 0, Keep90: 0, Keep60: 97, Keep30: 49, Keep15: 24, Keep0: 0,
+  SwapRateTouched: 145, SwapDurationTouched: 145, SwapBurstTouched: 5, LateTouched: 143, TouchedThenRemoved: 144 };
+const EMIT_IDS = [...Object.keys(EMIT_COUNTS), ...EMIT_COMPLETED];
+const emitting = (max, extra = {}) => ({ captured: true, valid: true, num_frames: 1, metric_max: max, metric_emitter: 'Probe', max_total: max, emitters: ['Probe'], read_errors: [], totals: [max], refused_frames: 0, last: { Probe: max }, max_by_emitter: { Probe: max }, ...extra });
+const completed = () => ({ captured: false, valid: false, num_frames: 0, metric_max: 0, metric_emitter: null, max_total: 0, emitters: [], read_errors: [], totals: [0], refused_frames: 40, last: {}, max_by_emitter: {} });
 const emitReport = () => ({
   build: { probe: 'emit-build', steps: EMIT_IDS.map((id) => ({ step: `variant_${id}`, id, emitters: ['Probe'] })) },
-  sim: { probe: 'sim', samples: Object.fromEntries(EMIT_IDS.map((id) => [id, { steps: { run: run(COUNTS[id]) } }])),
+  sim: { probe: 'sim', samples: Object.fromEntries(EMIT_IDS.map((id) => [id, { steps: { run: EMIT_COMPLETED.includes(id) ? completed() : emitting(EMIT_COUNTS[id], id === 'LateTouched' ? { max_by_emitter: { Probe: 143, Late: 144 } } : {}) } }])),
     compile: Object.fromEntries(EMIT_IDS.map((id) => [id, { error: '', value: { aggregateStatus: 'UpToDate' } }])), issues: {}, shots: [], events: [] },
 });
 
@@ -155,26 +159,58 @@ test('renderers: each claim has a failing case', () => {
 
 // ---- emit
 test('emit: each claim has a failing case', () => {
-  const sim = (r, id, value) => { r.sim.samples[id].steps.run.metric_max = value; };
-  assert.deepEqual(mutate('emit', (r) => sim(r, 'CtlTemplate', 0)), ['the sim-cache count reads a system that must emit']);
-  assert.deepEqual(mutate('emit', (r) => { r.sim.samples.CtlTemplate.steps.run.valid = false; }).includes('the sim-cache count reads a system that must emit'), true);
-  assert.deepEqual(mutate('emit', (r) => sim(r, 'Keep0', 3)), ['a spawn rate of 0 counts 0 particles in a valid cache (negative control)']);
-  assert.deepEqual(mutate('emit', (r) => sim(r, 'Keep0', 5)), ['a spawn rate of 0 counts 0 particles in a valid cache (negative control)', 'a stack input changes the sim-cache count']);
-  assert.deepEqual(mutate('emit', (r) => { r.sim.samples.Keep0.steps.run.metric_emitter = null; }), ['a spawn rate of 0 counts 0 particles in a valid cache (negative control)']);
-  assert.deepEqual(mutate('emit', (r) => { r.sim.samples.Keep0.steps.run.num_frames = 0; }).includes('a spawn rate of 0 counts 0 particles in a valid cache (negative control)'), true);
-  assert.deepEqual(mutate('emit', (r) => sim(r, 'Keep15', 31)), ['a stack input changes the sim-cache count']);
-  assert.deepEqual(mutate('emit', (r) => sim(r, 'SwapFountain', 0)), ['a template system whose emitters were removed and a Fountain emitter added emits']);
-  assert.deepEqual(mutate('emit', (r) => { delete r.sim.samples.SwapBurst; }), ['every authoring route was sampled, and the cause matrix is recorded']);
-  assert.deepEqual(mutate('emit', (r) => { r.sim.compile.FactoryBurst = { error: '', value: { aggregateStatus: 'Error' } }; }), ['every authoring route was sampled, and the cause matrix is recorded']);
-  assert.deepEqual(mutate('emit', (r) => { r.build.steps = r.build.steps.filter((s) => s.step !== 'variant_SwapFountain'); }).includes('a template system whose emitters were removed and a Fountain emitter added emits'), true);
-  assert.deepEqual(mutate('emit', (r) => { r.build.steps.find((s) => s.step === 'variant_Keep90').error = 'RemoveEmitter: ...'; }), ['a stack input changes the sim-cache count']);
+  const NAMES = {
+    control: 'the sim-cache count reads a system that must emit',
+    factory: 'a system from the factory emits with its emitter untouched',
+    zero: 'a spawn rate of 0 counts 0 particles in a valid cache (negative control)',
+    moves: 'a stack input changes the sim-cache count',
+    dead: 'an emitter added to a template system does not emit until a stack input value is changed',
+    revived: 'a float or int stack input changed after the last AddEmitter makes the added emitters emit',
+    stays: 'a write before the last AddEmitter, a same-value write, and an enum, bool or module-toggle edit do not make it emit',
+    matrix: 'every authoring route was sampled, and the cause matrix is recorded',
+  };
+  const sample = (r, id, value) => { r.sim.samples[id].steps.run.metric_max = value; };
+  const swap = (r, id, run) => { r.sim.samples[id].steps.run = run; };
+  assert.deepEqual(mutate('emit', (r) => sample(r, 'CtlTemplate', 0)), [NAMES.control]);
+  assert.ok(mutate('emit', (r) => { r.sim.samples.CtlTemplate.steps.run.valid = false; }).includes(NAMES.control));
+  assert.deepEqual(mutate('emit', (r) => sample(r, 'FactoryFountain', 0)), [NAMES.factory]);
+  assert.deepEqual(mutate('emit', (r) => swap(r, 'FactoryBurst', completed())), [NAMES.factory]);
+  assert.deepEqual(mutate('emit', (r) => sample(r, 'Keep0', 3)), [NAMES.zero]);
+  assert.deepEqual(mutate('emit', (r) => { r.sim.samples.Keep0.steps.run.metric_emitter = null; }), [NAMES.zero]);
+  assert.ok(mutate('emit', (r) => { r.sim.samples.Keep0.steps.run.num_frames = 0; }).includes(NAMES.zero));
+  assert.deepEqual(mutate('emit', (r) => sample(r, 'Keep15', 60)), [NAMES.moves]);
+  assert.deepEqual(mutate('emit', (r) => { r.build.steps.find((s) => s.step === 'variant_Keep60').error = 'RemoveEmitter: ...'; }), [NAMES.moves]);
+  assert.deepEqual(mutate('emit', (r) => sample(r, 'KeepUntouched', 7)), [NAMES.dead]);
+  assert.deepEqual(mutate('emit', (r) => sample(r, 'Keep90', 7)), [NAMES.dead]);
+  assert.deepEqual(mutate('emit', (r) => swap(r, 'SwapFountain', emitting(31))), [NAMES.dead]);
+  assert.deepEqual(mutate('emit', (r) => swap(r, 'SwapBurst', emitting(1))), [NAMES.dead]);
+  assert.deepEqual(mutate('emit', (r) => swap(r, 'SwapFountainModules', emitting(29))), [NAMES.dead]);
+  assert.ok(mutate('emit', (r) => { r.build.steps = r.build.steps.filter((s) => s.step !== 'variant_SwapFountain'); }).includes(NAMES.dead));
+  assert.deepEqual(mutate('emit', (r) => swap(r, 'SwapRateTouched', completed())), [NAMES.revived]);
+  assert.deepEqual(mutate('emit', (r) => swap(r, 'SwapDurationTouched', completed())), [NAMES.revived]);
+  assert.deepEqual(mutate('emit', (r) => sample(r, 'SwapBurstTouched', 4)), [NAMES.revived]);
+  assert.deepEqual(mutate('emit', (r) => { r.sim.samples.LateTouched.steps.run.max_by_emitter.Late = 0; }), [NAMES.revived]);
+  assert.deepEqual(mutate('emit', (r) => swap(r, 'TouchedThenRemoved', completed())), [NAMES.revived]);
+  for (const id of ['SwapWriteFirst', 'SwapSameValue', 'SwapEnum', 'SwapBool', 'SwapToggle', 'LateAdded']) assert.deepEqual(mutate('emit', (r) => swap(r, id, emitting(30))), [NAMES.stays], id);
+  assert.deepEqual(mutate('emit', (r) => { delete r.sim.samples.SwapSameValue; }).sort(), [NAMES.matrix, NAMES.stays].sort());
+  assert.deepEqual(mutate('emit', (r) => { r.sim.compile.FactoryBurst = { error: '', value: { aggregateStatus: 'Error' } }; }), [NAMES.matrix]);
+  assert.deepEqual(mutate('emit', (r) => { r.sim.samples.Keep30.steps.run.error = 'Traceback ...'; }).sort(), [NAMES.matrix, NAMES.moves].sort());
 });
 
-test('emit: a zero in the cause matrix is a finding, not a failure of the probe', () => {
+test('emit: a refused capture counts as completed only when the sim report says the system was asked and refused', () => {
+  const NAME = 'an emitter added to a template system does not emit until a stack input value is changed';
+  // a report without refused_frames (an older shape) or with a captured cache is not a completed system
+  assert.deepEqual(mutate('emit', (r) => { delete r.sim.samples.SwapFountain.steps.run.refused_frames; }), [NAME]);
+  assert.deepEqual(mutate('emit', (r) => { r.sim.samples.SwapFountain.steps.run.captured = true; }), [NAME]);
+  assert.deepEqual(mutate('emit', (r) => { r.sim.samples.SwapFountain.steps.run.error = 'Traceback ...'; }).includes(NAME), true);
+});
+
+test('emit: a zero or a completed system in the cause matrix is a finding, not a failure of the probe', () => {
   const out = evaluateProbes({ groups: ['emit'], reports: canned() });
   const matrix = out.find((c) => c.name.startsWith('every authoring route'));
   assert.equal(matrix.pass, true);
-  assert.match(matrix.detail, /FactoryFountain=0, FactoryBurst=0/);
+  assert.match(matrix.detail, /KeepUntouched=0, Keep90=0/);
+  assert.match(matrix.detail, /SwapFountain=completed at once, SwapBurst=completed at once/);
 });
 
 // ---- frame
@@ -337,7 +373,7 @@ test('the python scripts exist, name the maps the runner plays, and write the fi
   for (const group of PROBE_GROUPS) {
     for (const phase of PROBE_PHASES[group]) {
       const source = read(phase.script);
-      assert.match(source, /Prepared 2026-10-26; not yet run on an engine/, phase.script);
+      assert.match(source, phase.script === 'nts_probe_emit_build.py' ? /Run on 5\.8\.2 on 2026-10-26/ : /Prepared 2026-10-26; not yet run on an engine/, phase.script);
       if (phase.mode === 'editor') {
         const build = read(PROBE_PHASES[group][0].script);
         assert.ok(build.includes(`"${phase.map}"`), `${group}: build script and runner disagree on the map`);
@@ -346,6 +382,7 @@ test('the python scripts exist, name the maps the runner plays, and write the fi
   }
   assert.ok(read('nts_probe_emit_build.py').includes('"variant_" + variant'));
   for (const id of EMIT_IDS) assert.ok(read('nts_probe_emit_build.py').includes(`"${id}"`), id);
+  assert.ok(read('nts_probe_sim.py').includes('"refused_frames"'));
   const frame = read('nts_probe_frame_build.py');
   for (const word of ['"id": "Flip"', 'Cam_Flip', 'User.FrameIndex', '"shot": "base"', '"shot": "v%d"', 'SubImageIndex', '"user_variable"', '"link"', '"system"']) assert.ok(frame.includes(word), word);
   const wire = read('nts_probe_wire_build.py');
@@ -369,7 +406,7 @@ test('the probe files carry the status line and no machine or home-directory tex
   assert.ok(probeFiles.length >= 10, probeFiles.join(', '));
   for (const name of probeFiles) {
     const text = read(name);
-    assert.match(text, /Prepared 2026-10-26; not yet run on an engine/, name);
+    assert.match(text, name === 'nts_probe_emit_build.py' ? /Run on 5\.8\.2 on 2026-10-26/ : /Prepared 2026-10-26; not yet run on an engine/, name);
     assert.doesNotMatch(text, /[A-Za-z]:[\\/]Users[\\/]|\/home\/|\/Users\//, name);
     assert.doesNotMatch(text, /\r/, name);
   }
