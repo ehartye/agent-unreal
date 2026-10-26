@@ -94,7 +94,7 @@ const phaseSeconds = flag('--phase-seconds') || '30';
 say('INTERACTIVE RUN. A rendering editor opens with a visible window. Keep it in front and watch its viewport.');
 say(`Each of ${PHASES.length} phases lasts ${phaseSeconds} s after a 20 s settle. For every phase, note whether the orange renderer message is on screen, and screenshot the window if you can.`);
 say(`Project: ${root}`);
-if (offscreen) say('OFFSCREEN: no window is shown; each phase saves Saved/Screenshots/WindowsEditor/rpv_<phase>.png, and the observations are read from those images.');
+if (offscreen) say('OFFSCREEN: no window is shown; each phase saves Saved/Screenshots/WindowsEditor/rpv_<phase>00000.png, and the observations are read from those images.');
 const child = spawn(exe, [uproject, `-ExecutePythonScript=${script}`, `-abslog=${logPath}`, '-unattended', '-nosplash', '-nosound', '-notraceserver', ...(offscreen ? ['-RenderOffScreen'] : [])],
   { env: { ...process.env, RP_MODE: 'interactive', RP_OFFSCREEN: offscreen ? '1' : '0', RP_REPORT: reportPath, RP_MAP: '/Game/Maps/RpViewportInteractive', RP_PHASE_SECONDS: phaseSeconds }, stdio: 'ignore' });
 let announced = 0;
