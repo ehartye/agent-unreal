@@ -1,5 +1,6 @@
 #pragma once
 
+#include "AbilitySystemComponent.h"
 #include "AbilitySystemInterface.h"
 #include "AttributeSet.h"
 #include "Abilities/GameplayAbility.h"
@@ -10,7 +11,6 @@
 #include "TimerManager.h"
 #include "GasNativeRep.generated.h"
 
-class UAbilitySystemComponent;
 
 /**
  * Replicated-play scenario: a dedicated server and one client, a player state that owns an Ability System Component in Mixed replication
