@@ -51,17 +51,15 @@ The 5.8 install ships Python examples in `Engine/Plugins/MovieScene/MovieRenderP
 ## Workflow
 
 1. Enable the plugin and restart. Create the job with a Level Sequence and a map; MRQ opens the level for the job.
-2. A job needs a render pass and an output format. Add Deferred Rendering and an output such as `.png Sequence [8bit]`; the default output is `.jpg Sequence [8bit]`.
+2. A job needs a render pass and an output format. Add Deferred Rendering and an output such as `.png Sequence [8bit]`; the default output is `.jpg Sequence [8bit]`. A Deferred pass under a Lumen scene lost the GPU device once: see [passes and quality](unreal-movie-render-queue-quality.md).
 3. Choose the format for the destination: EXR keeps HDR (linear, no sRGB); PNG and JPG are 8-bit sRGB; PNG transparency needs the alpha project setting; Command Line Encoder pipes frames to an external encoder such as FFmpeg; WAV exports audio.
 4. Set resolution and the Output directory; build file names with `{token}` format strings.
-5. Set anti-aliasing. Epic's high-quality worked example uses Spatial Sample Count 1, Temporal Sample Count 64, Override Anti Aliasing on with method None, and Render and Engine Warm Up Count 120. Higher counts raise time per frame: time a few frames before raising them. In the 5.8 header, Engine Warm Up costs less than Render Warm Up and suits particle warm-up.
-6. In MRG, set temporal samples on the Sampling Method node, spatial samples and AA method on the Renderer node, warm up on its own node, and file naming on the File Type Output node. Connect the Path Tracer or Deferred node to choose the render path. The default Game Overrides node controls overrides; removing it removes them (Epic).
-7. Raise quality with the Console Variables setting. Epic's example sets `r.MotionBlurQuality 4`, `r.MotionBlurSeparable 1`, `r.DepthOfFieldQuality 4`, `r.BloomQuality 5`, `r.Tonemapper.Quality 5`. Values apply at render start and revert when it finishes.
-8. Render (Local) runs in the editor process (no save needed); Render (Remote) runs a separate process (save the project first).
-9. Keep executor and callback objects in module-level Python variables for the render's duration (5.8 install example).
-10. Confirm outputs in `on_job_finished`: read `in_output_data.graph_data`, each shot's `render_layer_data` and its `file_paths` (Epic).
+5. Set the render path, samples, anti-aliasing and quality console variables: [passes and quality](unreal-movie-render-queue-quality.md).
+6. Render (Local) runs in the editor process (no save needed); Render (Remote) runs a separate process (save the project first).
+7. Keep executor and callback objects in module-level Python variables for the render's duration (5.8 install example).
+8. Confirm outputs in `on_job_finished`: read `in_output_data.graph_data`, each shot's `render_layer_data` and its `file_paths` (Epic).
 
-Related: [TSR and anti-aliasing](../../unreal-rendering/references/unreal-temporal-super-resolution.md), [Lumen](../../unreal-rendering/references/unreal-lumen.md).
+Related: [Lumen](../../unreal-rendering/references/unreal-lumen.md).
 
 ## Sources
 
