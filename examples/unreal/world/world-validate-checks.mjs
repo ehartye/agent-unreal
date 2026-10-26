@@ -131,7 +131,7 @@ export function evaluate(r) {
 }
 
 // ---------------------------------------------------------------------------------------------------------------------------------
-// The automation claims of skills/unreal-procedural/references/unreal-world-partition.md: new_level, the proxy unit, the commandlets, the
+// The automation claims of skills/unreal-procedural/references/unreal-world-partition.md , unreal-world-partition-landscape.md and unreal-world-partition-commandlets.md: new_level, the proxy unit, the commandlets, the
 // console commands, the Water Zone setting and the Landscape size rule.
 
 /** Epic's Landscape technical guide, recommended sizes: [overall vertices, quads per section, sections per component side, components per side]. */

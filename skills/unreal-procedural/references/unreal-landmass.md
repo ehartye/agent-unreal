@@ -59,7 +59,7 @@ Tuning `CustomBrush_Landmass`:
 
 ## Large landscapes in World Partition
 
-The partitioned map, the Landscape proxy layout, reading heights back and what Python cannot attach are in [World Partition](unreal-world-partition.md).
+The partitioned map is in [World Partition](unreal-world-partition.md); the Landscape proxy layout, reading heights back and what Python cannot attach are in [World Partition Landscape](unreal-world-partition-landscape.md).
 
 ## Sources
 

@@ -27,31 +27,9 @@ Workflow: create or convert, confirm `get_actor_descs()` returns descriptors, sh
 - [tested] `new_level` on an existing path returns False and logs `An asset already exists at this location.`; a commandlet that logs it exits 1.
 - [tested] Python creates no Landscape: `Landscape` and `LandscapeProxy` expose only heightmap and weightmap render-target import and export. Use the template ([documented] a 2 km by 2 km Landscape) or convert a Landscape map.
 
-## Landscape in a partitioned map
+The template Landscape, its proxy grid and grid size, reading heights back and Landmass brushes: [World Partition Landscape](unreal-world-partition-landscape.md).
 
-- [tested] The template has one always-loaded Landscape actor with no components and 64 spatially loaded `LandscapeStreamingProxy` actors (8 by 8); two edit layers.
-- [tested] A proxy holds 2 by 2 components of 126 quads: 252 quads, 252 m at 100 cm per quad, per side. All 256 components make 16 by 16, 2017 vertices per side.
-- [documented] The grid size counts components per proxy side: `ChangeGridSize` fills a cell with N by N components (`Runtime/Landscape/Private/LandscapeConfigHelper.cpp:135`) and the cell side is N times the component quads (`Runtime/Landscape/Private/LandscapeEdit.cpp:5405`). Epic's [heightmap import page](https://dev.epicgames.com/documentation/en-us/unreal-engine/importing-and-exporting-landscape-heightmaps-in-unreal-engine) words World Partition Grid Size the other way round (proxies per component).
-- [tested] `LandscapeGridSize` in the `<map>.ini` the commandlet writes is that number: 4 gave one proxy for a 2 by 2 Landscape of 255-quad components, 1 gave four.
-- [tested] Python reaches no grid size: `unreal.LandscapeSubsystem` and `LandscapeInfo` do not exist, `runtime_grid` is the only grid member, quad counts are not properties. [documented] `ChangeGridSize` is a plain C++ function (`Runtime/Landscape/Public/LandscapeSubsystem.h:153`). Edit the ini and convert again.
-- [documented] Valid sizes ([Landscape technical guide](https://dev.epicgames.com/documentation/en-us/unreal-engine/landscape-technical-guide-in-unreal-engine)): vertices per side = quads per component times components plus 1; sections a power of two vertices up to 256; at most 1024 components. [tested] All 11 recommended rows satisfy it (pure Node check).
-- [tested] In a commandlet no proxy is in the world until `WorldPartitionBlueprintLibrary.load_actors` gets their guids; the rendering editor loaded all 64 at open.
-- [tested] In a rendering editor (`-RenderOffScreen`), `landscape.render_heightmap(Transform(), Box2D, target)` into an `RTF_RGBA8` target (float formats return False) gives final heights after `force_layers_full_update()` and 25 s of ticks; height = R*256 + G; Z = Landscape Z + (height - 32768) / 128 * scale Z.
-- [tested] Python spawns `LandmassBrushManager` and `CustomBrush_Landmass`, but neither attaches (`get_landscape()` is None); add brushes in Landscape mode.
-
-## Convert and rebuild
-
-- [tested] Conversion exits 1 without `-AllowCommandletRendering` (`The option "-AllowCommandletRendering" is required`).
-- [tested] `-ReportOnly` writes no file. `-GenerateIni` writes only `<map>.ini` (`LandscapeGridSize=4`, `CellSize=12800`, runtime hash set) and implies ReportOnly (`Editor/UnrealEd/Private/Commandlets/WorldPartitionConvertCommandlet.cpp:684`).
-- [tested] `-ConversionSuffix` writes `<map>_WP` and leaves the source plain; without it the map is converted in place.
-- [tested] `WorldPartitionResaveActorsBuilder` exits 0 and saves every actor. The class filter is `-ActorClassName=StaticMeshActor` (`Editor/UnrealEd/Public/WorldPartition/WorldPartitionResaveActorsBuilder.h:8`); the `-ActorClass` of Epic's [builder page](https://dev.epicgames.com/documentation/en-us/unreal-engine/world-partition-builder-commandlet-reference) is ignored.
-- [tested] `WorldPartitionFoliageBuilder -NewGridSize=512` logs `from 25600 to 512` (256 m default) and rewrites the map.
-- [tested] `WorldPartitionMiniMapBuilder -AllowCommandletRendering` exits 1 with `-nullrhi` (`render target ... has been released`); without `-nullrhi` it exits 0 with no error and the actor gets a 26 by 2 minimap texture.
-
-## Console commands
-
-- [tested] `DumpConsoleCommands wp.Runtime.` lists `ToggleDrawRuntimeHash2D`, `OverrideRuntimeSpatialHashLoadingRange` and `HLOD`.
-- [tested] The variable is `wp.Runtime.MaxLoadingStreamingCells` (default 4, `Runtime/Engine/Private/WorldPartition/WorldPartitionSubsystem.cpp:204`); Epic's `MaxLoadingLevelStreamingCells` is not registered.
+Converting a plain map, the builder commandlets and the `wp.Runtime` console commands: [World Partition commandlets](unreal-world-partition-commandlets.md).
 
 ## Water in a partitioned map
 

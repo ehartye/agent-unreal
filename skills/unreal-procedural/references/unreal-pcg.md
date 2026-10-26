@@ -57,18 +57,9 @@ Epic's forest example:
 5. Add a Static Mesh Spawner with weighted Mesh Entries.
 6. Click Generate; inspect each node's point data with debug rendering.
 
-Generation modes `[documented]` (Epic, [Using PCG Generation Modes](https://dev.epicgames.com/documentation/en-us/unreal-engine/using-pcg-generation-modes-in-unreal-engine)): Non-partitioned (default), Partitioned, Hierarchical and Runtime. A large grid suits large meshes such as trees and boulders; a small grid suits grass, flowers and stones.
-- Non-partitioned: one component generates its whole domain, on demand with the Generate button or `PCGComponent.generate`. Meshes stay inside the domain, which Epic says can slow a large area.
-- Partitioned: tick Is Partitioned to split data across a grid that World Partition and Level Instancing can stream. Partition Grid Size is on the PCGWorldActor; after changing it click Cleanup on each PCG asset, then Generate.
-- Hierarchical: requires partitioned components. Tick Use Hierarchical Generation in Graph Settings and set HiGen Default Grid Size. The Grid Size node (HiGen Grid Size) sets the grid for every node after it, so place it before the samplers. Nodes with no Grid Size node use the default; data flows from a larger grid to a smaller one, not back; a node fed by several grids outputs at the smallest; subgraphs use their parent's or input's grid.
-- Runtime: set Generation Trigger to Generate at Runtime; Epic pairs it with Hierarchical. It runs in editor, PIE and standalone. Generation sources are the editor viewport (Treat Editor Viewport as Generation Source on the PCGWorldActor), player controllers, World Partition streaming sources and PCG Generation Source components. A component generates inside the Generation Radius for its grid size (Override Generation Radii per component) and cleans up beyond that radius times Cleanup Radius Multiplier; each radius should exceed the next smaller grid's. The page also covers Unbounded grid size, scheduling and frustum culling.
-- Console variables `[tested]`, 5.8.2 defaults: `pcg.RuntimeGeneration.Enable` true, `.EnablePooling` true, `.BasePoolSize` 100, `.NumGeneratingComponents` 16, `.EnableDebugging` false, `pcg.FrameTime` 5.0 ms, `pcg.EditorFrameTime` 15.0 ms. Epic's page lists 16.667 and 50 ms and a `.FramesBetweenGraphSchedules` variable; the 5.8.2 plugin source declares other defaults and no such variable.
-- A running game needs more than the editor does: see [PCG in a running game](unreal-pcg-game-process.md).
+Generation modes (Non-partitioned, Partitioned, Hierarchical, Runtime), their grid settings and the runtime console variables: [PCG generation modes](unreal-pcg-generation-modes.md). A running game needs more than the editor does: see [PCG in a running game](unreal-pcg-game-process.md).
 
-GPU execution:
-- Supported nodes: Attribute Partition, Copy Points, Cull Points Outside Actor Bounds, Custom HLSL, Data Count, Normal to Density, Static Mesh Spawner, Transform Points.
-- Use it when the data holds enough points to fill the GPU; group GPU nodes to limit CPU-GPU transfers.
-- A GPU Static Mesh Spawner creates transient instances in GPU memory; it does not support collision and physics, navigation, ray tracing, Distance Field lighting, baked static lighting or HLOD, and works only with the Weighted and By-Attribute selectors and the by-attribute packer. Epic labels the feature Beta and the GPU spawner Experimental.
+GPU execution, its supported nodes and limits: [PCG GPU execution](unreal-pcg-gpu.md).
 
 World Partition: assign PCG assets to a Data Layer and HLOD Layer and the generated actors inherit them; Spawn Actor and Create Target Actor nodes expose Data Layer Source and HLOD Source settings.
 

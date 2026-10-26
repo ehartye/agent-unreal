@@ -1,5 +1,5 @@
 // node world_validate.mjs --engine "C:/Program Files/Epic Games/UE_5.8" [--keep] [--shot <png path>]
-// Validates the World Partition guidance in skills/unreal-procedural/references/unreal-world-partition.md against a real Unreal 5.8 install.
+// Validates the World Partition guidance in skills/unreal-procedural/references/unreal-world-partition.md , unreal-world-partition-landscape.md and unreal-world-partition-commandlets.md against a real Unreal 5.8 install.
 // It makes a throwaway project in the OS temp folder (Python, Landmass, Water, PCG), copies the
 // Open World template and a Water sample map into it, converts the sample map with the World Partition conversion commandlet, inspects
 // each map, places Water, Landmass and PCG actors, and carves a river in a rendering editor. A second part creates maps with
