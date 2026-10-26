@@ -1,13 +1,6 @@
 # Native Unreal game build and capture loop
 
-Observed in one consuming Unreal 5.8.2 project on Windows; not reproduced in this repo. Toolchain: Unreal **5.8.2 CL56702186**, VS2022 Build Tools **17.14.37516.0**, actual MSVC **14.44.35228**, SDK **10.0.26100.0**, bundled **.NET 10**, D3D12 on a discrete GPU. Engine source inspection and executed behaviour are labelled separately. Screenshots reveal rendering failures; delivery alone does not establish reference parity.
-
-## Native module and source geometry
-
-- [general] An initial C++ Runtime module loaded in `UnrealEditor.exe -game`, built procedural vehicles and a long track, simulated a Chaos chassis and saved game-camera PNGs using ProceduralMeshComponent.
-- [general] Explicit project plugins were `ProceduralMeshComponent`, `PythonScriptPlugin` and `EditorScriptingUtilities`. Runtime used Core, CoreUObject, Engine, InputCore, ProceduralMeshComponent and PhysicsCore, plus JSON/UI modules the game needed. Editor-only material graph creation stayed in Python.
-- [documented] Installed-source inspection, not runtime proof: ProceduralMeshComponent is a Runtime module in 5.8.2. It does not automatically provide a skeletal rig, Nanite or authored LODs. Use a few simple collision bodies, not collision on decorative trim. Bake accepted repeated geometry into static meshes when instancing/LODs are needed.
-- [general] The first native compile caught an ambiguous conditional between `Parent->Mobility` (`TEnumAsByte`) and `EComponentMobility::Movable`. `Parent->GetMobility()` supplies the exact enum. A test source in a nested module folder could not include the parent's header through a legacy implicit include path; its explicit relative include fixed compilation. Do not widen global include paths to hide a local ownership mistake.
+Observed in one consuming Unreal 5.8.2 project on Windows; not reproduced in this repo. Toolchain: Unreal **5.8.2 CL56702186**, VS2022 Build Tools **17.14.37516.0**, actual MSVC **14.44.35228**, SDK **10.0.26100.0**, bundled **.NET 10**, D3D12 on a discrete GPU. Engine source inspection and executed behaviour are labelled separately. Screenshots reveal rendering failures; delivery alone does not establish reference parity. Plugins, modules and first-compile pitfalls are in [module setup](unreal-native-module-setup.md).
 
 ## Exact compiler and engine versions
 
@@ -32,7 +25,7 @@ Use Epic's wrappers and bundled dotnet. Preserve logs and receipts. Record HEAD,
 
 ## Editor assets and presentation
 
-- [general] [Native presentation](unreal-native-presentation.md) records the Slate/font commandlet crash, empty VertexColor pin, exact-size Canvas glyphs and camera/palette failures caught by actual screenshots.
+- [general] [Native presentation](unreal-native-presentation.md) records the Slate/font commandlet crash, empty VertexColor pin, exact-size Canvas glyphs and Canvas text that needs a `UFont`; [exposure and vertex colour](unreal-native-exposure-and-vertex-color.md) the camera and palette failures caught by actual screenshots.
 
 The [content-only pipeline](unreal-native-content-pipeline.md) separates asset authoring from native gameplay when the host refuses an Editor module.
 
@@ -56,17 +49,12 @@ Use a fresh output directory. Reject stale/missing PNG or JSON, invalid PNG dime
 
 ## Automation exit codes are insufficient
 
-- [general] A failing automation test returned **process exit code 0** under `-TestExit="Automation Test Queue Empty"`. Fresh `index.json` correctly reported failed=1. The engine's queue-empty exit is not a passing test result.
-- [general] The project wrapper therefore parses fresh automation JSON and rejects failed, incomplete, zero-test or unexpected-filter reports, in addition to checking process exit/timeout. Dependency-free tooling checks should exercise those rejection paths using deliberate invalid artifacts.
-- [general] Writing a test and reading its report: [automation tests](unreal-native-automation-tests.md).
-- [general] After the guard fix, fresh automation reported all tests succeeded and none failed. Such bounded behaviours do not replace play-through, handling or physical-input checks.
+- [general] A failing test can exit 0 under the queue-empty exit; read the fresh report ([automation tests](unreal-native-automation-tests.md#the-exit-code-is-not-the-verdict)).
 
-```powershell
-& "$ueRoot/Engine/Binaries/Win64/UnrealEditor-Cmd.exe" $uproject "-ExecCmds=Automation RunTests MyGame" "-TestExit=Automation Test Queue Empty" "-ReportExportPath=$projectRoot/Saved/Verification/fresh-tests" -unattended -nullrhi -nosound -notraceserver
-# Parse fresh index.json: require executed successes and failed/notRun/inProcess == 0.
-```
+## Static parts at the world origin
 
-Use nullrhi for nonvisual automation, never for a rendered acceptance frame. Engine process ownership must be serialized between builders, content generation, tests and captures.
+- [documented] `USceneComponent` is Movable by default. `AttachToComponent` refuses to attach a Static component to a non-Static parent: it logs `AttachTo: '<parent>' is not static, cannot attach '<child>' which is static to it. Aborting.` through `FMessageLog("PIE")` and returns false, so the child stays unattached (`Engine/Source/Runtime/Engine/Private/Components/SceneComponent.cpp`; skipped while the owner runs a user construction script).
+- [general] Observed once on 5.8.x: actors that owned static slabs and walls drew those parts at the world origin, not where the actor stood. A wall jump's sweeps found no wall for three runs, through changes of mesh origin and trace channel, until one log line showed the walls never attached. Give an actor that owns static meshes a Static root (`SetMobility(EComponentMobility::Static)` on it before attaching), and search the log for `is not static` before debugging a probe. A sweep that finds a Nanite wall is a separate trap: [contact case study](unreal-native-contact.md#a-sweep-can-need-the-complex-triangles).
 
 ## Native packaging and remaining acceptance
 

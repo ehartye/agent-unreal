@@ -36,6 +36,11 @@ $uproject = "$projectRoot/MyGame.uproject"
 
 Check each process exit and fresh cook logs before continuing; the shell snippet is not a failure-aware wrapper. Cook success does not prove stage completeness or runtime startup.
 
+## Assets loaded only by path
+
+- [documented] A folder that nothing references is cooked only if it is listed. `DirectoriesToAlwaysCook` ("Additional Asset Directories to Cook", Packaging, Advanced) names directories cooked "regardless of whether they're referenced by anything" (`Engine/Source/Developer/DeveloperToolSettings/Classes/Settings/ProjectPackagingSettings.h`); `CookCommandlet.cpp` adds each unless `NoGameAlwaysCookPackages` is set.
+- [general] `Config/DefaultGame.ini`: `[/Script/UnrealEd.ProjectPackagingSettings]` then `+DirectoriesToAlwaysCook=(Path="/Game/Art")`. Code that loads by path (a string-built soft path, a run-time name lookup) needs its folder listed. The failure is silent; see the [packaged smoke run](unreal-native-packaged-smoke.md).
+
 ## Receipt staging and native UnrealPak
 
 - [general] A finite PowerShell stager read `Binaries/Win64/MyGame.target`. It copied executable/dynamic-library/required-resource build products and NonUFS runtime dependencies, skipped debug-only products, and built UFS entries from runtime receipt dependencies plus the actual cooked files. It rejected missing files and unsupported roots instead of guessing paths.
@@ -55,7 +60,3 @@ Every response entry quotes both paths, for example `"source-file" "../../../MyG
 - [general] Scenario receipts sampled actor count, player displacement, speed, grounded wheels and weapon execution. These establish sampled native motion/control-command execution. They do not establish a completed session or physical keyboard/controller interaction.
 - [general] Performance acceptance needs the profiling method in [native profiling](unreal-native-profiling.md), run on the immutable package with the sampler built into it.
 - [general] Preserve visual GAP status, known HUD/world issues and open full-play/input/audio/performance acceptance. A locally running native package does not establish cross-machine portability; another clean Windows machine remains a separate test.
-
-## Pace audio captures
-
-- [general] UE5.8.2's fixed-step/benchmark branch bypasses frame waiting (`UnrealEngine.cpp`), so MaxFPS alone cannot pace it. For an isolated 60Hz master recording, save FApp's fixed-step/benchmark flags and engine fixed-rate/FPS; during recording disable the former and enable engine fixed 60FPS. Restore on normal stop and teardown. One project observed 19.65 simulation seconds during 20.0095 wall seconds (ratio 0.9820), with settings restored. Validate both clocks, intended tick rate and restoration beside WAV/EXE hashes. Use the project's intended rate rather than copying 60 universally; restrict this to explicit captures. A normal-cadence excerpt is not a sustained-performance test or owner approval.
