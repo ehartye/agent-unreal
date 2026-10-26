@@ -4,6 +4,8 @@ Target: Unreal Engine 5.8, Windows. The console variables, Python routes and tun
 
 ## How an agent drives it
 
+The table rows are `[documented]` from the 5.8 install and Epic's pages unless a row says otherwise; the Python names from the 5.7 API page were not found in the 5.8 clippings and are unchecked.
+
 | Task | Route | What to call |
 |---|---|---|
 | Turn it on for the project | Project settings | Rendering > Direct Lighting > MegaLights; the console variable is `r.MegaLights.EnableForProject` |
@@ -21,7 +23,7 @@ Python reaches console variables and Post Process Volume settings. Project Setti
 2. [general] Keep Lumen on hardware ray tracing so the Ray Tracing Scene is shared.
 3. [general] Leave lights on the Ray Tracing shadow method; reserve Virtual Shadow Maps for the few lights that need Nanite detail.
 4. [general] Keep lights small and sparse: narrow attenuation radius, cone angle and barn doors, no lights inside geometry, and merge clusters into single area lights.
-5. [documented] Set `r.Visibility.LocalLightPrimitiveInteraction 0` when every light uses ray tracing to remove most per-light CPU cost.
+5. [documented] `r.Visibility.LocalLightPrimitiveInteraction` defaults to 2, which Epic and the renderer source describe as enabled only while MegaLights is disabled; with MegaLights enabled for the project the per-light primitive interaction is already off, so there is nothing to set. Set it to 1 only to bring the old behaviour back for a comparison.
 6. [general] Tune with `r.MegaLights.NumSamplesPerPixel` and `r.MegaLights.DownsampleMode`; use `r.MegaLights.LightAttenuationFalloff` to tighten light influence.
 7. [general] Profile with `r.RDG.AsyncCompute 0`, then A/B test `r.MegaLights.AsyncCompute.Volume`, `.GenerateSamples` and `r.StochasticLighting.AsyncCompute`.
 8. [documented] Inspect shadow mismatches with `r.MegaLights.Visualize 1` and the Light Complexity view.

@@ -15,7 +15,7 @@ Target: Unreal Engine 5.8, Windows. Headers were read in a 5.8.2 install under `
 
 ## Find, claim, occupy and free
 
-- [documented] `FindSlots(Handle, Filter, OutSlots)` lists the object's slots that match an `FSmartObjectRequestFilter`. Its `BehaviorDefinitionClasses` restricts the search to those behaviour classes, so two kinds of user can share one object by the behaviour they use. The filter also takes `UserTags`, `ClaimPriority`, `ActivityRequirements` and `bShouldEvaluateConditions`.
+- [documented] `FindSlots(Handle, Filter, OutSlots)` lists the object's slots that match an `FSmartObjectRequestFilter`. Its `BehaviorDefinitionClasses` restricts the search to those behaviour classes, so two kinds of user can share one object by the behaviour they use. The filter also takes `UserTags`, `ClaimPriority`, `ActivityRequirements`, `bShouldEvaluateConditions` and `bShouldIncludeClaimedSlots` (false by default, so slots already claimed are left out of a find).
 - [documented] `MarkSlotAsClaimed(SlotHandle, Priority)` returns an `FSmartObjectClaimHandle` and is `[[nodiscard]]`. `MarkSlotAsOccupied(ClaimHandle, BehaviourClass)` returns the slot's behaviour definition (a template overload takes the type). `MarkSlotAsFree(ClaimHandle)` returns a bool and releases a claimed or occupied slot.
 - [documented] Keep each claim handle: it is the only argument `MarkSlotAsFree` takes.
 

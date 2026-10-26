@@ -1,10 +1,10 @@
 # Gameplay Cameras in Unreal 5.8: a third-person view built from code, and a blend that never finishes
 
-Target: Unreal Engine 5.8, Windows. Observed once on 5.8.x in a native C++ third-person game. No run in this repository covers it, so every line is `[general]`. Names marked "header read" were also found in a 5.8.2 install under `Engine/Plugins/Cameras/GameplayCameras/`. Choose Cine Cameras and Sequencer shots in [unreal-animation](../../unreal-animation/SKILL.md); this page is the gameplay camera that follows a pawn.
+Target: Unreal Engine 5.8, Windows. Observed once on 5.8.x in a native C++ third-person game. No run in this repository covers it, so a line is `[general]` unless it says it rests on a header or descriptor, which is `[documented]`. Names marked "header read" were also found in a 5.8.2 install under `Engine/Plugins/Cameras/GameplayCameras/`. Choose Cine Cameras and Sequencer shots in [unreal-animation](../../unreal-animation/SKILL.md); this page is the gameplay camera that follows a pawn.
 
 ## Enable it
 
-- [general] The `GameplayCameras` plugin is experimental: its descriptor sets `IsExperimentalVersion` (header read), and lists it enabled by default with EnhancedInput, StateTree and TemplateSequence as plugin dependencies. Add the module `GameplayCameras` to the game module's `Build.cs`.
+- [documented] The `GameplayCameras` plugin is experimental: its descriptor sets `IsExperimentalVersion` (header read), and lists it enabled by default with EnhancedInput, StateTree and TemplateSequence as plugin dependencies. Add the module `GameplayCameras` to the game module's `Build.cs`.
 - [general] The character has a `UGameplayCameraComponent` (the camera asset is its `CameraReference`, header read), and the player controller's camera manager class is `AGameplayCamerasPlayerCameraManager`. The spring arm stayed as a fallback behind a console variable; setting it to 0 brought the arm back.
 
 ## Where the numbers live
@@ -20,7 +20,7 @@ Target: Unreal Engine 5.8, Windows. Observed once on 5.8.x in a native C++ third
 
 ## Build traps
 
-- [general] `FCameraRigAssetAssembler::AddEnterTransition` does not compile for the plain assembler in 5.8: it hands a base class where the derived one is wanted. In `CameraAssetAssembleUtils.h` (header read) the base template passes `*this` as a `TCameraRigAssetAssemblerBase<ThisType>` to a transition assembler that wants `ThisType&`. Make the blend transitions by hand: `UCameraRigAsset` holds public `EnterTransitions` and `ExitTransitions` arrays of `UCameraRigTransition` (header read).
+- [documented] `FCameraRigAssetAssembler::AddEnterTransition` does not compile for the plain assembler in 5.8: it hands a base class where the derived one is wanted. In `CameraAssetAssembleUtils.h` (header read) the base template passes `*this` as a `TCameraRigAssetAssemblerBase<ThisType>` to a transition assembler that wants `ThisType&`. Make the blend transitions by hand: `UCameraRigAsset` holds public `EnterTransitions` and `ExitTransitions` arrays of `UCameraRigTransition` (header read).
 - [general] An enum value named `Cast` meets Unreal's `Cast<>` where the enum's namespace is brought in with `using`. Pick another name.
 - [general] The eye can read far from the character in the first frames of a run (1,395 cm against a 465 cm boom) while a test moves the character to its start and the boom's lag catches up. A camera assertion needs a settle time.
 

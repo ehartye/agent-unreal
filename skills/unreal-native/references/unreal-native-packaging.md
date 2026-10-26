@@ -39,7 +39,7 @@ Check each process exit and fresh cook logs before continuing; the shell snippet
 ## Assets loaded only by path
 
 - [documented] A folder that nothing references is cooked only if it is listed. `DirectoriesToAlwaysCook` ("Additional Asset Directories to Cook", Packaging, Advanced) names directories cooked "regardless of whether they're referenced by anything" (`Engine/Source/Developer/DeveloperToolSettings/Classes/Settings/ProjectPackagingSettings.h`); `CookCommandlet.cpp` adds each unless `NoGameAlwaysCookPackages` is set.
-- [general] `Config/DefaultGame.ini`: `[/Script/UnrealEd.ProjectPackagingSettings]` then `+DirectoriesToAlwaysCook=(Path="/Game/Art")`. Code that loads by path (a string-built soft path, a run-time name lookup) needs its folder listed. The failure is silent; see the [packaged smoke run](unreal-native-packaged-smoke.md).
+- [general] `Config/DefaultGame.ini`: `[/Script/UnrealEd.ProjectPackagingSettings]` (the class now lives in the DeveloperToolSettings module; the engine redirects the old name, which project templates still use; not run here) then `+DirectoriesToAlwaysCook=(Path="/Game/Art")`. Code that loads by path (a string-built soft path, a run-time name lookup) needs its folder listed. The failure is silent; see the [packaged smoke run](unreal-native-packaged-smoke.md).
 
 ## Receipt staging and native UnrealPak
 
