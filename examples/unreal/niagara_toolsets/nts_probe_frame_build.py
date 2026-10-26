@@ -31,6 +31,8 @@ import unreal  # noqa: E402
 FOLDER, MAP = "/Game/Probe/Frame", "/Game/Maps/NtsProbeFrame"
 SYSTEM, MATERIAL, TEXTURE = FOLDER + "/NS_Flip", FOLDER + "/M_Flip", FOLDER + "/T_Flip"
 VARIABLE = "User.FrameIndex"
+VARIANT = os.environ.get("NTS_FRAME_VARIANT", "link")   # "const": write 5.0 into Direct Frame Index instead of linking it (separates the mode from the link)
+SET_NAME = os.environ.get("NTS_FRAME_SETNAME", VARIABLE)   # the name the sim passes to set_variable_float
 SHORT_NAME = "FrameIndex"
 VALUES = (2.0, 9.0)
 GRID, CELL = 4, 128
@@ -149,7 +151,8 @@ try:
 except Exception as exc:
     probe.step("setup", error=str(exc)[:300])
 
-for name, fn in (("texture", texture), ("material", material), ("system", system), ("user_variable", user_variable), ("link", link)):
+steps = (("texture", texture), ("material", material), ("system", system), ("user_variable", user_variable), ("link", link) if VARIANT == "link" else ("const", lambda: c.set_float(c.at(SYSTEM, "Sprite", "ParticleUpdateScript", "SubUVAnimation", ["Direct Frame Index"]), 5.0)))
+for name, fn in steps:
     probe.guarded(name, fn)
 probe.guarded("save", lambda: {"system": bool(eal.save_asset(SYSTEM))})
 probe.write()
@@ -157,7 +160,7 @@ probe.write()
 probe.manifest.update({"map": MAP, "settle_seconds": 8, "systems": [{"id": "Flip", "asset": SYSTEM}], "samples": [{
     "id": "Flip", "actor": "Fx_Flip", "camera": "Cam_Flip", "metric_emitter": "Sprite",
     "sequence": [{"name": "base", "hidden": True, "shot": "base", "live_seconds": 0.5}] + [
-        {"name": "v%d" % int(v), "frames": 30, "attributes": ["SubImageIndex"], "set": [{"type": "float", "name": VARIABLE, "value": v}], "shot": "v%d" % int(v), "live_seconds": 1.5}
+        {"name": "v%d" % int(v), "frames": 30, "attributes": ["SubImageIndex"], "set": [{"type": "float", "name": SET_NAME, "value": v}], "shot": "v%d" % int(v), "live_seconds": 1.5}
         for v in VALUES]}]})
 probe.guarded("level", lambda: c.build_level(MAP, [{"id": "Flip", "asset": SYSTEM, "location": (0, 0, 100)}]))
 probe.write()
