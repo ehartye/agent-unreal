@@ -152,7 +152,9 @@ try:
 except Exception as exc:
     probe.step("setup", error=str(exc)[:300])
 
-steps = (("texture", texture), ("material", material), ("system", system), ("user_variable", user_variable), ("link", link) if VARIANT == "link" else ("const", lambda: c.set_float(c.at(SYSTEM, "Sprite", "ParticleUpdateScript", "SubUVAnimation", ["Direct Frame Index"]), 5.0)))
+steps = (("texture", texture), ("material", material), ("system", system), ("user_variable", user_variable), ("link", link) if VARIANT in ("link", "modelast") else ("const", lambda: c.set_float(c.at(SYSTEM, "Sprite", "ParticleUpdateScript", "SubUVAnimation", ["Direct Frame Index"]), 5.0)))
+if VARIANT == "modelast":   # the mode is written again after the link, to see whether the order decides the compiled behaviour
+    steps += (("mode_again", lambda: {"error": c.call("SetStackInputData", {"stackInputRef": c.at(SYSTEM, "Sprite", "ParticleUpdateScript", "SubUVAnimation", ["SubUV Animation Mode"]), "inputData": ENUM_DIRECT})["error"]}),)
 for name, fn in steps:
     probe.guarded(name, fn)
 probe.guarded("save", lambda: {"system": bool(eal.save_asset(SYSTEM))})
