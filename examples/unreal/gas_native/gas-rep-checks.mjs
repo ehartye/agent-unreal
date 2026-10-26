@@ -44,7 +44,7 @@ export const OBSERVATIONS = [
   { name: 'client TryActivateAbilityByClass returned', side: 'client', path: ['activation', 'try_activate_returned'], expect: true, source: `${GA}Public/Abilities/GameplayAbility.h:715`, why: 'NetExecutionPolicy LocalPredicted lets the client activate before the server answers' },
   { name: 'client actor info knows its controller before the call', side: 'client', path: ['phases', 'before', 'actor_info_locally_controlled'], expect: true, source: `${GA}Private/AbilitySystemComponent_Abilities.cpp:1645`, why: 'LocalPredicted activation needs IsLocallyControlled on the actor info' },
   { name: 'client TryActivateAbilityByClass returned after InitAbilityActorInfo with the pawn as avatar', side: 'client', path: ['activation', 'try_activate_after_reinit'], optional: true, expect: true, source: `${GA}Private/Abilities/GameplayAbility.cpp:463`, why: 'CanActivateAbility refuses when the avatar actor is a simulated proxy; a player state is one on its owning client, a pawn is an autonomous proxy' },
-  { name: 'client prediction ran at the call', side: 'client', path: ['activation', 'predicted_count_after_reinit'], optional: true, expect: 1, source: `${GA}Public/Abilities/GameplayAbility.h:715`, why: 'a locally predicted activation runs ActivateAbility on the client first' },
+  { name: 'client prediction ran at the call', side: 'client', path: ['activation', 'predicted_count_right_after_call'], expect: 1, source: `${GA}Public/Abilities/GameplayAbility.h:715`, why: 'a locally predicted activation runs ActivateAbility on the client first' },
   { name: 'client predicted activations after settling', side: 'client', path: ['phases', 'after', 'activations_predicted'], expect: 1, source: `${GA}Public/Abilities/GameplayAbility.h:715`, why: 'the same count, read again after the settle time' },
   { name: 'server authority activations', side: 'server', path: ['phases', 'after', 'activations_authority'], expect: 1, source: `${GA}Public/Abilities/GameplayAbility.h:715`, why: 'the client asks the server, which runs the ability with authority' },
   { name: 'server Energy base after the cost', side: 'server', path: ['phases', 'after', 'energy_base'], expect: 90, source: 'module/GasNative/GasNativeRep.cpp (UGasNativeRepCostEffect)', why: '100 minus the 10 Energy cost' },
@@ -70,7 +70,7 @@ export function observationRows({ server, client }) {
   return OBSERVATIONS.map((o) => {
     const receipt = o.side === 'server' ? server : client;
     const observed = dig(receipt, o.path);
-    return { name: o.name, side: o.side, optional: !!o.optional, observed, expect: o.expect, matches: 'expect' in o ? observed === o.expect : undefined, source: o.source, why: o.why };
+    return { name: o.name, side: o.side, optional: !!o.optional, observed, expect: o.expect, matches: 'expect' in o && !(o.optional && observed === undefined) ? observed === o.expect : undefined, source: o.source, why: o.why };
   });
 }
 
