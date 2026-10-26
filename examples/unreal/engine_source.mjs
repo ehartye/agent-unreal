@@ -13,7 +13,12 @@
 //           message string or in a lookup such as FindConsoleVariable is not a definition.
 //   symbol  a whole-word identifier, one line per hit, ranked declaration, then definition, then use, in path order within a rank,
 //           capped by --max (20). The rank is a heuristic read of the hit's own line and what follows it, not a parse: a class,
-//           struct or enum name ranks declaration only when its keyword is on that line. Read the printed line before citing a hit. Comments are not searched; `Class::Name` searches the last component.
+//           struct or enum name ranks declaration only when its keyword is on that line (or on the lines of one statement above it,
+//           when the name opens its line below a decorating macro). Within declarations, type, alias and macro declarations
+//           (real ones before forward ones) come before function, constructor and variable declarations. Read the printed line before
+//           citing a hit. Comments are not searched; `Class::Name` searches the last component.
+//           Known limits: the name that ends `typedef struct { ... } Name;` ranks as a use, a function-pointer typedef is not
+//           recognised, and a class defined inside the body of a multi-line #define is ranked like any other declaration.
 //   module  a bare name with a matching <Name>.Build.cs: that file plus the nearest ancestor .uplugin, or "engine module".
 //   file    a name ending in .h .cpp .inl .cs .uplugin or .ini (or any name given with --kind file): every file with it.
 //
@@ -336,7 +341,7 @@ export function findCvarDefinitions(text, rel, { name, prefix = false, ignoreCas
 // Symbols
 
 const RANK = { declaration: 0, definition: 1, use: 2 };
-const TYPE_INTRO = /\b(?:class|struct|union|enum(?:\s+(?:class|struct))?|namespace|concept)\s+(?:(?:[A-Z][A-Z0-9_]*|\[\[[^\]]*\]\])\s+)*$/;
+const TYPE_INTRO = /\b(class|struct|union|enum(?:\s+(?:class|struct))?|namespace|concept)\s+(?:(?:[A-Z][A-Z0-9_]*|\[\[[^\]]*\]\])\s+)*$/;
 
 /** `s` with every ALL_CAPS macro call, `alignas(...)` and `__declspec(...)` replaced by a space, however deeply their parentheses nest, so `class UE_EXPERIMENTAL(5.0, "x") FName` reads `class  FName`. */
 function dropMacroCalls(s) {
@@ -399,12 +404,17 @@ function classifyHit(masked, idx, len, isHeader) {
   // A name that opens its line continues the line above when that one ends in a comma, or in a colon after a closing parenthesis
   // (a constructor initialiser list written with the colon last).
   if (/^\s*$/.test(before) && /(?:,|\)[ \t\w]*:)\s*$/.test(masked.slice(Math.max(0, lineStart - 600), lineStart))) return { rank: 'use' };
-  if (TYPE_INTRO.test(dropMacroCalls(before))) {
-    if (/\btemplate\s+(?:class|struct)\s/.test(before)) return { rank: 'use' }; // an explicit instantiation
+  // A name that opens its line is read against the statement above it, so `class UE_DEPRECATED(5.5, "x")` on one line and the name on the next still read as a type introduction.
+  const intro = /^\s*$/.test(before) ? masked.slice(Math.max(0, lineStart - 600), lineStart).replace(/^[^]*[;{}]/, '') : before;
+  const introMatch = TYPE_INTRO.exec(dropMacroCalls(intro));
+  if (introMatch) {
+    if (/\btemplate\s+(?:class|struct)\s/.test(intro)) return { rank: 'use' }; // an explicit instantiation
     const angle = /^\s*</.exec(after);
     const rest = angle ? afterAngles(after, angle[0].length - 1) : after; // `class X<Arg>` is a specialisation only when what follows the arguments reads like one
     // A forward declaration ends at the name (`class X;`) or, for an opaque enum, after its underlying type (`enum class E : uint8;`).
-    return /^\s*(?:;|:(?!:)|\{|final\b|sealed\b|$)/.test(rest) ? { rank: 'declaration', forward: /^\s*(?:;|:(?!:)[^;{}]*;)/.test(rest) } : { rank: 'use' };
+    // A class or struct whose base list ends in `;` has its body supplied by a macro (`class FDim : SHADER_PERMUTATION_BOOL("X");`): a real declaration.
+    const opaqueEnum = introMatch[1].startsWith('enum');
+    return /^\s*(?:;|:(?!:)|\{|final\b|sealed\b|$)/.test(rest) ? { rank: 'declaration', forward: /^\s*;/.test(rest) || (opaqueEnum && /^\s*:(?!:)[^;{}]*;/.test(rest)) } : { rank: 'use' };
   }
   if (/\busing\s+$/.test(before) && /^\s*=/.test(after)) return { rank: 'declaration' };
   if (/\btypedef\b/.test(before) && /^\s*(?:;|\[)/.test(after)) return { rank: 'declaration' };
@@ -413,17 +423,17 @@ function classifyHit(masked, idx, len, isHeader) {
   const qual = qm ? qm[1] : '';
   const prefix = before.slice(0, before.length - qual.length)
     .replace(/\b(?:__declspec|alignas|UE_DEPRECATED|DEPRECATED)\s*\([^()]*\)/g, '').trim();
-  const typed = prefix !== '' && isTypeText(prefix) && !STATEMENT_KEYWORD.test(prefix);
+  const typed = /[A-Za-z_>]/.test(prefix) && isTypeText(prefix) && !STATEMENT_KEYWORD.test(prefix); // `*Name[0],` on an argument continuation line has no type word
   if (/^\s*\(/.test(after)) {
     const open = masked.indexOf('(', afterAt);
     const close = matchClose(masked, open);
     const tail = close < 0 ? 'other' : functionTail(masked, close + 1);
     if (tail === 'body' && (typed || qual || prefix === '')) return { rank: 'definition' };
-    if (tail === 'semi' && typed) return { rank: 'declaration' };
+    if (tail === 'semi' && typed) return { rank: 'declaration', value: true };
     return { rank: 'use' };
   }
   if (typed && /^\s*(?:=(?!=)|;|\{|\[|:\s*\d)/.test(after)) {
-    if (/\bextern\b/.test(prefix) || isHeader) return { rank: 'declaration' };
+    if (/\bextern\b/.test(prefix) || isHeader) return { rank: 'declaration', value: true };
     if (before.length === before.trimStart().length) return { rank: 'definition' };
   }
   return { rank: 'use' };
@@ -451,7 +461,7 @@ export function findSymbolHits(text, rel, symbol) {
     let end = text.indexOf('\n', m.index);
     if (end < 0) end = text.length;
     const src = collapse(text.slice(start, end));
-    byLine.set(line, { kind: 'symbol', path: rel, line, rank: hit.rank, forward: !!hit.forward, string: !!hit.string, text: src.length > 140 ? `${src.slice(0, 137)}...` : src });
+    byLine.set(line, { kind: 'symbol', path: rel, line, rank: hit.rank, forward: !!hit.forward, value: !!hit.value, string: !!hit.string, text: src.length > 140 ? `${src.slice(0, 137)}...` : src });
   }
   return [...byLine.values()];
 }
@@ -617,7 +627,7 @@ export async function run({ engine, query, kind = 'auto', roots = [], max, concu
     if (!/^[A-Za-z_]\w*$/.test(word)) throw new UsageError('a symbol query must be an identifier (use --kind cvar for a console variable)');
     const needle = Buffer.from(word);
     const hits = (await scan(content(), (buf, rel) => (buf.indexOf(needle) < 0 ? null : findSymbolHits(buf.toString('utf8'), rel, word)))).flat();
-    hits.sort((a, b) => RANK[a.rank] - RANK[b.rank] || Number(a.forward) - Number(b.forward) || Number(a.string) - Number(b.string) || a.path.localeCompare(b.path, 'en') || a.line - b.line);
+    hits.sort((a, b) => RANK[a.rank] - RANK[b.rank] || Number(a.value) - Number(b.value) || Number(a.forward) - Number(b.forward) || Number(a.string) - Number(b.string) || a.path.localeCompare(b.path, 'en') || a.line - b.line);
     const cap = max ?? MAX_DEFAULT.symbol;
     more = Math.max(0, hits.length - cap);
     results = hits.slice(0, cap);

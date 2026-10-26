@@ -1,6 +1,6 @@
 # Import GLB controls and WAVs through the content-only bake
 
-Observed in one consuming Unreal **5.8.2 CL56702186** project on Windows; not reproduced in this repo. The bake, cook and reuse rules are in the [content pipeline](unreal-native-content-pipeline.md); the receipt staging is in the [native packaging recipe](unreal-native-packaging.md).
+Observed in one consuming Unreal **5.8.2 CL56702186** project on Windows; not reproduced in this repo. The bake, cook and reuse rules are in the [content pipeline](unreal-native-content-pipeline.md); the receipt staging is in the [native packaging staging recipe](unreal-native-packaging-staging.md).
 
 ## Rigid GLB controls and native WAVs through the same bake
 

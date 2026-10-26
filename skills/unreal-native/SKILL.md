@@ -18,11 +18,13 @@ reviewing its module and state structure is [unreal-architecture](../unreal-arch
 |---|---|
 | Pin the compiler, run real gameplay, verify screenshots, or find static parts at the world origin (`is not static`) | [Native game loop](references/unreal-native-game.md) |
 | Add plugins and modules to a native game, or fix a first C++ compile error | [Module setup](references/unreal-native-module-setup.md) |
-| Fix C2374, C2086, C4459 or C2872 in code you did not change, or a build that passes then fails (adaptive unity), and gate replay and test steps on the build | [Unity builds](references/unreal-native-unity-builds.md) |
+| Diagnose a build that passes then fails on code you did not change (adaptive unity, chunking, the git working set) | [Unity builds](references/unreal-native-unity-builds.md) |
+| Fix C2374, C2086, C4459 or C2872, name file-scope symbols safely, turn the grouping off, and gate replay and test steps on the build | [Unity build fixes](references/unreal-native-unity-build-fixes.md) |
 | Write a C++ automation test for 5.8, run it headless, read its report and why the exit code is not the verdict | [Automation tests](references/unreal-native-automation-tests.md) |
 | Generate materials and fonts, draw crisp Canvas text (it draws nothing without a `UFont`), record native audio | [Native presentation](references/unreal-native-presentation.md) |
 | Diagnose a near-black first frame, physical-camera exposure, an HDR palette pass or imported vertex colour that hides detail | [Exposure and vertex colour](references/unreal-native-exposure-and-vertex-color.md) |
-| Cook and stage Windows; tell UAT policy failures from real Game EXE proof; cook a folder that code loads only by path | [Native packaging](references/unreal-native-packaging.md) |
+| Cook Windows; tell UAT policy failures from real Game EXE proof; cook a folder that code loads only by path | [Native packaging](references/unreal-native-packaging.md) |
+| Stage a cooked build from the target receipt, create the pak with UnrealPak, and read what a packaged Game EXE run proves | [Packaging staging](references/unreal-native-packaging-staging.md) |
 | Check a staged build with a packaged smoke run: windowed start, log read, world counts | [Packaged smoke run](references/unreal-native-packaged-smoke.md) |
 | Separate content-only asset construction from native gameplay and preserve cooked provenance | [Native content pipeline](references/unreal-native-content-pipeline.md) |
 | Import rigid GLB controls and WAVs through the content-only bake, or read what the second-generation runtime proof did and did not show | [Content pipeline assets](references/unreal-native-content-pipeline-assets.md) |

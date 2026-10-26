@@ -41,22 +41,4 @@ Check each process exit and fresh cook logs before continuing; the shell snippet
 - [documented] A folder that nothing references is cooked only if it is listed. `DirectoriesToAlwaysCook` ("Additional Asset Directories to Cook", Packaging, Advanced) names directories cooked "regardless of whether they're referenced by anything" (`Engine/Source/Developer/DeveloperToolSettings/Classes/Settings/ProjectPackagingSettings.h`); `CookCommandlet.cpp` adds each unless `NoGameAlwaysCookPackages` is set.
 - [general] `Config/DefaultGame.ini`: `[/Script/UnrealEd.ProjectPackagingSettings]` (the class now lives in the DeveloperToolSettings module; the engine redirects the old name, which project templates still use; not run here) then `+DirectoriesToAlwaysCook=(Path="/Game/Art")`. Code that loads by path (a string-built soft path, a run-time name lookup) needs its folder listed. The failure is silent; see the [packaged smoke run](unreal-native-packaged-smoke.md).
 
-## Receipt staging and native UnrealPak
-
-- [general] A finite PowerShell stager read `Binaries/Win64/MyGame.target`. It copied executable/dynamic-library/required-resource build products and NonUFS runtime dependencies, skipped debug-only products, and built UFS entries from runtime receipt dependencies plus the actual cooked files. It rejected missing files and unsupported roots instead of guessing paths.
-- [general] Receipt roots `$(ProjectDir)` and `$(EngineDir)` mapped to the package's project-name and Engine directories. Cooked Metadata was excluded. Config and plugin config were staged deliberately. Native UnrealPak consumed a UTF-8 response list mapping sources to `../../../Project/...` and `../../../Engine/...`; the resulting pak mounted at `../../../` in the actual game log.
-- [general] Staging also included Windows DDPI's **icudt64l** English ICU data at `Engine/Content/Internationalization/icudt64l`, Engine en localization, app-local VC/DirectX DLLs beside the executable, and an empty **Engine/Config/StagedBuild_MyGame.ini outside the pak**. The marker lets native startup find the staged project directory before mounting paks. Installed UAT staging source supplied these contracts; receipt DLLs alone were insufficient as a complete recipe.
-- [general] Source font OFL files and source metadata were copied from the exact archived tree into ThirdPartyNotices. Font binaries were already in cooked FontFace assets. The delivery was a Development Game executable of a few hundred MB, not a size-optimized Shipping build.
-
-```text
-UnrealPak.exe MyGame-Windows.pak -Create=pak-response.txt -compress -UTF8Output
-```
-
-Every response entry quotes both paths, for example `"source-file" "../../../MyGame/Content/Maps/MyMap.umap"`. Keep non-UFS DLLs and the staged marker physically accessible. A direct native executable may live at `MyGame/Binaries/Win64/MyGame.exe`; do not assume a UAT-created root bootstrap exists. A small relative-path launch script can expose it to the player without requiring the Editor.
-
-## Actual packaged runtime proof
-
-- [general] The **Game executable**, not UnrealEditor, ran its scenarios offscreen on D3D12 on a discrete GPU. Each delivered a fresh 1920×1080 PNG and matching native JSON; the images were opened. The log mounted the staged pak. App-local runtime DLLs and the OFL notices were present.
-- [general] Scenario receipts sampled actor count, player displacement, speed, grounded wheels and weapon execution. These establish sampled native motion/control-command execution. They do not establish a completed session or physical keyboard/controller interaction.
-- [general] Performance acceptance needs the profiling method in [native profiling](unreal-native-profiling.md), run on the immutable package with the sampler built into it.
-- [general] Preserve visual GAP status, known HUD/world issues and open full-play/input/audio/performance acceptance. A locally running native package does not establish cross-machine portability; another clean Windows machine remains a separate test.
+Receipt staging, native UnrealPak and the actual packaged runtime proof: [packaging staging](unreal-native-packaging-staging.md).

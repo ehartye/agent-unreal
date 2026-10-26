@@ -41,7 +41,7 @@ About one to two minutes to build and 10 to 30 s for the probe; 12 checks (`gas-
 
 ## Unity builds (`examples/unreal/unity_build/`)
 
-Backs [Unity builds and file-scope names](../../unreal-native/references/unreal-native-unity-builds.md): a three-file module whose files build alone and fail together.
+Backs [Unity builds and file-scope names](../../unreal-native/references/unreal-native-unity-builds.md) and [its fixes](../../unreal-native/references/unreal-native-unity-build-fixes.md): a three-file module whose files build alone and fail together.
 
 ```text
 node examples/unreal/unity_build/unity_build.mjs --engine "C:/Program Files/Epic Games/UE_5.8" [--keep] [--compiler <version>] [--sdk <version>]
