@@ -64,8 +64,9 @@ def describe(mesh):
     rows = []
     for slot in mesh.get_editor_property("materials"):
         row = {"name": str(slot.material_slot_name), "material": path_of(slot.material_interface)}
-        try:   # source: SkinnedAssetCommon.h FSkeletalMaterial::ImportedMaterialSlotName (VisibleAnywhere, editor only)
-            row["imported_name"] = str(slot.imported_material_slot_name)
+        try:   # source: SkinnedAssetCommon.h FSkeletalMaterial::ImportedMaterialSlotName, UPROPERTY(VisibleAnywhere), editor only:
+            # not BlueprintReadOnly, so the attribute form is absent on 5.8.2 (first run); get_editor_property reads edit-visible properties.
+            row["imported_name"] = str(slot.get_editor_property("imported_material_slot_name"))
         except Exception as exc:
             row["imported_name"] = "error: " + clean(exc)[:120]
         rows.append(row)
@@ -79,6 +80,14 @@ def stat(name):
         return [info.st_mtime_ns, info.st_size]
     except OSError:
         return None
+
+
+def is_dirty(name):
+    """True when the package of /Game/Skel/<name> is in the editor's dirty content packages."""
+    try:   # source: Engine/Source/Editor/UnrealEd/Public/FileHelpers.h UEditorLoadingAndSavingUtils::GetDirtyContentPackages (the out array is the return value)
+        return f"{FOLDER}/{name}" in [p.get_path_name() for p in unreal.EditorLoadingAndSavingUtils.get_dirty_content_packages()]
+    except Exception as exc:
+        return "error: " + clean(exc)[:120]
 
 
 def save(mesh, forced):
@@ -137,6 +146,9 @@ def run_author():
     lib = getattr(unreal, "SkeletalMaterialsBridgeLibrary", None)
     report["bridge"] = {"class_found": lib is not None, "members": [m for m in dir(lib) if "material" in m] if lib else []}
     eal.make_directory(FOLDER)
+    # A commandlet has not scanned engine content, and EditorAssetLibrary.DuplicateAsset looks the source up in the asset registry
+    # ("Could not find the source asset ... in the Asset Registry"), so scan the source folder first.
+    unreal.AssetRegistryHelpers.get_asset_registry().scan_paths_synchronous([SOURCE.rsplit("/", 1)[0]], True)
     made = {}
 
     def make_materials():
@@ -171,13 +183,27 @@ def run_author():
         out["raised"] = attempt(lambda: mesh.set_editor_property("materials", fresh_slots(mesh, red)))   # the assign-back route
         out["after"] = describe(mesh)
         out["in_memory_changed"] = out["after"] != before
+        out["dirty_after_set_1"] = is_dirty("SK_Assign")
         out["default_save_1"] = save(mesh, False)
         out["file_changed_after_save_1"] = stat("SK_Assign") != base
+        after_1 = stat("SK_Assign")
+        out["dirty_after_save_1"] = is_dirty("SK_Assign")
         out["raised_again"] = attempt(lambda: mesh.set_editor_property("materials", fresh_slots(mesh, red)))   # the identical set, second time
+        out["dirty_after_set_2"] = is_dirty("SK_Assign")
         out["default_save_2"] = save(mesh, False)
         out["file_changed_after_save_2"] = stat("SK_Assign") != base
+        out["file_changed_by_save_2"] = stat("SK_Assign") != after_1   # save 2 against the file save 1 wrote
         return out
     step("SK_Assign", assign)
+
+    def control():   # nothing is done to the mesh, so a default save must write nothing: this tells "the set dirtied it" from "a default save always writes"
+        mesh = duplicate("SK_Control")
+        base = stat("SK_Control")
+        out = {"dirty_before_save": is_dirty("SK_Control")}
+        out["default_save"] = save(mesh, False)
+        out["file_changed_after_default_save"] = stat("SK_Control") != base
+        return out
+    step("SK_Control", control)
 
     def assign_forced():
         mesh = duplicate("SK_AssignForced")
