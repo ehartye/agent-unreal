@@ -4,6 +4,7 @@
 // executable (-Set perf rendered, and -Set perf -Headless) and judges each receipt with compare_perf.mjs. Exit code 0 only when both judges pass.
 //   --project <folder>  reuse a project folder this runner wrote earlier (the sources are not rewritten; the builds and the package still run, incrementally)
 //   --skip-package      do not package; run the executable already archived under <project>/Archive (needs --project)
+//   --modes <list>      comma-separated runs to make, default rendered,headless (for example --modes headless)
 //   --keep              keep the temp project folder when the run succeeds (it is always kept when a step fails)
 // Windows, PowerShell 7 (pwsh) and Node only. Not part of node scripts/check.mjs; the pure pieces it uses are tested there.
 import { spawnSync } from 'node:child_process';
@@ -128,7 +129,8 @@ note(`packaged game: ${exe}`);
 
 const outRoot = join(root, 'out', String(Date.now()));
 const results = {};
-for (const mode of ['rendered', 'headless']) {
+const modes = (flag('--modes') || 'rendered,headless').split(',').map((m) => m.trim()).filter((m) => m === 'rendered' || m === 'headless');
+for (const mode of modes) {
   const out = join(outRoot, mode);
   const started = Date.now();
   const run = spawnSync('pwsh', ['-NoProfile', '-NonInteractive', '-File', join(here, 'compare.ps1'), '-Exe', exe, '-Set', 'perf', '-OutputDirectory', out,
@@ -144,7 +146,7 @@ for (const mode of ['rendered', 'headless']) {
   note(`compare_perf.mjs (${mode}): exit ${judge.status}`);
 }
 
-const ok = Object.values(results).every((r) => r.runExit === 0 && r.judgeExit === 0);
+const ok = modes.length > 0 && Object.values(results).every((r) => r.runExit === 0 && r.judgeExit === 0);
 note(ok ? 'RESULT: both judges pass' : `RESULT: not every judge passes ${JSON.stringify(results)}`);
 if (ok && !keep && !existing) rmSync(root, { recursive: true, force: true }); else note(`project kept at ${root}`);
 process.exit(ok ? 0 : 1);
