@@ -16,7 +16,7 @@ node examples/unreal/pcg_packaged/pcg_packaged.mjs --engine "C:/Program Files/Ep
 1. Writes a throwaway code project in the OS temp folder (`../native-build.mjs`): the game module `module/PcgPackaged`, the PCG plugin listed, `MapsToCook` naming the maps and **no other cook rule** (no `DirectoriesToAlwaysCook`).
 2. Builds the Editor target, then starts the editor once (`-nullrhi`) on `pcg_packaged_author.py`. It reuses `../pcg_game/pcg_common.py`. It makes a project copy of the engine cube (`SM_ProbeCube`), a second copy nothing references (`SM_Orphan`, the cook control), an unlit material with the instanced-meshes usage flag, and two graphs (Create Points Grid then Static Mesh Spawner). It generates the P1 graph on demand on a scratch map first (the editor baseline), then saves the maps.
 3. Builds the Game target and packages it (`RunUAT BuildCookRun`, Development, Windows).
-4. Runs the packaged game once per map and mode on `APcgPackagedGameMode`, which only reads and writes a JSON receipt (rewritten every two seconds, so a crash leaves a partial one), then exits. Headless runs use `-nullrhi`; rendered runs use `-RenderOffScreen`, which a session with no desktop needs.
+4. Runs the packaged game once per map and mode on `APcgPackagedGameMode`, which only reads and writes a JSON receipt (rewritten every two seconds, so a crash leaves a partial one), then exits. Headless runs use `-nullrhi`; rendered runs use `-RenderOffScreen` (the session had no desktop).
 5. Judges the author report and the receipts with `pcg-packaged-checks.mjs`: PASS, FAIL, or OBSERVE per check, exit code 0 when every asserted check passes.
 
 | Map | Row | What is in it |
@@ -31,7 +31,7 @@ The pawn path (P2): hold 12 s at A, travel 20 s to B (50 m/s), hold 15 s at B. T
 
 | Item | Value |
 |---|---|
-| Needs a rendering GPU | Only the `rendered` mode. `--modes headless` needs none and is the evidence for the generation questions; the rendered run adds the material usage-flag log check. |
+| Modes | The headless mode used `-nullrhi`; the rendered mode used `-RenderOffScreen` (the session had no desktop). |
 | Stage times, 5.8.3 | Editor build 39 s; author session (editor, `-nullrhi`) 19 s; Game build 35 s; package (`RunUAT BuildCookRun`, Development, Windows) 81 s; each game run 30 to 49 s (six runs: headless and rendered, each of three maps). |
 | Disk after the run | Archive 0.88 GB, Saved 0.93 GB, Intermediate 4.52 GB, Binaries 0.74 GB, total 7.08 GB. |
 | Cook warm-up | The cache state of the first cook was not recorded, so the 81 s package time is one observation, not a warm or cold figure. |
@@ -49,7 +49,7 @@ Asserted, written from reading the PCG plugin source (`Engine/Plugins/PCG/Source
 - Player controllers are generation sources by default (`bTreatPlayerControllersAsGenerationSources`, `Private/RuntimeGen/PCGGenSourceManager.cpp`). The run: the receipt named the player controller and its pawn (a `DefaultPawn`) as the source.
 - `GENERATE_ON_DEMAND` generates only when asked (`UPCGComponent::ShouldGenerate`). The run: no instances and no started event until the script called `Generate`, then 64 instances and 1 generated event.
 - The editor baseline and the game produce the same instance count for the same graph (64 and 64); the mesh, the material and the graph, referenced from the map and graph, loaded by object path in the game with no cook rule beyond `MapsToCook`; the unreferenced mesh did not (`DirectoriesToAlwaysCook` is the documented way to cook such a folder; this run did not set it).
-- A volume 1,000 m from the player with its generation radius set to 10 m stayed empty (0 instances, 0 generated events). Python applied the override through the `PCGRuntimeGenerationRadii` struct, member `generation_radius` (1000 cm). The author step also set the World Partition grid size to 3200 cm from Python (25600 before).
+- A volume 1,000 m from the player with its generation radius set to 10 m stayed empty (0 instances, 0 generated events). Python applied the override through the `PCGRuntimeGenerationRadii` struct, member `generation_radius` (1000 cm). The author step also set the PCG World Actor partition grid to 3200 cm (32 m) from Python (25600 before).
 - P2: a partitioned runtime volume generates per grid cell within a few cells of the source and cleans up cells that fall out of range (`TickCleanup`); the marker at the pawn is loaded and the one 1,000 m away is not (from reading, the default runtime grid's loading range is 256 m). The run: markers loaded and unloaded as expected, generated cells stayed near the source, followed it and were cleaned up behind it.
 
 Observed (recorded, never judged), 5.8.3:
@@ -62,7 +62,7 @@ Observed (recorded, never judged), 5.8.3:
 | Start to first generated cell (P2) | 0.50 s | 0.51 s |
 
 - Console variables in the game: `pcg.RuntimeGeneration.Enable` true, `NumGeneratingComponents` 16, `GlobalRadiusMultiplier` 1, `FramesBeforeFirstGenerate` 0, `TimeBetweenRuntimeGenSchedulerTicks` 0, `EnableWorldStreamingQueries` true, `EnablePooling` true, `BasePoolSize` 100.
-- P2, at the end of each hold in both modes: 2 of 2 loaded streaming levels (lowest 1, highest 2); 100 `APCGPartitionActor`s in the pool, 10 holding instances; 288 instances over those 10 cells (28.8 per cell); the original volume component showed 0 generated events and 0 instances (the output sits on the partition actors); 0 components still generating.
+- P2, at the end of each hold (each mode's assertions held; one set of numbers is recorded for the run): 2 of 2 loaded streaming levels (lowest 1, highest 2); 100 `APCGPartitionActor`s in the pool, 10 holding instances; 288 instances over those 10 cells (28.8 per cell); the original volume component showed 0 generated events and 0 instances (the output sits on the partition actors); 0 components still generating.
 - No LogPCG warnings or errors in any run. Material usage-flag log lines: 0 (headless).
 - The author step: the map held one PCG World Actor that the script did not spawn (the author report records `spawned_by_script` false), and the editor baseline run reported one world actor added by the editor. Saving a map that held runtime volumes baked no instances.
 
@@ -77,7 +77,7 @@ Observed (recorded, never judged), 5.8.3:
 
 ## Not covered
 
-`GENERATE_ON_LOAD` (an editor generation saves its output in the map, a different question), a Shipping or Test build, a non-Windows platform, hierarchical generation, the GPU spawner, multiplayer, Landscape-based graphs in a packaged game (the Landscape cache rules are in the game-process reference), and the material fallback in Play-In-Editor. Procedural ISM components are counted by reflection and recorded, not asserted.
+`GENERATE_ON_LOAD`, a Shipping or Test build, a non-Windows platform, hierarchical generation, the GPU spawner, multiplayer, Landscape-based graphs in a packaged game (the Landscape cache rules are in the game-process reference), and the material fallback in Play-In-Editor. Procedural ISM components are counted by reflection and recorded, not asserted.
 
 ## Constraint
 

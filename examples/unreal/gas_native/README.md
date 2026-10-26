@@ -25,7 +25,7 @@ The question: how does a native Gameplay Effect get its tag-granting component, 
 node examples/unreal/gas_native/gas_native.mjs --engine "C:/Program Files/Epic Games/UE_5.8" [--keep] [--compiler 14.44.35228] [--sdk 10.0.26100.0]
 ```
 
-About one to two minutes to build and 10 to 30 s for the probe.
+On 5.8.3 the build took 51 s and the probe 6 s. On 5.8.2 the build took about one to two minutes and the probe 10 to 30 s.
 
 ## What it checks (24 checks, all passed on 5.8.3: the 12 below, then 12 for the effect components)
 
@@ -78,17 +78,18 @@ node examples/unreal/gas_native/gas_rep.mjs --engine "C:/Program Files/Epic Game
 
 On 5.8.3 the build (the same module as `gas_native.mjs`) took 51 s, the server was ready 4 to 7 s after launch and the scenario finished in 23 to 27 s, both processes exiting 0. One engine process at a time except the scenario itself, which runs a server and a client together on a free UDP port.
 
-Design, from the engine source (install-relative); the commands below are the ones that ran:
+Design notes from the engine source (install-relative), with the target and `?listen` choices labelled `[general]`; the commands below are the ones that ran:
 
-- Binary: the Editor target built by `native-build.mjs`; no Game, Server or Client target and no packaging. In an editor build `-server` makes `IsRunningDedicatedServer()` true and `-game` runs the editor binary as a game (`Engine/Source/Runtime/Core/Private/Misc/CoreMisc.cpp`, `StaticDedicatedServerCheck`, `StaticGameCheck`). A Game or Server target would need a source build (the installed engine ships no server target) and a cook; the editor route needs neither.
-- Server: `UnrealEditor-Cmd.exe Project.uproject /Engine/Maps/Entry?game=/Script/GasNative.GasNativeRepGameMode -server -game -Port=<free port> -nullrhi -RepReceipt=<file> -abslog=<file> -unattended -nosplash -nosound -notraceserver -nopause`. The map is the engine's own, so the project needs no assets. `-Port=` overrides the URL port (`CoreMisc.cpp`, `FUrlConfig::Init`). `UEngine::LoadMap` calls `UWorld::Listen` before `UWorld::BeginPlay` (`Engine/Source/Runtime/Engine/Private/UnrealEngine.cpp`, the `Listen for clients` block), so the game mode's "server ready" log line means a client can connect. `-log` is left out: it opens a console window and the log file is written without it.
+- Binary: the Editor target built by `native-build.mjs`; no Game, Server or Client target and no packaging. In an editor build `-server` makes `IsRunningDedicatedServer()` true and `-game` runs the editor binary as a game (`Engine/Source/Runtime/Core/Private/Misc/CoreMisc.cpp`, `StaticDedicatedServerCheck`, `StaticGameCheck`).
+- [general] The design uses the editor target; a Game or Server target was not used in this run.
+- Server: `UnrealEditor-Cmd.exe Project.uproject /Engine/Maps/Entry?game=/Script/GasNative.GasNativeRepGameMode -server -game -Port=<free port> -nullrhi -RepReceipt=<file> -abslog=<file> -unattended -nosplash -nosound -notraceserver -nopause`. The map is the engine's own, so the project needs no assets. `-Port=` overrides the URL port (`CoreMisc.cpp`, `FUrlConfig::Init`). `UEngine::LoadMap` calls `UWorld::Listen` before `UWorld::BeginPlay` (`Engine/Source/Runtime/Engine/Private/UnrealEngine.cpp`, the `Listen for clients` block), so the game mode's "server ready" log line means a client can connect. No `-log`; the log file was written through `-abslog`.
 - Client: `UnrealEditor.exe Project.uproject 127.0.0.1:<port> -game -nullrhi -windowed -ResX=640 -ResY=360 -RepReceipt=<file> -abslog=<file> ...`; the first plain token is the URL. `--render` swaps `-nullrhi` for `-RenderOffScreen` (not run).
-- `?listen` is not used: the map option makes the process a listen server, which is the other mode and not what the question asks.
+- [general] `?listen` is not used: the map option makes the process a listen server, which is the other mode and not what the question asks.
 - Receipts: each process writes a JSON receipt to its own `-RepReceipt=` file after a fixed time (server 8 s after the join, client 3 s after its player state begins play for the activation and 2 s later for the receipt, then it exits). The runner waits for both with a hard timeout, kills whatever is left and judges the two together.
 
 What the scenario does: the ability system component lives on the player state, which is the owner; the pawn is the avatar. The first design used the player state as both and changed after the first runs (findings below). On the join the server's game mode grants `UGasNativeRepAbility` and applies `UGasNativeRepBuffEffect` (infinite, Energy +5, grants a tag) to the player state's component. `Energy` starts at 100 and replicates. Three seconds into its map the client snapshots what it can see, then calls `TryActivateAbilityByClass`; the ability is `LocalPredicted`, costs 10 Energy, counts its activations split by `IsNetAuthority()`, and ends at once. Two seconds later the client snapshots again.
 
-Checks (10 asserted, all passed on 5.8.3 after two fixes to the probe; server and client on one machine):
+Checks (10 of 10 passed on 5.8.3 after two fixes to the probe; the tenth records that the readings are present; server and client on one machine):
 
 - Asserted, expectations from source: the module builds; both receipts are written with no fatal error (exit codes are reported, not judged); the server is `DedicatedServer` and a client joined; on the server the component is Mixed, owned by the player state, and holds the ability, the buff and Energy 105/100; on the client the component is Mixed and owned by the player state, the ability is present (`ActivatableAbilities`, `COND_ReplayOrOwner`: `AbilitySystemComponent.cpp:1861`), the buff is an active effect and its tag is owned (Mixed gives the owner full effect info: `GameplayEffect.cpp:5195`), and Energy reads 105/100; after the settle time client and server read the same Energy.
 - Observed (printed beside the source-derived expectation, never asserted). On 5.8.3: after the client's predicted activation the client counted 1 predicted activation and 0 with authority, the server counted 1 with authority, and Energy read 90 base and 95 current on the server and, after the settle time, on the client. Roles: the client's player state had local role `SimulatedProxy` and remote role `Authority`; the client avatar (the pawn) was `AutonomousProxy`; the client had a local player controller.

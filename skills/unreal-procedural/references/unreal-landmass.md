@@ -32,7 +32,7 @@ Target: Unreal Engine 5.8, Windows. Landmass is the plugin that supplies the Lan
 | Task | Route | What to call |
 |---|---|---|
 | Add a brush to a Landscape | Editor UI | Landscape mode > Sculpt tab > Blueprint; pick a type from the Blueprint Brush dropdown; click the Landscape |
-| Add a brush to a Landscape from a script | Editor C++ bridge | `unreal.LandscapeBridgeLibrary.attach_brush_to_layer(landscape, 0, manager)`; Python alone does not attach ([below](#attach-a-brush-from-a-script)) |
+| Add a brush to a Landscape from a script | Editor C++ bridge | `unreal.LandscapeBridgeLibrary.attach_brush_to_layer(landscape, 0, manager)`; the three Python routes tried did not attach ([below](#attach-a-brush-from-a-script)) |
 | Choose a brush | Editor UI | `CustomBrush_Landmass` (spline shape plus effects), `CustomBrush_LandmassRiver` (static mesh extruded along a spline; roads and rivers), `CustomBrush_MaterialOnly` (material noise base) |
 | Reshape a brush's spline | Editor UI | Edit the brush actor's spline in the viewport |
 | Set blend mode, falloff and effects | Python / editor UI | `unreal.LandmassTerrainCarvingSettings` (`blend_mode`, `priority`, `invert_shape`, `falloff_settings`, `effects`); `unreal.LandmassFalloffSettings` (`falloff_mode`, `falloff_angle`, `falloff_width`, `edge_offset`, `z_offset`); `unreal.LandmassBrushEffectsList` (`blurring`, `curl_noise`, `displacement`, `smooth_blending`, `terracing`) |
@@ -68,7 +68,8 @@ Run on 5.8.3 in one throwaway project, on a Landscape made by the repo's bridge 
 - [tested] False positive: after writing `detail_panel_landscape`, `get_landscape()` printed the written Landscape while the manager was still on no layer.
 - [general] Read attachment through `get_brush_layer_index` or the layer's brush count, not `get_landscape()` alone.
 - [tested] Heights, rendering editor only: with `CustomBrush_Landmass` attached the heightmap read back unchanged (peak delta 0 cm, original restored after the detach); with `LandmassBrush_ProceduralNoise` attached the peak delta was 1569.55 cm after 43 s, and the original returned after the detach. No nudge was needed. In the `-nullrhi` run the collision heightfield peak delta was 0 and was not judged.
-- [tested] The rendering run's Landmass step took 486 s; the first edit-layer merge compiles brush materials.
+- [tested] The rendering run's Landmass step took 486 s.
+- [general] Expect a long first edit-layer merge; the run did not isolate why.
 - Not covered by these runs: brushes with a spline, Water brushes, a brush other than the two classes named.
 
 ## Large landscapes in World Partition

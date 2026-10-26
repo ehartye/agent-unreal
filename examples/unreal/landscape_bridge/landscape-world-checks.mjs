@@ -1,7 +1,7 @@
 // Judges the reports that landscape_world.mjs collects. Pure functions, no Unreal and no dependencies; landscape-world.test.mjs feeds them
-// canned reports in the shape landmass_probe.py, pcg_partition_probe.py and wp_unload_probe.py write. These probes have not run on an
-// engine yet: every expectation below was written from the install's sources before the first run, and the canned reports are what a
-// run that agrees with those sources would write, not recorded results.
+// canned reports in the shape landmass_probe.py, pcg_partition_probe.py and wp_unload_probe.py write. The probes ran on Unreal 5.8.3
+// (rendering editor 18 of 18 checks, -nullrhi editor 16 of 18). The expectations below were written from the install's sources before
+// the first run, and the canned reports are what a run that agrees with those sources would write, not recorded results.
 //
 // Two kinds of check. `assert` checks have an expectation that engine source supports; they pass or fail. `observe` checks record a value
 // the sources do not decide (a height change that depends on a brush Blueprint's defaults, a count that depends on how the editor loads
@@ -56,7 +56,7 @@ function landmassChecks(landmass, add, observe) {
     const peak = Math.max(0, ...rungs.filter((r) => /^r[34]/.test(r.rung)).map((r) => r.max_delta_cm ?? 0));
     const nudge = rungs.find((r) => /^r4/.test(r.rung) && (r.max_delta_cm ?? 0) > CHANGE_CM);
     const back = rungs.find((r) => r.rung === 'r5_detach_after_wait');
-    observe(`landmass height, brush ${key}`, 'with the brush attached the heightmap changes by more than one height step at some sampled spot, and returns after the detach (needs a rendering editor: the edit layer merge draws on the GPU)',
+    observe(`landmass height, brush ${key}`, 'with the brush attached the heightmap changes by more than one height step at some sampled spot, and returns after the detach (read in a rendering editor; the -nullrhi run did not judge it)',
       landmass?.render === true
         ? show({ peak_delta_cm: peak, changed: peak > CHANGE_CM, seconds_to_change: rungs.find((r) => r.rung === 'r3_bridge_attach')?.seconds_to_change ?? null, nudge_that_worked: nudge?.rung ?? null, returned_after_detach: back?.returned_to_baseline ?? null })
         : `not read: this run used -nullrhi (peak delta in the collision heightfield ${peak} cm)`);

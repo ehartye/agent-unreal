@@ -1,5 +1,5 @@
 // node landscape_world.mjs --engine "C:/Program Files/Epic Games/UE_5.8" [--only landmass|pcg|unload] [--rendering] [--keep] [--compiler 14.44.35228] [--sdk 10.0.26100.0]
-// PREPARED, NOT YET RUN ON AN ENGINE. Engine probes for three open rows of the procedural-world references:
+// Ran on Unreal 5.8.3: rendering editor 18 of 18 checks, -nullrhi editor 16 of 18. Engine probes for three rows of the procedural-world references:
 //   landmass  Can Python put a Landmass brush manager on a Landscape edit layer? (landmass_probe.py: a ladder of rungs, a negative control
 //             and the bridge's attach_brush_to_layer; heights read in a rendering editor.)
 //   pcg       Does a PCG graph with a Landscape input and a Surface Sampler produce points across the proxies of a partitioned Landscape in
@@ -9,9 +9,8 @@
 // brush functions), the Landmass and PCG plugins, builds the Editor target, and starts one editor per phase. The map made by the pcg phase is
 // the one the unload phase opens, so run them in this order (the default), or run unload alone and it makes the map itself.
 // Editors start with -nullrhi. --rendering uses -RenderOffScreen instead and sets LW_RENDER=1: the landmass phase then waits for the edit
-// layer merge and compares heights (the merge draws on the GPU, so heights need a rendering editor; on a machine with no desktop session
-// a rendering editor needs -RenderOffScreen). Build about 40 s to 5 min; each editor run 1 to 4 min; the landmass phase in a rendering editor
-// can take 10 to 20 min the first time (the brush materials compile).
+// layer merge and compares heights (the -nullrhi run could not judge the height; a session with no desktop needs -RenderOffScreen for a
+// rendering editor). The recorded build took 36 s; the landmass phase in the recorded rendering run took 486 s.
 // Exit code 0 when every assert check passes; observe lines never fail the run. Not part of node scripts/check.mjs; the checks are tested there.
 import { spawnSync } from 'node:child_process';
 import { mkdtempSync, mkdirSync, readFileSync, existsSync, rmSync } from 'node:fs';

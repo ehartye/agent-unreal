@@ -73,7 +73,7 @@ Read points with `unreal.PCGDataFunctionLibrary.get_typed_inputs(collection, unr
 
 ## Not verified
 
-- The material fallback in Play-In-Editor was not run. The cooked game, `GENERATE_AT_RUNTIME` and a partitioned map were run on 5.8.3 and are in [PCG in a cooked game](unreal-pcg-cooked-game.md); the Landscape cache rules above were not repeated in a cooked game. A later Landscape graph gave 0 points in `-nullrhi` editors and 1209 in a rendering editor on 5.8.3, on a Landscape from an editor module; the Perlin counts above come from `-nullrhi` editors on 5.8.2 with a copied engine sample Landscape. The runs differ in engine patch, Landscape origin and map, and the cause is not isolated ([World Partition Landscape](unreal-world-partition-landscape.md)).
+- The material fallback in Play-In-Editor was not run. The cooked game, `GENERATE_AT_RUNTIME` and a partitioned map were run on 5.8.3 and are in [PCG in a cooked game](unreal-pcg-cooked-game.md); the Landscape cache rules above were not repeated in a cooked game. A later Landscape graph gave 0 points in `-nullrhi` editors and 1209 in a rendering editor on 5.8.3, on a Landscape from an editor module; the Perlin counts above come from `-nullrhi` editors on 5.8.2 with a copied engine sample Landscape. The cause of the difference is not isolated ([World Partition Landscape](unreal-world-partition-landscape.md)).
 
 ## Sources
 

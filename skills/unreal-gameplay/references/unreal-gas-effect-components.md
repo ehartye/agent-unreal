@@ -31,8 +31,9 @@ Every asserted case observed what its expectation said. Each bullet names the ca
 ## Adding a component
 
 - [tested] `AddComponent<T>()` on an effect built with `NewObject` at run time worked for every case; no ensure failed during the component cases. The constructor route is in [GAS in C++](unreal-gas-native-effects.md).
-- [documented] Only `ComponentMode` on `UCancelAbilityTagsGameplayEffectComponent` is private (`CancelAbilityTagsGameplayEffectComponent.h`, `ComponentMode`); the other components expose public members or a setter. The cases wrote it with `FindPropertyByName` on the class.
-- [documented] `UGameplayEffectUIData` and its text-only subclass are components too and hold display data; no case covered them.
+- [documented] Only `ComponentMode` on `UCancelAbilityTagsGameplayEffectComponent` is private (`CancelAbilityTagsGameplayEffectComponent.h`, `ComponentMode`); the other components expose public members or a setter.
+- [general] The example writes `ComponentMode` with `FindPropertyByName` on the class (`examples/unreal/gas_native/module/GasNative/GasNativeCases.cpp`).
+- [documented] `UGameplayEffectUIData` and its text-only subclass are components too and hold display data. [general] The example has no case for them.
 
 ## Sources
 

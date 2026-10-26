@@ -8,7 +8,7 @@ Graph: Create Points Grid, then Static Mesh Spawner. Volume trigger `GENERATE_AT
 
 - [tested] The cooked game (cooked data true, editor false) generated with no script call: 0 instances at the first sample, 64 before the window ended, headless and rendered, one started and one generated event. The editor's on-demand run of the same graph gave 64 points, 64 instances and 1 ISM component, equal to the game's count. The volume kept 1 output item of 64 points.
 - [tested] The PCG World Actor saved in the map registered with the subsystem (1 actor). A map from which that actor was removed, with no other added before save, did not generate in either mode, and the log had no line about the world actor or the scheduler.
-- [documented] `UPCGSubsystem::Tick` ticks the runtime scheduler only when a PCG World Actor exists (`Private/Subsystems/PCGSubsystem.cpp` lines 425 to 428); the actor registers in `BeginPlay` (`Private/PCGWorldActor.cpp` line 236); the editor creates one only outside play (`GetPCGWorldActor`).
+- [documented] `UPCGSubsystem::Tick` ticks the runtime scheduler only when a PCG World Actor exists (`Private/Subsystems/PCGSubsystem.cpp` lines 425 to 428); the actor registers in `APCGWorldActor::BeginPlay`, which calls `RegisterToSubsystem` (`Private/PCGWorldActor.cpp` lines 187 to 190 and 232 to 237); the editor creates one only outside play (`GetPCGWorldActor`).
 - [tested] The generation source reported in the game was the player controller and its pawn (a `DefaultPawn`). [documented] Player controllers are sources while `bTreatPlayerControllersAsGenerationSources` is set (`Private/RuntimeGen/PCGGenSourceManager.cpp` line 203).
 - [tested] A `GENERATE_ON_DEMAND` volume had no instances and no started event until the script called `Generate`; that call then gave 64 instances and 1 generated event.
 - [tested] A volume 1,000 m from the player, its runtime generation radius set to 10 m, stayed empty (0 instances, 0 generated events). Python applied the override through the `PCGRuntimeGenerationRadii` struct, member `generation_radius` (1000 cm).
@@ -20,10 +20,10 @@ Graph: Create Points Grid, then Static Mesh Spawner. Volume trigger `GENERATE_AT
 
 ## Partitioned runtime generation
 
-Setup: a World Partition map from `new_level(path, True)`, grid size 3200 cm set from Python (25600 before), a partitioned `GENERATE_AT_RUNTIME` volume 1,120 m long, two spatially loaded markers A and B 1,000 m apart, a pawn that is the streaming and generation source: 12 s at A, 20 s travel, 15 s at B.
+Setup: a World Partition map from `new_level(path, True)`, PCG World Actor partition grid 3200 cm set from Python (25600 before), a partitioned `GENERATE_AT_RUNTIME` volume 1,120 m long, two spatially loaded markers A and B 1,000 m apart, a pawn that is the streaming and generation source: 12 s at A, 20 s travel, 15 s at B.
 
 - [tested] Every asserted check held in the headless and the rendered run: the markers loaded and unloaded as the pawn moved, and generated cells stayed near the source, followed it and were cleaned up behind it.
-- [tested] Observed at the end of each hold, both modes: loaded streaming levels 2 of 2 (lowest 1, highest 2 during the run); 100 `APCGPartitionActor`s in the pool, 10 holding instances; 288 instances over those 10 cells (28.8 each); no component still generating; no LogPCG warning or error.
+- [tested] Observed at the end of each hold (each mode's assertions held; one set of numbers is recorded for the run): loaded streaming levels 2 of 2 (lowest 1, highest 2 during the run); 100 `APCGPartitionActor`s in the pool, 10 holding instances; 288 instances over those 10 cells (28.8 each); no component still generating; no LogPCG warning or error.
 - [tested] The original volume component showed 0 generated events and 0 instances; the output sat on the partition actors. First generated cell 0.50 s after `BeginPlay` headless, 0.51 s rendered.
 
 ## Observed values (one run each, not budgets)
