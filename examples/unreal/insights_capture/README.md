@@ -48,7 +48,7 @@ TimingInsights.ExporTimers <out>/timers-typo.csv
 
 ## Not verified
 
-A rendered frame (`-nullrhi` throws render data away), the `gpu` and `rendercommands` channels, the render thread's frame time, a packaged build, trace overhead, and bookmarks read back from the trace (no headless export command reads them).
+A rendered frame (`-nullrhi` throws render data away), the `gpu` and `rendercommands` channels, the render thread's frame time, a packaged build and trace overhead. `MemoryInsights.ExportAllocs` finds `Trace.Bookmark` bookmarks by exact name (see the measurement commands below).
 
 ## Measurement commands (opt-in)
 
@@ -64,7 +64,7 @@ node examples/unreal/insights_capture/insights_stats.mjs --engine "<UE_5.8 folde
 - `insights_stats.mjs` writes the same content-only project as `insights_capture.mjs`, runs the stats mode, then the memory mode twice: started with `-trace=default,memory -tracefile=<path>` and with `-trace=default -tracefile=<path>` (no memory channel). `UnrealInsights.exe -NoUI -AutoQuit -ExecOnAnalysisCompleteCmd=@=<file>.rsp` then runs `MemoryInsights.ExportAllocs` (rules `aAf` Active Alloc, `AaBCf` Memory Leaks, `AaBfC` Limited Lifetime, with `-BookmarkA/B/C` and `-Columns=Size,StartTime,EndTime`) on both traces. The command, its rule names and its parameters are read from `Engine/Source/Developer/TraceInsights/Private/Insights/MemoryProfiler/MemoryProfilerManager.cpp` and `MemoryExportCommandParser.cpp`.
 - `insights-stats-checks.mjs` judges the log, the `.uestats` files and the exported CSV files; `insights-stats.test.mjs` tests it with hand-built data (it runs in `node scripts/check.mjs`). The CSV shape was confirmed by the run: a header naming the requested columns, one row per allocation, `Size` in bytes, `EndTime` `+inf` for an allocation still alive.
 
-What it checks (counted): the stats run finished; `stat help` lists the Unit and FPS commands with their descriptions; a bare `stat` prints the stat help; `stat startfile` then `stat stopfile` leaves a `.uestats` file; the memory trace answers Active Alloc; Memory Leaks returns the held array and not the freed one; Limited Lifetime returns the freed one; a trace without the memory channel answers nothing. The two leak checks look for the exact allocation sizes (4 bytes per element), because other engine allocations of several megabytes also start and stay alive inside the window.
+What it checks (counted): the stats run finished; `stat help` lists the Unit and FPS commands with their descriptions; a bare `stat` prints the stat help; `stat startfile` and `stat stopfile` are compiled out of the installed build, so no `.uestats` file is written; the memory trace answers Active Alloc; Memory Leaks returns the held array and not the freed one; Limited Lifetime returns the freed one; a trace without the memory channel answers nothing. The two leak checks look for the exact allocation sizes (4 bytes per element), because other engine allocations of several megabytes also start and stay alive inside the window.
 
 Observed on 5.8.2:
 

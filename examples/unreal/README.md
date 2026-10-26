@@ -63,17 +63,17 @@ To look at the probe level yourself, `niagara_view.py` frames the systems with t
 
 `stylized/stylized_validate.mjs`, `world/world_validate.mjs`, `pcg_game/pcg_validate.mjs`, `editor_python/ep_validate.mjs`, `landscape_bridge/landscape_bridge.mjs`, `automation_test/automation_test.mjs`, `niagara_toolsets/nts_validate.mjs`, `editor_python_friction/epf_validate.mjs`, `constructor_locks/constructor_locks.mjs` and `anim_bridge/anim_bridge.mjs`, `statetree_bridge/statetree_bridge.mjs`, `gas_native/gas_native.mjs`, `unity_build/unity_build.mjs` and `rendering_probes/rp_validate.mjs` each build a throwaway project, run their scripts on an installed Unreal 5.8 and check the claims marked [tested] in the Niagara, Substrate, Landmass, Water, World Partition, PCG, Editor Python, bridge, automation-test and Rendering (Directional lights) references. `rendering_probes/rp_validate.mjs` spawns two directional lights headless and reads ForwardShadingPriority back through the Python setter and four other routes (the renderer's on-screen message needs a rendering editor and is not reproduced). `native-build.mjs` finds the Visual Studio toolset and Windows SDK the C++ scenes build with. `editor_probes/probe.mjs` is a helper too: it runs one of three editor-Python probes (`doc_probe.py`, `inspect_system.py`, `asset_probe.py`) headless and fails when no report is written ([README](editor_probes/README.md)). `engine_source.mjs` is a helper too: `node engine_source.mjs --engine "<UE folder>" r.MegaLights.Allowed` prints the install-relative `path:line` where the install defines a console variable, symbol, module or file, with no Unreal run (it has node tests in the merge lane). `contention/editor_contention.mjs` is a helper, not a scene: it stamps other-editor presence into a capture receipt. Commands, scripts and results: [example scenes](../../skills/unreal-editor-scripting/references/unreal-example-scenes.md).
 
-## Prepared engine probes (not yet run)
+## Engine probes: run on 5.8.2 and still prepared
 
-These were written and tested against canned reports only. Each README carries a Status line; a first run tests the probe before it tests the engine, and nothing here backs a `[tested]` label until a run does.
+Each README carries a Status line. Not run on 5.8.3. The rows marked run passed on Unreal 5.8.2; the rest were written and tested against canned reports only, and nothing in them backs a `[tested]` label until a run does.
 
-| Folder or script | What it prepares |
+| Folder or script | Result |
 |---|---|
-| [`niagara_toolsets/nts_probe.mjs`](niagara_toolsets/README.md) | `AddRenderer` positions, Direct Frame Index linked to a user parameter, generated assets wired into Niagara, gradient inputs (the `emit` group, a stack-authored emitter that counts no particles, has run on 5.8.2) |
-| [`anim_bridge/anim_runtime.mjs`](anim_bridge/README.md) | a played state machine, a 2D blend space and linked layers |
-| [`chaos_break`](chaos_break/README.md) | a Geometry Collection built from code that breaks in a running game, with controls that must not |
-| [`automation_test/automation_reference.mjs`](automation_test/README.md), [`insights_capture/insights_stats.mjs`](insights_capture/README.md) | the commands the architecture and quality references name: headless Automation runs, `stat` output, traces |
-| [`rendering_probes/rp_rt_validate.mjs`](rendering_probes/README.md), `rp_viewport.mjs` | MegaLights tracing routes and the editor toggle; the directional-light message |
-| [`compare-scene`](compare-scene/README.md) | GPU frame time next to wall, game and render thread times in the replay receipt |
-| [`unity_build`](unity_build/README.md), [`editor_probes/probe_timeout.mjs`](editor_probes/README.md) | the read-only unity working set; the probe launcher under a timeout |
-| [`gameplay_cameras`](gameplay_cameras/README.md), [`skeletal_materials`](skeletal_materials/README.md) | the Gameplay Cameras reference's claims in a running game; setting skeletal mesh material slots from an editor module |
+| [`niagara_toolsets/nts_probe.mjs`](niagara_toolsets/README.md) | Ran: `renderers` (`AddRenderer` positions and renderer kinds) 6 of 6; `emit` (an emitter that counts no particles) 8 of 8. Not run: Direct Frame Index linked to a user parameter, generated assets wired into Niagara, gradient inputs |
+| [`anim_bridge/anim_runtime.mjs`](anim_bridge/README.md) | Ran: 13 of 13 (a played state machine, a 2D blend space, linked layers) |
+| [`chaos_break`](chaos_break/README.md) | Ran: 11 of 11, and 11 of 11 with `--render` (a code-built collection with hulls breaks in a running game; the controls do not) |
+| [`automation_test/automation_reference.mjs`](automation_test/README.md), [`insights_capture/insights_stats.mjs`](insights_capture/README.md) | Ran: 7 of 7 (headless Automation runs); 8 of 8 (`stat` output, traces) |
+| [`rendering_probes/rp_rt_validate.mjs`](rendering_probes/README.md), `rp_viewport.mjs` | Not run: MegaLights tracing routes and the editor toggle; the directional-light message |
+| [`compare-scene`](compare-scene/README.md) | Not run: GPU frame time next to wall, game and render thread times in the replay receipt |
+| [`unity_build`](unity_build/README.md), [`editor_probes/probe_timeout.mjs`](editor_probes/README.md) | Ran: `--only-readonly` 4 of 4 (the read-only unity working set); 7 of 7 (the probe launcher under a timeout) |
+| [`gameplay_cameras`](gameplay_cameras/README.md), [`skeletal_materials`](skeletal_materials/README.md) | Ran: 34 of 34 (Gameplay Cameras in a running game); 15 of 15, headless and with `--rendering` (skeletal mesh material slots from an editor module) |

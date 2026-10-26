@@ -21,7 +21,7 @@ About six minutes: the first build of each project takes about a minute, the res
 
 ## Opt-in: the read-only working set
 
-**Status:** Prepared 2026-10-26; not yet run on an engine. A first run tests the probe before it tests the engine. The default run above is unchanged.
+**Status:** Prepared and first run 2026-10-26 on Unreal 5.8.2: `unity_build.mjs --only-readonly` passed 4 of 4 checks in 62 s with no change to the probe. Not run on 5.8.3. The default run above is unchanged.
 
 ```text
 node examples/unreal/unity_build/unity_build.mjs --engine "C:/Program Files/Epic Games/UE_5.8" --only-readonly [--keep]
@@ -37,7 +37,7 @@ The question is the Perforce case: a workspace syncs files read-only, and an ins
 | `ro-beta` | the other two sources, the header, the rules | `ProbeBeta.cpp` | only `ProbeBeta.cpp` excluded, the build passes |
 | `ro-header` | the three sources, the rules | `UnityProbeTypes.h` | `ProbeAlpha.cpp` and `ProbeBeta.cpp` excluded because `System/Unity.cs` (`GetAdaptiveFiles`) leaves out a source whose first include is a same-named working-set header; `UnityProbeModule.cpp` stays in; the build passes |
 
-The third row may explain why a scratch run that made only the sources read-only still saw them excluded: both sources include `UnityProbeTypes.h` first, and the header stayed writable (a hypothesis; what that run changed was not recorded). Every prediction here is a reading of the source, not an observation; the checks in `unity-build-checks.mjs` (`evaluateReadOnly`) state each prediction, and a failed check means the prediction was wrong. Node sets and clears the read-only attribute with `chmodSync`; the run clears it again before deleting the folders.
+The `--only-readonly` run on 5.8.2 observed all three rows as predicted, so the first-include effect is an observation: with only the header writable, both sources that include it first were excluded although read-only. It may explain why an earlier scratch run that made only the sources read-only still saw them excluded (the header stayed writable; what that run changed was not recorded). The checks in `unity-build-checks.mjs` (`evaluateReadOnly`) state each prediction, and a failed check means the prediction was wrong. Node sets and clears the read-only attribute with `chmodSync`; the run clears it again before deleting the folders.
 
 ## What it checks (11 checks)
 
@@ -48,4 +48,4 @@ The third row may explain why a scratch run that made only the sources read-only
 
 ## Not verified
 
-The Perforce read-only working set (prepared above, not yet run; an earlier scratch run with read-only sources still excluded them), `-ForceUnity` (it did not group the files in a scratch run), a module of 32 or more files in more than one chunk, and a Linux or macOS toolchain.
+A real Perforce workspace with read-only files (the no-git read-only case ran on 5.8.2: nothing is excluded and the build fails), `-ForceUnity` (it did not group the files in a scratch run), a module of 32 or more files in more than one chunk, and a Linux or macOS toolchain.

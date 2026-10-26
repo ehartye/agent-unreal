@@ -1,6 +1,6 @@
 # Chaos destruction from C++: facts for a Geometry Collection built in code
 
-Written for Unreal 5.8.2. A [documented] line cites a file and line in the install as `Module/File`, found by name under `Engine/Source/Runtime` or `Engine/Plugins`. A [general] line is behaviour observed outside this repository and not re-run here. No line was run on an engine. Editor routes are in [Chaos destruction](unreal-chaos-destruction.md).
+Written for Unreal 5.8.2. A [documented] line cites a file and line in the install as `Module/File`, found by name under `Engine/Source/Runtime` or `Engine/Plugins`. A [general] line is behaviour observed outside this repository and not re-run here. Only the material line below was exercised by a run, and it was not confirmed. Hulls, simulation data and spawn order are in [Chaos destruction from C++: hulls and spawn order](unreal-chaos-destruction-hulls.md). Editor routes are in [Chaos destruction](unreal-chaos-destruction.md).
 
 ## Build and shatter
 
@@ -10,28 +10,14 @@ Written for Unreal 5.8.2. A [documented] line cites a file and line in the insta
 - [documented] `*Asset->GetGeometryCollection()` (`GeometryCollectionObject.h` line 421) is an `FGeometryCollection`, an `FManagedArrayCollection` through `FTransformCollection` (`GeometryCollection.h` line 29). `InitializeFromCollection(Collection, true)` on an `FDataflowTransformSelection` selects every transform (`DataflowCore/DataflowSelection.h` line 27).
 - [documented] Plugin `Fracture` (module `FractureEngine`, `Runtime`) is beta, off by default and needs `PlanarCut` (`Fracture/Fracture.uplugin`). The `Build.cs` modules a caller names: `GeometryCollectionEngine`, `Chaos`, `FractureEngine`, `PlanarCut` (`FIslandSplitSettings`, included at `FractureEngineFracturing.h` line 6), `DataflowCore` (`FDataflowTransformSelection`) and `FieldSystemEngine` (`URadialVector`).
 
-## No convex hulls, nothing breaks
-
-- [documented] `FGeometryCollectionConvexUtility::GetValidConvexHullData(FGeometryCollection*)` (`Chaos/GeometryCollectionConvexUtility.h` line 104, body in the `.cpp` lines 146-181) creates the hull attributes if missing and adds a hull for every rigid transform with none.
-- [documented] `AppendStaticMesh` copies only the mesh's simple collision into `ExternalCollisions` (conversion `.cpp` lines 120-162, 350), which the proxy uses only if `bUseImportedCollisionImplicits` is set (`GeometryCollectionPhysicsProxy.cpp` line 5736). Neither it nor `FractureEngineFracturing.cpp` builds hull data. The default collision shape is convex (`GeometryCollectionObject.cpp` line 186), and a convex shape is made only from hull data (proxy lines 5239-5253).
-- [documented] A transform with neither a shape nor a cluster built from its children logs `GeometryCollection Transform %d has no geometry` (proxy line 3217), then `Geometry collection %ls tried to create %d particles with no geometry` (line 3227; line 3231 omits the name). Both are `Verbose`. The engine's comment at line 3216 names another cause: "This will happen if some particles are being culled (e.g., via data flow) but the MaxSimulatedLevel is set to a level that includes them."
-- [general] `log LogChaos Verbose` shows both lines. In a native project a collection built with the two calls and no hulls acted as one inert particle (the cause is observed, not read): the strain and crumble calls did nothing, `OnChaosBreakEvent` never fired and nothing printed at normal verbosity. `GetValidConvexHullData` on the rest collection before saving gave 31 hulls and a 374 KB asset.
-- [general] A noise point spacing of 1 cm gave a 39 MB asset and 250 cm gave 320 KB, so check the saved asset size.
-- [documented] `ApplyExternalStrain` and `CrumbleActiveClusters` are also silent with no physics proxy: each sits inside `if (PhysicsProxy)` (`GeometryCollectionEngine/GeometryCollectionComponent.cpp` lines 6826-6832, 6850-6856).
-- [documented] In the editor, `UGeometryCollection::UpdateConvexGeometry` builds hulls (`GeometryCollectionObject.h` line 863; empty outside `WITH_EDITOR`, `.cpp` lines 450-461). The load path at `.cpp` lines 1276-1292 swaps Convex for Box on an old asset; it builds none.
-
 ## Materials need the Geometry Collections usage flag
 
 - [documented] The flag is `bUsedWithGeometryCollections` (`Engine/Material.h` line 803), deprecated for direct use in 5.8 (line 801): C++ reads `GetUsageByFlag(MATUSAGE_GeometryCollections)` (line 1309) and writes `SetUsageByFlag` (line 1567, no recompile). The scene proxy falls back to the default material for a null or failing one (`GeometryCollectionEngine/GeometryCollectionSceneProxy.cpp` lines 185-188).
 - [general] The Python property is `used_with_geometry_collections`, named like the other usage flags; not run here.
 - [documented] A game or Play-In-Editor session logs a `LogMaterial` warning, `Material <path> missing usage flag GeometryCollections! Default Material will be used in game.` (`Engine/Material.cpp` line 1945; the name is at `MaterialInterface.cpp` line 2962). Outside play the editor sets the flag itself and marks the package dirty (lines 1882-1920), so the warning needs such a session and the saved asset is where to set it.
+- [tested] On 5.8.2, the `missing usage flag GeometryCollections` warning did not appear in either the null-RHI run or the `--render` run (a `-game -RenderOffScreen` run with the engine's basic shape material); the cause is not established, so the source reading above is not backed by a run.
 
 ## Give released cells velocity
 
 - [documented] `UGeometryCollectionComponent::ApplyPhysicsField(bool, EGeometryCollectionPhysicsTypeEnum, UFieldSystemMetaData*, UFieldNodeBase*)` (`GeometryCollectionComponent.h` line 1141) takes `Chaos_LinearVelocity` (`Chaos/GeometryCollectionSimulationTypes.h` line 50) and a `URadialVector` (`FieldSystemEngine/FieldSystemObjects.h` line 673, `SetRadialVector` at line 694). `ApplyExternalStrain` is header line 714 and `CrumbleActiveClusters` line 740.
 - [general] Without a velocity field the released cells settle in place as a pile; apply a radial `Chaos_LinearVelocity` field after the strain and crumble calls.
-
-## Spawn order
-
-- [general] The sequence that worked: `SpawnActorDeferred` for `AGeometryCollectionActor`, `SetRestCollection` on its component, then `FinishSpawning`.
-- [documented] `SetRestCollection(const UGeometryCollection*, bool bApplyAssetDefaults = true)` (`GeometryCollectionComponent.h` line 867) resets the dynamic collection and calls `RecreatePhysicsState` (`.cpp` lines 5148-5168), so the source does not say a later call fails. The component is the actor's root (`GeometryCollectionActor.cpp` lines 38-39) and registers in `PostSpawnInitialize` even when construction is deferred (`Engine/Actor.cpp` lines 4334-4337); `BeginPlay` runs from `FinishSpawning` in a started world (lines 4420, 4529), so the sequence sets the collection first.

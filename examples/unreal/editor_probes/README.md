@@ -29,7 +29,7 @@ It also takes `--timeout <ms>` (default 600000). The pure logic (arguments, repo
 
 ## Opt-in: the launcher under a time limit
 
-**Status:** Prepared 2026-10-26; not yet run on an engine. A first run tests the probe before it tests the engine. The three probes above and their launcher runs are unchanged.
+**Status:** Prepared and first run 2026-10-26 on Unreal 5.8.2: `probe_timeout.mjs` passed 7 of 7 checks in 108 s with no change to the probe. Not run on 5.8.3. The three probes above and their launcher runs are unchanged.
 
 ```text
 node examples/unreal/editor_probes/probe_timeout.mjs --engine "C:/Program Files/Epic Games/UE_5.8" [--timeout-ms 60000] [--keep]
@@ -62,4 +62,4 @@ One object keyed by each name you asked for. Each entry has `status`: `found`, `
 
 ## Not verified
 
-The launcher on macOS or Linux (the editor path is chosen by platform, only Windows was run), a probe run longer than the timeout (prepared above, not yet run), and `inspect_system.py` on a system whose compile is still pending.
+The launcher on macOS or Linux (the editor path is chosen by platform, only Windows was run), and `inspect_system.py` on a system whose compile is still pending.

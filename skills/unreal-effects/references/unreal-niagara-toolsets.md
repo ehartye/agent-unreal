@@ -50,4 +50,12 @@ unreal.EditorAssetLibrary.save_asset("/Game/FX/NS_Worked")
 - [tested] `NiagaraSystemFactoryNew` makes an empty system (no emitters). `CreateNiagaraSystem` (`assetName`, `assetPath`, `templateSystem`) copies a template system instead.
 - [documented] Epic's fundamentals skill (`NiagaraToolsets/Content/Python/skills/fundamentals.py`) says a material needs the usage flag of its renderer type; the example's material has `used_with_niagara_sprites` set before it is saved.
 
+## Emitters added to a template-made system start dead
+
+- [tested] On 5.8.2, an emitter added with `AddEmitter` to a system made by `CreateNiagaraSystem` from a template system counts 0 particles in a valid simulation cache, or the system completes at once and every capture is refused (`System already completed its simulation`). A system made with `NiagaraSystemFactoryNew` is not affected.
+- [tested] Rule: after the last `AddEmitter`, write a Float or Int stack input to a different value (the emitter's `SpawnRate`, a burst `Spawn Count` of 5, or the system's `SystemState` `Loop Duration` of 5), then verify with a simulation-cache count before saving. 90 is the Fountain's default `SpawnRate`, so writing 90 changes nothing; 91, 60, 30 or 15 revives it and the count tracks the rate (60, 30, 15 and 0 read 97, 49, 24 and 0). Removing emitters after the write is fine; a second emitter added after a write kills the whole system again, so write again after the last add.
+- [tested] These do not revive it: a write before the add, a write of the value already held, an enum edit (`Loop Behavior` to Infinite), a bool, toggling the `SpawnRate` module off and on, adding three modules.
+- [tested] `GetSystemCompileState` reads `UpToDate` for every one of these systems, so it does not show whether a system emits.
+- [documented] The cause is not determined. The source shows Float and Int inputs are rapid iteration parameters and bool and enum inputs are not (`FNiagaraStackGraphUtilities::IsRapidIterationType`, `NiagaraStackGraphUtilities.cpp`), and `SetLocalValue` writes them into the affected scripts; a missing refresh as the cause is untested.
+
 Deleting and recreating a system, the start-up log and what was not verified are in [Delete and recreate, and the start-up log](unreal-niagara-toolsets-lifecycle.md).

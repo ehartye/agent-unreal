@@ -14,6 +14,10 @@ Target: Unreal Engine 5.8, Windows. The numbered steps for [Animation Blueprints
 10. Blend Spaces: set axis range and grid; Smoothing Time and Type set how an axis eases; Wrap Input needs similar animations at both ends; use a Blend Space player node; analysis functions can place samples.
 11. For many characters, enable Update Rate Optimizations at 15 Hz or lower at distance, or use the Animation Budget Allocator plugin (Epic's recommendation).
 
+## Run on 5.8.2
+
+- [tested] Steps 6, 7 and 10 were run from code on 5.8.2: a two-state machine whose transitions read two Boolean variables changed state and the pose followed; a 2D Blend Space played one clip at each corner sample and blended all three at an interior point; linked layers swapped to a guest's layer and back. Not run: montage slot groups other than the default ([AnimGraph from C++](unreal-animgraph-from-cpp.md)).
+
 ## Sources
 
 - [Graphing in Animation Blueprints](https://dev.epicgames.com/documentation/en-us/unreal-engine/graphing-in-animation-blueprints-in-unreal-engine)

@@ -35,7 +35,7 @@ The renderer's on-screen message. It is drawn only by a rendering editor viewpor
 
 ## Opt-in probes (prepared, not yet run on an engine)
 
-**Status:** Prepared 2026-10-26; not yet run on an engine. A first run tests the probe before it tests the engine. Nothing in this section changes `rp_validate.mjs` or what the default run above does. Every engine name the scripts call was found in the 5.8.2 install first (a comment beside each call names the file); the expected log lines, settings and outcomes come from reading that source, so a failed check on a first run may be the probe's mistake or a wrong reading, and the detail line says what was seen. The canned reports in the tests are shaped like what the scripts are written to produce; the first run confirms the shapes.
+**Status:** Prepared 2026-10-26. `rp_validate.mjs` with its stricter route check ran on Unreal 5.8.2 the same day and passed 3 of 3; the opt-in probes in this section (`rp_rt_validate.mjs`, `rp_viewport.mjs`) have not yet run on an engine, and a first run tests a probe before it tests the engine. Nothing in this section changes `rp_validate.mjs` or what the default run above does. Every engine name the scripts call was found in the 5.8.2 install first (a comment beside each call names the file); the expected log lines, settings and outcomes come from reading that source, so a failed check on a first run may be the probe's mistake or a wrong reading, and the detail line says what was seen. The canned reports in the tests are shaped like what the scripts are written to produce; the first run confirms the shapes.
 
 | File | What it does |
 |---|---|

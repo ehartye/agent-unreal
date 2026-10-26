@@ -21,7 +21,8 @@ Target and evidence as in [Unity builds](unreal-native-unity-builds.md): `exampl
 - [tested] `bUseUnity = false;` in the module rules: the clashing sources built (phase `off`). Cost: slower full builds of that module.
 - [tested] `NumIncludedBytesPerUnityCPPOverride = 1;` gave one chunk per source file and the clashing sources built (phase `chunks`); use it only to reproduce a regrouping.
 - [tested] `-DisableAdaptiveUnity` on the build command with `MinSourceFilesForUnityBuildOverride = 1;` reproduced all four codes in a project with no git repository (phase `clash`). `unity_build.mjs` passes it through `buildEditor({ extraArgs })`.
-- [tested] Two scratch runs of the same module, outside `unity_build.mjs`: `-ForceUnity` (with `-DisableAdaptiveUnity`) did not group the files, each compiled alone, so set the threshold in the module rules instead; with the files marked read-only (the Perforce route) they were still excluded, so that route is unconfirmed.
+- [tested] A scratch run of the same module, outside `unity_build.mjs`: `-ForceUnity` (with `-DisableAdaptiveUnity`) did not group the files, each compiled alone, so set the threshold in the module rules instead.
+- [tested] Read-only files as the working set, on 5.8.2 with no git repository (`node unity_build.mjs --only-readonly`): with every file read-only, the shared header included, nothing is excluded and the clash reproduces (exit 6, all four codes above plus `C2838` and `C2065`). A read-only file whose first include is a writable header is still excluded, so make the header read-only too. This replaces the earlier scratch result that read-only files were excluded; details in [Unity builds](unreal-native-unity-builds.md).
 
 ## Chain the next step on the build
 
