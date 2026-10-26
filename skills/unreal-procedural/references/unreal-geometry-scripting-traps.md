@@ -10,7 +10,7 @@ Target: Unreal Engine 5.8, Windows. Companion to [Geometry Scripting](unreal-geo
 - [documented] A positive roll turns local +Z toward +Y. `FRotationTranslationMatrix` (`Engine/Source/Runtime/Core/Public/Math/RotationTranslationMatrix.h`) gives the rotated Z axis `(-(CR*SP*CY + SR*SY), CY*SR - CR*SP*SY, CR*CP)`, which is `(0, sin r, cos r)` for roll `r` with pitch and yaw 0. A ring of rays in the YZ plane, each ray built along +Z, therefore needs the roll `90 - angle` to point at `angle` measured from +Y toward +Z. [general] The ring built this way looked right in a picture once.
 - [documented] `FRotator` stores Pitch, Yaw, Roll, but its native make function is `MakeRotator {Roll, Pitch, Yaw}` (`Engine/Source/Runtime/Engine/Classes/Kismet/KismetMathLibrary.h`). Build `unreal.Rotator` with keywords (`roll=`, `pitch=`, `yaw=`); a helper that takes `(pitch, yaw, roll)` is easy to mis-assign by hand. The Python constructor's argument order was not read.
 - [general] Read the pieces back before saving: count the triangles, read `get_mesh_bounding_box`, and check that the base is at Z 0 and the top where the stack says. A wrong origin imports fine and shows only when the mesh is placed, half-buried or floating.
-- Not run: a check that prints the bounding box of a box, a cone, a cylinder and a rotated cone from this repo. Until one exists these lines stay `[documented]` or `[general]`, not `[tested]`.
+- Not run: a check that prints the bounding box of a box, a cone, a cylinder and a rotated cone from this repo. Until one exists, none of these lines is a tested claim.
 
 ## New Static Mesh asset and runtime collision
 
