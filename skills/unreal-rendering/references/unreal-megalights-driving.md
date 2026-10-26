@@ -18,13 +18,13 @@ Python reaches console variables and Post Process Volume settings. Project Setti
 ## Workflow
 
 1. [documented] Enable Support Hardware Ray Tracing and MegaLights in Project Settings, with `r.SkinCache.CompileShaders >= 1`; confirm Shader Model 6 and the Deferred renderer.
-2. Keep Lumen on hardware ray tracing so the Ray Tracing Scene is shared.
-3. Leave lights on the Ray Tracing shadow method; reserve Virtual Shadow Maps for the few lights that need Nanite detail.
-4. Keep lights small and sparse: narrow attenuation radius, cone angle and barn doors, no lights inside geometry, and merge clusters into single area lights.
-5. Set `r.Visibility.LocalLightPrimitiveInteraction 0` when every light uses ray tracing to remove most per-light CPU cost.
-6. Tune with `r.MegaLights.NumSamplesPerPixel` and `r.MegaLights.DownsampleMode`; use `r.MegaLights.LightAttenuationFalloff` to tighten light influence.
-7. Profile with `r.RDG.AsyncCompute 0`, then A/B test `r.MegaLights.AsyncCompute.Volume`, `.GenerateSamples` and `r.StochasticLighting.AsyncCompute`.
-8. Inspect shadow mismatches with `r.MegaLights.Visualize 1` and the Light Complexity view.
+2. [general] Keep Lumen on hardware ray tracing so the Ray Tracing Scene is shared.
+3. [general] Leave lights on the Ray Tracing shadow method; reserve Virtual Shadow Maps for the few lights that need Nanite detail.
+4. [general] Keep lights small and sparse: narrow attenuation radius, cone angle and barn doors, no lights inside geometry, and merge clusters into single area lights.
+5. [documented] Set `r.Visibility.LocalLightPrimitiveInteraction 0` when every light uses ray tracing to remove most per-light CPU cost.
+6. [general] Tune with `r.MegaLights.NumSamplesPerPixel` and `r.MegaLights.DownsampleMode`; use `r.MegaLights.LightAttenuationFalloff` to tighten light influence.
+7. [general] Profile with `r.RDG.AsyncCompute 0`, then A/B test `r.MegaLights.AsyncCompute.Volume`, `.GenerateSamples` and `r.StochasticLighting.AsyncCompute`.
+8. [documented] Inspect shadow mismatches with `r.MegaLights.Visualize 1` and the Light Complexity view.
 
 Related: [MegaLights](unreal-megalights.md), [Lumen](unreal-lumen.md), [Virtual Shadow Maps](unreal-virtual-shadow-maps.md), [Nanite](unreal-nanite.md).
 

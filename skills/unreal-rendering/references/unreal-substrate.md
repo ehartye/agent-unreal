@@ -71,7 +71,7 @@ Blend Mode and the translucent Lighting Mode are set on the root node. The mode 
 
 1. Enable Substrate and restart; choose Blendable or Adaptive GBuffer per the table.
 2. Author new materials from Slab nodes; use Substrate Simple Clear Coat, Wrap and Diffusion building blocks in place of legacy shading models.
-3. Pick the Blend Mode, then the translucent Lighting Mode with the lowest cost that looks right ([modes](unreal-substrate-slabs.md)).
+3. [documented] Pick the Blend Mode, then the translucent Lighting Mode with the lowest cost that looks right ([modes](unreal-substrate-slabs.md)).
 4. Reduce cost with parameter blending: Epic's example drops 108 bytes per pixel to 28. Each extra BSDF roughly doubles per-pixel lighting cost.
 5. Read the Substrate stats panel for simplification reasons when a material exceeds closure or bytes-per-pixel limits.
 6. For stylized work, create a Toon Profile, assign it to a Substrate Toon BSDF, and keep the project on Blendable GBuffer.

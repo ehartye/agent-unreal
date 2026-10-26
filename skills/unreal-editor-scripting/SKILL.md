@@ -6,7 +6,7 @@ when_to_use: "Use when deciding whether an Unreal task can be scripted from Pyth
 
 # Scripting the Unreal editor
 
-Unreal 5.8 on Windows. Pick the feature from the goal, then read that system's reference: when to use it, what to use instead, how an agent drives it. Other domains: `unreal-effects`, `unreal-animation`, `unreal-gameplay`, `unreal-procedural`, `unreal-rendering`, `unreal-native`, `unreal-import`, `uefn`.
+Unreal 5.8 on Windows. Pick the feature from the goal, then read that system's reference: when to use it, what to use instead, how an agent drives it. Other domains: `unreal-effects`, `unreal-animation`, `unreal-gameplay`, `unreal-procedural`, `unreal-rendering`, `unreal-native`, `unreal-import`, `uefn`, `unreal-architecture`, `unreal-quality`.
 
 | You are about to | Read |
 |---|---|

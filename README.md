@@ -59,7 +59,7 @@ functions after an owned helper reload, backed by a disposable native probe.
 The [native Unreal game recipe](skills/unreal-native/references/unreal-native-game.md)
 records a separate 5.8.2 C++ build and actual offscreen game-camera loop, with fresh automation JSON checks
 because failed tests can exit zero. Its [presentation companion](skills/unreal-native/references/unreal-native-presentation.md)
-covers the measured font/Slate commandlet crash, crisp Canvas glyph sizing, physical camera exposure and HDR palette traps.
+covers the measured font/Slate commandlet crash, crisp Canvas glyph sizing and Canvas text drawing; its [exposure and vertex colour companion](skills/unreal-native/references/unreal-native-exposure-and-vertex-color.md) covers physical camera exposure and HDR palette traps.
 The [Windows packaging reference](skills/unreal-native/references/unreal-native-packaging.md)
 records an actual staged Game EXE separately from Editor-game evidence, including the UAT Application Control failure.
 The [content pipeline](skills/unreal-native/references/unreal-native-content-pipeline.md)

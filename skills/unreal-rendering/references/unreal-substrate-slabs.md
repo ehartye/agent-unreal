@@ -19,11 +19,11 @@ Connect pins by name. The spelling differs by node, so spell each as listed.
 
 Set the Blend Mode on the root node: Opaque, Masked, Translucent - Grey Transmittance, Translucent - Colored Transmittance, Colored Transmittance Only (the Multiply equivalent), Additive, AlphaComposite (Premultiplied Alpha), AlphaHoldout. Translucent modes also need a Lighting Mode:
 
-- Volumetric NonDirectional: cheapest per pixel; ignores the normal.
-- Volumetric Directional: uses the normal; enable Generate Spherical Particles for a useful tangent space.
-- Volumetric PerVertex NonDirectional and Directional: per-vertex evaluation, lower pixel cost.
-- Surface Translucency Volume: blurry, distance-limited, diffuse only, supports reflections.
-- Surface ForwardShading: per-light specular; the most expensive.
+- [documented] Volumetric NonDirectional: cheapest per pixel; ignores the normal.
+- [documented] Volumetric Directional: uses the normal; enable Generate Spherical Particles for a useful tangent space.
+- [documented] Volumetric PerVertex NonDirectional and Directional: per-vertex evaluation, lower pixel cost.
+- [documented] Surface Translucency Volume: blurry, distance-limited, diffuse only, supports reflections.
+- [documented] Surface ForwardShading: per-light specular; the most expensive.
 
 Related: [Substrate](unreal-substrate.md), [Lumen](unreal-lumen.md).
 

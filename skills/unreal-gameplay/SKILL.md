@@ -6,7 +6,7 @@ when_to_use: "Use when asked which Unreal system to use for abilities, stat effe
 
 # Choosing an Unreal gameplay system
 
-Unreal 5.8 on Windows. Pick the feature from the goal, then read that system's reference: when to use it, what to use instead, how an agent drives it. Brackets show each plugin's shipped state. Other domains: `unreal-effects`, `unreal-animation`, `unreal-procedural`, `unreal-rendering`, `unreal-editor-scripting`, `unreal-native`, `unreal-import`, `uefn`.
+Unreal 5.8 on Windows. Pick the feature from the goal, then read that system's reference: when to use it, what to use instead, how an agent drives it. Brackets show each plugin's shipped state. Other domains: `unreal-effects`, `unreal-animation`, `unreal-procedural`, `unreal-rendering`, `unreal-editor-scripting`, `unreal-native`, `unreal-import`, `uefn`, `unreal-architecture`, `unreal-quality`.
 
 | You are about to | Read |
 |---|---|

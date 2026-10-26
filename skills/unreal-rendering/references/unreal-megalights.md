@@ -27,7 +27,7 @@ MegaLights is a renderer feature, not a plugin: the engine ships no plugin descr
 
 - The renderer is Forward, or the target is mobile, Switch or previous-generation consoles: use the standard deferred lighting path where supported.
 - A strong sun-like directional light carries the scene: Epic recommends Deferred Lighting with Virtual Shadow Maps for it, with MegaLights reserved for dimmer lights such as moonlight.
-- Water, Clouds, Heterogeneous Volumes ([reference](unreal-heterogeneous-volumes.md)) and Local Volumetrics need direct light from these lights: MegaLights does not support them (Epic's page).
+- [documented] Water, Clouds, Heterogeneous Volumes ([reference](unreal-heterogeneous-volumes.md)) and Local Volumetrics need direct light from these lights: MegaLights does not support them (Epic's page).
 
 ## How MegaLights relates to Lumen and Virtual Shadow Maps
 

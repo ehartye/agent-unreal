@@ -24,7 +24,7 @@ const exeName = (name) => String(name).toLowerCase().replace(/\.exe$/, '') + '.e
 
 // Parse the JSON that listProcesses asks PowerShell for: an array, or one bare object when a single process matches.
 export function parseProcessList(text) {
-  const trimmed = String(text ?? '').replace(/^﻿/, '').trim();
+  const trimmed = String(text ?? '').replace(/^\uFEFF/, '').trim();
   if (!trimmed) return [];
   const data = JSON.parse(trimmed);
   const rows = Array.isArray(data) ? data : [data];
@@ -139,7 +139,7 @@ export async function waitForQuiet(options = {}) {
 
 // Receipts -----------------------------------------------------------------------------------------------------------
 export function stampReceipt(file, block, key = 'contention') {
-  const receipt = existsSync(file) ? JSON.parse(readFileSync(file, 'utf8').replace(/^﻿/, '')) : {};
+  const receipt = existsSync(file) ? JSON.parse(readFileSync(file, 'utf8').replace(/^\uFEFF/, '')) : {};
   receipt[key] = block;
   writeFileSync(file, JSON.stringify(receipt, null, 2) + '\n');
   return receipt;
@@ -179,7 +179,7 @@ async function main(argv) {
   try { opts = parseArgs(argv); } catch (e) { console.error(e.message); return 2; }
   if (opts.command === 'verify') {
     if (!opts.positional[0]) { console.error('usage: verify <receipt.json> [--allow-contention]'); return 2; }
-    const verdict = judgeReceipt(JSON.parse(readFileSync(opts.positional[0], 'utf8').replace(/^﻿/, '')), opts);
+    const verdict = judgeReceipt(JSON.parse(readFileSync(opts.positional[0], 'utf8').replace(/^\uFEFF/, '')), opts);
     console.log(JSON.stringify(verdict));
     return verdict.ok ? 0 : 3;
   }
