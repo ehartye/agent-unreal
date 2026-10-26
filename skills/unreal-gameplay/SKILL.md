@@ -17,6 +17,7 @@ Unreal 5.8 on Windows. Pick the feature from the goal, then read that system's r
 | Write Gameplay Effects, attribute sets, native tags or a cost and cooldown in C++ (GameplayAbilities) | [GAS in C++](references/unreal-gas-native-effects.md) |
 | Bind player input and switch controls by situation (EnhancedInput; on) | [Enhanced Input](references/unreal-enhanced-input.md) |
 | Build NPC decisions, sensing, interaction slots or crowds (StateTree, Behavior Trees, Smart Objects, Mass) | [AI](references/unreal-ai-behavior.md) |
+| Follow the numbered steps for a StateTree, Behavior Tree, EQS, Perception or Smart Object setup | [AI workflow](references/unreal-ai-behavior-workflow.md) |
 | Create Smart Objects and claim slots from C++ at run time, with no authored assets (SmartObjects; off) | [Smart Objects from C++](references/unreal-smart-objects-native.md) |
 | Run Mass entities and processors by hand from C++ without the Mass plugins (MassEntity, MassCore modules) | [Native Mass](references/unreal-mass-native.md) |
 | Follow a pawn with a Gameplay Cameras rig, or blend a view while world time is dilated (GameplayCameras; experimental) | [Gameplay Cameras](references/unreal-gameplay-cameras.md) |
