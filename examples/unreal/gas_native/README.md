@@ -14,8 +14,10 @@ The question: how does a native Gameplay Effect get its tag-granting component, 
   - `GasNativeProbe` has a test actor with an Ability System Component and `UGasNativeProbeCommandlet`, which makes a game world by hand, runs the scenario and writes a JSON report.
   - `GasNative.Build.cs` lists `GameplayAbilities`, `GameplayTags` and `GameplayTasks`.
   - `GasNativeCases` holds `UGasNativeHoldAbility` (stays active until cancelled), `UGasNativeGateRequirement` (a Custom Can Apply requirement class) and `GasNativeCases::Run`, which runs the effect-component cases below. `GasNativeEffects` also has `UGasNativeBonusEffect`, the class the Additional Effects cases name.
+  - `GasNativeRep` is the replicated-play scenario (second runner below): a replicated attribute set, a locally predicted ability with a cost, a buff effect, a player state that owns an Ability System Component in Mixed mode, and a game mode that writes the server receipt.
 - `gas_native.mjs` writes a throwaway project in the OS temp folder (`../native-build.mjs`), builds the Editor target, and runs `UnrealEditor-Cmd.exe Project.uproject -run=GasNativeProbe -Report=<file> -nullrhi` hidden.
 - `gas-native-checks.mjs` judges the build, the report and the log; `gas-native-cases.mjs` holds the table of effect-component cases (expectation, source line, assert or observe) and judges them; `gas-native.test.mjs` tests that logic with no Unreal (it runs in `node scripts/check.mjs`).
+- `gas_rep.mjs` starts a dedicated server and one client for the replicated-play scenario; `gas-rep-checks.mjs` builds their command lines and judges the two receipts together; `gas_rep_pie_readback.py` reads the Play In Editor multiplayer settings back; `gas-rep.test.mjs` tests the judge.
 
 ## Run
 
@@ -59,6 +61,34 @@ How a component is added, from `GameplayEffect.h` in the install: `GEComponents`
 
 Runtime: the cases add a few seconds to the probe (44 cases; the seven Additional Effects completion cases tick the world for one second each). The runner prints the observe-only cases and any case that differs from the table.
 
+## Replicated play (prepared, not yet run on an engine)
+
+The question: with a dedicated server and one client on the same machine, does an actor with an Ability System Component in Mixed replication mode (owner and avatar: a player state) replicate a granted ability, an active Gameplay Effect and an attribute value to the client, and what does a client-side activation do?
+
+```text
+node examples/unreal/gas_native/gas_rep.mjs --engine "C:/Program Files/Epic Games/UE_5.8" [--keep] [--reuse <kept folder>] [--render] [--pie-readback] [--timeout 150]
+```
+
+About two minutes to build (the same module as `gas_native.mjs`), then 20 to 40 s for the scenario. One engine process at a time except the scenario itself, which runs a server and a client together on a free UDP port.
+
+Design, from the engine source (install-relative):
+
+- Binary: the Editor target built by `native-build.mjs`; no Game, Server or Client target and no packaging. In an editor build `-server` makes `IsRunningDedicatedServer()` true and `-game` runs the editor binary as a game (`Engine/Source/Runtime/Core/Private/Misc/CoreMisc.cpp`, `StaticDedicatedServerCheck`, `StaticGameCheck`). A Game or Server target would need a source build (the installed engine ships no server target) and a cook; the editor route needs neither.
+- Server: `UnrealEditor-Cmd.exe Project.uproject /Engine/Maps/Entry?game=/Script/GasNative.GasNativeRepGameMode -server -game -Port=<free port> -nullrhi -RepReceipt=<file> -abslog=<file> -unattended -nosplash -nosound -notraceserver -nopause`. The map is the engine's own, so the project needs no assets. `-Port=` overrides the URL port (`CoreMisc.cpp`, `FUrlConfig::Init`). `UEngine::LoadMap` calls `UWorld::Listen` before `UWorld::BeginPlay` (`Engine/Source/Runtime/Engine/Private/UnrealEngine.cpp`, the `Listen for clients` block), so the game mode's "server ready" log line means a client can connect. `-log` is left out: it opens a console window and the log file is written without it.
+- Client: `UnrealEditor.exe Project.uproject 127.0.0.1:<port> -game -nullrhi -windowed -ResX=640 -ResY=360 -RepReceipt=<file> -abslog=<file> ...`; the first plain token is the URL. `--render` swaps `-nullrhi` for `-RenderOffScreen`.
+- `?listen` is not used: the map option makes the process a listen server, which is the other mode and not what the question asks.
+- Receipts: each process writes a JSON receipt to its own `-RepReceipt=` file after a fixed time (server 8 s after the join, client 3 s after its player state begins play for the activation and 2 s later for the receipt, then it exits). The runner waits for both with a hard timeout, kills whatever is left and judges the two together.
+
+What the scenario does: on the join the server's game mode grants `UGasNativeRepAbility` and applies `UGasNativeRepBuffEffect` (infinite, Energy +5, grants a tag) to the player state's component. `Energy` starts at 100 and replicates. Three seconds into its map the client snapshots what it can see, then calls `TryActivateAbilityByClass`; the ability is `LocalPredicted`, costs 10 Energy, counts its activations split by `IsNetAuthority()`, and ends at once. Two seconds later the client snapshots again.
+
+Checks (10, none run on an engine):
+
+- Asserted from source: the module builds; both receipts are written with no fatal error (exit codes are reported, not judged); the server is `DedicatedServer` and a client joined; on the server the component is Mixed, owned by the player state, and holds the ability, the buff and Energy 105/100; on the client the component is Mixed and owned by the player state, the ability is present (`ActivatableAbilities`, `COND_ReplayOrOwner`: `AbilitySystemComponent.cpp:1861`), the buff is an active effect and its tag is owned (Mixed gives the owner full effect info: `GameplayEffect.cpp:5195`), and Energy reads 105/100; after the settle time client and server read the same Energy.
+- Observed only (printed beside the source-derived expectation, never asserted): whether the client had the spec at the call, whether `TryActivateAbilityByClass` returned true, the predicted and authority activation counts on each side, Energy after the cost (expected 90 base, 95 current on both), and the roles, controller and avatar readings.
+- `--pie-readback` adds an observe-only check: Python reads `LevelEditorPlaySettings` (`PlayNetMode`, `PlayNumberOfClients`, `RunUnderOneProcess`, `bLaunchSeparateServer`, `ServerPort`) with `get_editor_property`, writes `play_number_of_clients` and `play_net_mode` in memory, reads them back and restores them. It does not start Play In Editor. The first three are private members with `EditAnywhere`, so whether Python reaches them is the question; the report holds each call's result or exception text.
+
+Not covered: Play In Editor itself, more than one client, a pawn as owner or avatar (Epic's usual setup puts the avatar on the pawn), Minimal and Full modes, Iris, prediction rejection, lag or loss, and a packaged Server or Client target.
+
 ## Variants that were run once and are not shipped
 
 Each was a copy of the module with one change, built and started in a throwaway project. The run records are in the reference; none of these variants is in this folder.
@@ -68,4 +98,4 @@ Each was a copy of the module with one change, built and started in a throwaway 
 
 ## Not verified
 
-Executions and magnitude calculations written in C++. The effect-component cases are prepared and have not run on an engine yet, so nothing in that section is `[tested]`.
+Executions and magnitude calculations written in C++. The effect-component cases and the replicated-play scenario are prepared and have not run on an engine yet, so nothing in those sections is `[tested]`.
