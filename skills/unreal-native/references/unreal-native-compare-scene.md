@@ -39,7 +39,8 @@ static AECompare::FRegistrar MineRegistrar(TEXT("mine"),&MakeMine);
 
 - [tested] `compare.json` holds `scenario` (`compare`), `screenshot` and `screenshot_b` (full paths), `set`, `title`, `engine_version`, `rhi_adapter`, the showcase and stress settings, `frame_time_meaning`, and `candidates[]`: id, label, note, whatever `Describe` added, and `stress` with `copies`, `frames`, `frame_ms_mean`, `frame_ms_p50`, `frame_ms_p95`, `frame_ms_max` and its screenshot.
 - [tested] The runner fails unless both showcase PNGs are valid 1920x1080 PNGs (signature and IHDR), the receipt parses and names this scenario and screenshot, and every candidate has at least 10 timed frames and a stress screenshot. Passing proves the artifacts exist and are well formed; look at the images.
-- [tested] `rhi_adapter` carried the GPU adapter name in a 5.8.3 receipt. Strip it from receipts you publish.
+- [tested] `rhi_adapter` carried the GPU adapter name in a 5.8.3 receipt.
+- [general] Strip `rhi_adapter` from receipts you publish.
 
 ## What the frame times mean
 
