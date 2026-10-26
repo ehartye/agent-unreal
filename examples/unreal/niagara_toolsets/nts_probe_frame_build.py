@@ -32,6 +32,7 @@ FOLDER, MAP = "/Game/Probe/Frame", "/Game/Maps/NtsProbeFrame"
 SYSTEM, MATERIAL, TEXTURE = FOLDER + "/NS_Flip", FOLDER + "/M_Flip", FOLDER + "/T_Flip"
 VARIABLE = "User.FrameIndex"
 VARIANT = os.environ.get("NTS_FRAME_VARIANT", "link")   # "const": write 5.0 into Direct Frame Index instead of linking it (separates the mode from the link)
+USER_DEFAULT = float(os.environ.get("NTS_FRAME_DEFAULT", "0"))   # the user parameter default; a non-zero default shows whether the link is read at all
 SET_NAME = os.environ.get("NTS_FRAME_SETNAME", VARIABLE)   # the name the sim passes to set_variable_float
 SHORT_NAME = "FrameIndex"
 VALUES = (2.0, 9.0)
@@ -116,7 +117,7 @@ def system():
 def user_variable():
     float_type = {"classStructOrEnum": {"refPath": c.FLOAT}}
     added = c.call("AddUserVariables", {"system": c.ref(SYSTEM), "variablesToAdd": [
-        {"name": VARIABLE, "type": float_type, "defaultValue": {"struct": {"refPath": c.FLOAT}, "value": {"value": 0.0}}, "description": "Frame chosen from Python"}]})
+        {"name": VARIABLE, "type": float_type, "defaultValue": {"struct": {"refPath": c.FLOAT}, "value": {"value": USER_DEFAULT}}, "description": "Frame chosen from Python"}]})
     listed = c.call("GetUserVariables", {"system": c.ref(SYSTEM)})
     names = [v.get("name") for v in ((listed["value"] or {}).get("userVariables") or [])]
     return {"add_error": added["error"], "list_error": listed["error"], "names": names, "present": VARIABLE in names or SHORT_NAME in names}
