@@ -135,3 +135,9 @@ test('the console summary has one line per key with its status and reason', () =
   ]);
   assert.deepEqual(summarizeReport(undefined), []);
 });
+
+test('the hang probe (the launcher timeout case) needs slept_seconds on a found hold', () => {
+  assert.deepEqual(checkReport('hang', ['3'], { 3: { status: 'found', requested_seconds: 3, slept_seconds: 3 } }), []);
+  assert.deepEqual(checkReport('hang', ['3'], { 3: { status: 'found' } }), ['3: found without slept_seconds']);
+  assert.equal(PROBES.hang.script, 'hang_probe.py');
+});

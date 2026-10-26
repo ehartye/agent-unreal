@@ -27,6 +27,23 @@ The project needs PythonScriptPlugin and EditorScriptingUtilities; `system` also
 
 It also takes `--timeout <ms>` (default 600000). The pure logic (arguments, report shape, failure message) is in `probe-checks.mjs`, and `probe-checks.test.mjs` tests it with no Unreal; the test runs in `node scripts/check.mjs`. The editor runs are a manual lane.
 
+## Opt-in: the launcher under a time limit
+
+**Status:** Prepared 2026-10-26; not yet run on an engine. A first run tests the probe before it tests the engine. The three probes above and their launcher runs are unchanged.
+
+```text
+node examples/unreal/editor_probes/probe_timeout.mjs --engine "C:/Program Files/Epic Games/UE_5.8" [--timeout-ms 60000] [--keep]
+```
+
+`hang_probe.py` holds the editor for the seconds in `PROBE_HANG` (the launcher's `--probe hang --hold <seconds>`) and then writes a report, so the launcher can be tried at its `--timeout`. `probe_timeout.mjs` makes a throwaway project and runs the launcher twice: a control with a 3 s hold, which also pays for the project's slow first start, and a 600 s hold with the limit at `--timeout-ms` (default 60 s, minimum 20 s). It then lists the processes whose command line names the project (Windows only), stops them, and judges seven things in `probe-timeout-checks.mjs`:
+
+- the control exits 0 with a report whose `slept_seconds` is at least 2.5;
+- the timed-out editor log has `[hang_probe] holding for`, so the limit cut off a running script and not a start-up;
+- the launcher exits 1, with stderr naming the missing report, `did not finish before the time limit`, the report path and the editor log path (`missingReportMessage`);
+- no report exists, the launcher returned between the limit and the limit plus 20 s, and no process naming the project is left.
+
+The last check is the open question: the launcher uses `spawnSync` with a `timeout`, which ends the editor process it started and may not end helper processes the editor started. A failed check there lists them, and the enhancement is a process-tree stop in `probe.mjs` after a timeout; nothing has been changed in `probe.mjs` for it. Takes about two minutes.
+
 ## The reports
 
 One object keyed by each name you asked for. Each entry has `status`: `found`, `missing` (nothing at that name) or `unavailable` (it exists but cannot be described, with the reason). A property the editor could not read holds the string `"unavailable"`.
@@ -45,4 +62,4 @@ One object keyed by each name you asked for. Each entry has `status`: `found`, `
 
 ## Not verified
 
-The launcher on macOS or Linux (the editor path is chosen by platform, only Windows was run), a probe run longer than the timeout, and `inspect_system.py` on a system whose compile is still pending.
+The launcher on macOS or Linux (the editor path is chosen by platform, only Windows was run), a probe run longer than the timeout (prepared above, not yet run), and `inspect_system.py` on a system whose compile is still pending.
