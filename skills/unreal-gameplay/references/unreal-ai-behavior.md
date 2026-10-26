@@ -13,7 +13,7 @@ Target: Unreal Engine 5.8, Windows. Epic's AI page lists StateTree, Behavior Tre
 | `EnvironmentQueryEditor` | on | uncooked-only module | AISupport |
 | `MassGameplay`, `MassAI`, `MassCrowd`, `ZoneGraph` | off | experimental | StateTree, SmartObjects, ZoneGraph |
 
-- Behavior Trees, AI Controllers and AI Perception are engine modules (AIModule), not plugins. MassEntity and MassCore are engine modules in the 5.8 install.
+- Behavior Trees, AI Controllers and AI Perception (AIModule), and MassEntity and MassCore, are engine modules, not plugins.
 - Epic's quick start: Settings > Plugins, enable `GameplayStateTree` and `StateTree`, restart. EQS: enable "Environment Query Editor" if it is off.
 
 ## Use it when
@@ -30,7 +30,7 @@ Target: Unreal Engine 5.8, Windows. Epic's AI page lists StateTree, Behavior Tre
 - Epic's pages give no rule for StateTree versus Behavior Tree. The documented difference: StateTree commits a selection and re-selects on transitions; Behavior Trees keep executing selection logic. Use one per character. A Behavior Tree can host a StateTree through `BTTask_RunStateTree`, and Mass runs StateTrees.
 - Use [Navigation](unreal-navigation.md) for pathing and [Mover](unreal-mover.md) for how the pawn moves.
 - Use [Gameplay Ability System](unreal-gameplay-ability-system.md) for abilities, attributes and effects.
-- Mass is experimental in the descriptors.
+- The Mass plugins are experimental; the core modules run without them.
 
 ## How an agent drives it
 
@@ -44,8 +44,8 @@ Target: Unreal Engine 5.8, Windows. Epic's AI page lists StateTree, Behavior Tre
 | Behavior Tree | editor UI; Blueprint; C++ | Blackboard and Behavior Tree assets; AIController Event On Possess > Run Behavior Tree (Epic); `AAIController::RunBehaviorTree` in the 5.8 install |
 | Run EQS | editor UI; C++ | Run EQS Query task (Query Template, result Blackboard key); `UEnvQueryManager::RunEQSQuery` in the 5.8 install |
 | Perception | Blueprint; C++ | AI Perception Component on the AIController; team affiliation is C++ only (Epic) |
-| Smart Objects | editor UI; Blueprint | SmartObjectDefinition asset, Smart Object Component on an Actor; subsystem Find, Claim, Use, Release |
-| Mass | editor UI; C++ | MassSpawner Actor, Mass Entity Definition Asset; fragments and processors are native types |
+| Smart Objects | editor UI; Blueprint; C++ | SmartObjectDefinition asset, Smart Object Component on an Actor; subsystem Find, Claim, Use, Release. In code: [Smart Objects from C++](unreal-smart-objects-native.md) |
+| Mass | editor UI; C++ | MassSpawner Actor, Mass Entity Definition Asset; fragments and processors are native types. No plugin: [native Mass](unreal-mass-native.md) |
 | Debug | editor UI | Window > Debugger (StateTree trace recorder, breakpoints); Gameplay Debugger (apostrophe) |
 | Project settings and cvars | settings; console | Project Settings > Engine > AI System > Forget Stale Actors; `StateTree.Compiler.EnableQueuedCompilationOnAssetLoad` and `...WhenAssetDirty` (release notes, default off) |
 

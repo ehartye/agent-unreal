@@ -66,12 +66,12 @@ Two throwaway code projects, built with Unreal Build Tool (compiler and SDK disc
 
 Both folders have a README and a pure Node test that runs in `node scripts/check.mjs`; the engine runs take three to five minutes each.
 
-## Content and tooling scenes (`niagara_toolsets/`, `editor_python_friction/`, `constructor_locks/`, `anim_bridge/`, `contention/`)
+## More scenes
 
-Throwaway projects on 5.8.2; each folder has a README with the command and every check. Pure checks run in `node scripts/check.mjs`; the engine runs are manual.
+[Example scenes: tooling and native builds](unreal-example-scenes-tooling.md) has the commands and results for these, and for `niagara_toolsets`, `editor_python_friction`, `constructor_locks`, `anim_bridge` and `contention`.
 
-- [`niagara_toolsets`](../../../examples/unreal/niagara_toolsets/README.md) (14 checks): create a system, edit an input, set the material, delete and recreate. Backs [Niagara toolsets](../../unreal-effects/references/unreal-niagara-toolsets.md).
-- [`editor_python_friction`](../../../examples/unreal/editor_python_friction/README.md) (8): `unreal.Box` construction and the benign Interchange alpha-mode log line.
-- [`constructor_locks`](../../../examples/unreal/constructor_locks/README.md) (11): constructor-loaded asset files are locked while the editor is open. Backs [Content pipeline](../../unreal-native/references/unreal-native-content-pipeline.md).
-- [`anim_bridge`](../../../examples/unreal/anim_bridge/README.md) (22): slot-only Animation Blueprints from Python and C++; states, transitions and blend-space resampling need C++. Backs [Animation Blueprints](../../unreal-animation/references/unreal-animation-blueprints.md).
-- [`contention`](../../../examples/unreal/contention/README.md): a helper that stamps other-editor count and free memory into a receipt. Backs [profiling facts](../../unreal-native/references/unreal-native-profiling-facts.md).
+| Folder | Runs | Backs |
+|---|---|---|
+| `rendering_probes/` | one headless commandlet, under a minute | [Two directional lights](../../unreal-rendering/references/unreal-directional-lights.md) |
+| `gas_native/` | a built module and a commandlet, a few minutes | [GAS in C++](../../unreal-gameplay/references/unreal-gas-native-effects.md) |
+| `unity_build/` | ten builds, about six minutes | [Unity builds](../../unreal-native/references/unreal-native-unity-builds.md) |
