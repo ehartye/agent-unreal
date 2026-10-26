@@ -1,6 +1,6 @@
 // node pcg_packaged.mjs --engine "C:/Program Files/Epic Games/UE_5.8" [--keep] [--rows p1,p2] [--modes headless,rendered] [--stop-after author|package]
 //                        [--project <folder this runner wrote earlier> [--skip-package]] [--rejudge <project folder>] [--seconds 20] [--compiler 14.44.35228] [--sdk 10.0.26100.0]
-// Runs the packaged PCG probe end to end on one Windows machine. PREPARED, NOT YET RUN ON AN ENGINE: see README.md for what the first run is expected to show.
+// Runs the packaged PCG probe end to end on one Windows machine. Run on Unreal 5.8.3: see README.md for what it showed.
 //   1. writes a throwaway code project in the OS temp folder: one game module (module/PcgPackaged), the PCG plugin listed, maps listed in MapsToCook and no
 //      other cook rule (the cook of the PCG graph, the mesh and the material is what row P1 asks about);
 //   2. builds the Editor target and starts the editor once (-nullrhi) on pcg_packaged_author.py, which makes the assets, the graphs and the maps and records an

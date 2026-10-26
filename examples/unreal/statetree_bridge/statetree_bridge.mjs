@@ -6,7 +6,7 @@
 // editor twice with statetree_probe.py. Session "build" creates and compiles three trees, reads them back, saves two and probes what Python
 // reaches; it then builds three more under the component schema (row S1) and one with a bound root parameter (row S2). Session "run" is a
 // fresh editor that loads the saved trees and runs them in Play-In-Editor on probe pawns: an AI controller pawn, or for the component schema
-// a plain pawn that owns a StateTreeComponent. Rows S1 and S2 are prepared and not yet run on an engine.
+// a plain pawn that owns a StateTreeComponent. Rows S1 and S2 ran on 5.8.3.
 // The compiler and Windows SDK are discovered from the installed Visual Studio (override with --compiler / --sdk).
 // Takes about five minutes. Exit code 0 when every asserted check passes (observations are recorded, never judged). Not part of node scripts/check.mjs; the checks are tested there.
 import { spawnSync } from 'node:child_process';

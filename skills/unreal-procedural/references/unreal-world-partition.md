@@ -40,10 +40,11 @@ Converting a plain map, the builder commandlets and the `wp.Runtime` console com
 - [tested] `set_editor_property("is_spatially_loaded", False)` and `("runtime_grid", "MainGrid")` persist in saved descriptors; for a Data Layer use a `DataLayerAsset` (`DataLayerFactory`), `DataLayerEditorSubsystem.create_data_layer_instance`, `add_actor_to_data_layer`.
 - [documented] Local Tessellation limits a Water Zone's info texture and quad tree to a window around the view (`Plugins/Experimental/Water/Source/Runtime/Public/WaterZoneActor.h:205`). [tested] `enable_local_only_tessellation` defaults False, `local_tessellation_extent` (51200, 51200, 10000) cm; True persists through save and reopen. An Epic forum [reply](https://forums.unrealengine.com/t/waterzone/2719663) recommends one large zone, streamed bodies and Local Tessellation.
 - [tested] `is_component_partitioned` on a PCG volume adds the PCG World Actor (always loaded, 25,600 cm grid) and spatially loaded `PCGPartitionGridActor` actors.
+- [tested] Streaming in play, on 5.8.3 in a cooked Development game (one throwaway project, grid size 3200 cm): two spatially loaded markers 1,000 m apart loaded and unloaded as a pawn that was the streaming source travelled between them, with 2 of 2 streaming levels loaded at each hold. A partitioned `GENERATE_AT_RUNTIME` volume generated cells near the pawn and cleaned them up behind it. Details: [PCG in a cooked game](unreal-pcg-cooked-game.md).
 
 ## Not verified
 
-Carving of proxies that are not loaded (the editor loaded every proxy and `unload_actors` did not unload them); attaching a Landmass brush from Python; a PCG graph on a partitioned Landscape; streaming in play.
+Carving of proxies that are not loaded (the editor loaded every proxy and `unload_actors` did not unload them); attaching a Landmass brush from Python; a PCG graph on a partitioned Landscape. Streaming in play was run only for the PCG case in the bullet above.
 
 ## Sources
 

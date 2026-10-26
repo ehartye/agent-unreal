@@ -1,6 +1,6 @@
 # PCG in a running game: what a game process needs that the editor supplies
 
-Target: Unreal Engine 5.8.2, Windows. A game process here is the editor binary started with `-game` ([run modes](../../unreal-editor-scripting/references/unreal-editor-python.md)). `[tested]` marks a result of [`examples/unreal/pcg_game`](../../../examples/unreal/pcg_game/README.md); `[documented]` marks the engine install (paths under `Engine/Plugins/PCG/Source/PCG/` unless they start with `Source/`). Node choice and graph building: [PCG](unreal-pcg.md).
+Target: Unreal Engine 5.8.2, Windows. A game process here is the editor binary started with `-game` ([run modes](../../unreal-editor-scripting/references/unreal-editor-python.md)). A cooked Development game, `GENERATE_AT_RUNTIME` and partitioned runtime generation, run on 5.8.3: [PCG in a cooked game](unreal-pcg-cooked-game.md). `[tested]` marks a result of [`examples/unreal/pcg_game`](../../../examples/unreal/pcg_game/README.md); `[documented]` marks the engine install (paths under `Engine/Plugins/PCG/Source/PCG/` unless they start with `Source/`). Node choice and graph building: [PCG](unreal-pcg.md).
 
 ## Before a game process generates
 
@@ -73,7 +73,7 @@ Read points with `unreal.PCGDataFunctionLibrary.get_typed_inputs(collection, unr
 
 ## Not verified
 
-- A packaged or cooked game, `GENERATE_AT_RUNTIME` in a game process, partitioned World Partition maps, and the material fallback in Play-In-Editor were not run.
+- The material fallback in Play-In-Editor was not run. The cooked game, `GENERATE_AT_RUNTIME` and a partitioned map were run on 5.8.3 and are in [PCG in a cooked game](unreal-pcg-cooked-game.md); the Landscape cache rules above were not repeated in a cooked game.
 
 ## Sources
 

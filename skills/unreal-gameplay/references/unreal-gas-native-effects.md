@@ -23,7 +23,7 @@ Target: Unreal Engine 5.8, Windows. This is the native-code half of the [Gamepla
 | Cost and cooldown | `CostGameplayEffectClass` and `CooldownGameplayEffectClass` set in the constructor; call `CommitAbility` in `ActivateAbility` | `GameplayAbility.h` 723, 731 |
 | Wait inside an ability | `UAbilityTask_WaitDelay::WaitDelay(this, Seconds)`, bind `OnFinish`, `ReadyForActivation()` | `AbilityTask_WaitDelay.h` 28 |
 
-- [tested] `node examples/unreal/gas_native/gas_native.mjs --engine <UE_5.8 folder>` builds the module and drives every row headless with a commandlet and no map; 12 of 12 checks passed on 5.8.2.
+- [tested] `node examples/unreal/gas_native/gas_native.mjs --engine <UE_5.8 folder>` builds the module and drives every row headless with a commandlet and no map; 24 of 24 checks passed on 5.8.3 (the first 12 also on 5.8.2). The other 12 cover the effect components in [Gameplay Effect components](unreal-gas-effect-components.md).
 
 ## Constructor pattern for effect components
 
@@ -50,7 +50,7 @@ Target: Unreal Engine 5.8, Windows. This is the native-code half of the [Gamepla
 
 ## Not covered here
 
-Effect components other than target tags, executions and magnitude calculations in C++, and replicated play are not tested.
+- [general] Not covered by these runs: executions and magnitude calculations in C++. Effect components other than target tags are in [Gameplay Effect components](unreal-gas-effect-components.md); replicated play is in [Networking and replication](unreal-networking-and-replication.md).
 
 ## Sources
 

@@ -1,7 +1,7 @@
 // node --test examples/unreal/pcg_packaged/pcg-packaged.test.mjs  (no Unreal, no dependencies)
 // The reports below have the shape APcgPackagedGameMode and pcg_packaged_author.py are written to produce; they are built from the source reading in the checks
-// file, NOT from an engine run (the probe is prepared, not yet run). Each test changes one fact and expects the matching check to fail, so the judge cannot pass by
-// accident, and the first engine run may need these shapes adjusted to what the game really writes.
+// file, NOT from an engine run (the probe itself ran on 5.8.3; see the README). Each test changes one fact and expects the matching check to fail, so the judge cannot pass by
+// accident, and these shapes are the ones the run on 5.8.3 accepted.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { evaluate, summarize, volumeName, cellsOverlapped, PATHS } from './pcg-packaged-checks.mjs';
