@@ -24,6 +24,7 @@ Unreal 5.8 on Windows. Pick the feature from the goal, then read that system's r
 | Build, compile and run a StateTree from an editor module, or find out what Python can author | [StateTree authoring](references/unreal-statetree-authoring.md) |
 | Path AI across level geometry, including World Partition maps | [Navigation](references/unreal-navigation.md) |
 | Replicate gameplay for several players: RPCs, dedicated servers (Iris off; beta or experimental) | [Networking and replication](references/unreal-networking-and-replication.md) |
+| Set up a dedicated server, follow the replication steps in order or find the net console commands | [Networking workflow](references/unreal-networking-workflow.md) |
 
 ## Rules of thumb
 
