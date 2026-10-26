@@ -18,7 +18,7 @@ See [Niagara families and stock content](../../unreal-effects/references/unreal-
 
 ## Materials tested on Unreal 5.8.2
 
-- [tested] A Custom material node body is one function body: a `#define` macro compiles; a helper function logs `function definition is not allowed here` and the material falls back to the default. Instanced static meshes need `used_with_instanced_static_meshes`: `False` on a Python-made material and in a commandlet, set when a rendering editor draws instances or for a list by `allow_instancing` ([editor Python](../../unreal-editor-scripting/references/unreal-editor-python.md)).
+- [tested] A Custom material node body is one function body: a `#define` macro compiles; a helper function logs `function definition is not allowed here` and the material falls back to the default. Instanced static meshes need `used_with_instanced_static_meshes`: `False` on a Python-made material and in a commandlet, set when a rendering editor draws instances or for a list by `allow_instancing` ([editor Python maps](../../unreal-editor-scripting/references/unreal-editor-python-maps.md)).
 
 ## Evaluate motion and production cost
 

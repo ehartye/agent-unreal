@@ -42,7 +42,7 @@ Result on 5.8.2: with the cache serialized the game process spawns instances; wi
 
 ## Editor Python scene (`examples/unreal/editor_python/`)
 
-`examples/unreal/editor_python/` has helpers (`soft_set`, a generator stage runner, `recreate_map`, `place_above_ground`, `allow_instancing`) and a validating scene. `ep_probe.py` runs headless; `ep_stages.py` and `ep_ground.py` run in a rendering editor (`-ExecCmds="py ..."`). Reference: [Editor Python](unreal-editor-python.md).
+`examples/unreal/editor_python/` has helpers (`soft_set`, a generator stage runner, `recreate_map`, `place_above_ground`, `allow_instancing`) and a validating scene. `ep_probe.py` runs headless; `ep_stages.py` and `ep_ground.py` run in a rendering editor (`-ExecCmds="py ..."`). Reference: [Editor Python: maps, materials and meshes](unreal-editor-python-maps.md).
 
 ```text
 node examples/unreal/editor_python/ep_validate.mjs --engine "C:/Program Files/Epic Games/UE_5.8" [--keep] [--shots <folder>]

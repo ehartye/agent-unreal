@@ -1,6 +1,6 @@
 # Editor Python scene: build a map, materials and meshes from scripts
 
-Helpers and a validating scene for the practices in [Scripting the Unreal editor from Python](../../../skills/unreal-editor-scripting/references/unreal-editor-python.md) and the plane-cut note in [Geometry Scripting](../../../skills/unreal-procedural/references/unreal-geometry-scripting.md). Verified on Unreal Engine 5.8.2, Windows. Nothing here needs a project of yours: the validator makes a throwaway project in the OS temp folder.
+Helpers and a validating scene for the practices in [Scripting the Unreal editor from Python: maps](../../../skills/unreal-editor-scripting/references/unreal-editor-python-maps.md) and the plane-cut note in [Geometry Scripting](../../../skills/unreal-procedural/references/unreal-geometry-scripting.md). Verified on Unreal Engine 5.8.2, Windows. Nothing here needs a project of yours: the validator makes a throwaway project in the OS temp folder.
 
 ## Run
 
