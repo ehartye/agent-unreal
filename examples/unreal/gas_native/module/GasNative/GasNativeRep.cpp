@@ -2,6 +2,8 @@
 #include "AbilitySystemComponent.h"
 #include "Engine/Engine.h"
 #include "Engine/World.h"
+#include "GameFramework/DefaultPawn.h"
+#include "GameFramework/Pawn.h"
 #include "GameFramework/GameStateBase.h"
 #include "GameFramework/PlayerController.h"
 #include "GasNativeAttributeSet.h"
@@ -158,6 +160,9 @@ void AGasNativeRepPlayerState::BeginPlay()
 
 void AGasNativeRepPlayerState::ServerGrantAndBuff()
 {
+	// The pawn is the avatar, the player state stays the owner: a player state is a simulated proxy on its owning client, and an ability
+	// is not activatable when its avatar is one (UGameplayAbility::CanActivateAbility, ShouldActivateAbility).
+	if (APawn* PlayerPawn = GetPawn()) { Asc->InitAbilityActorInfo(this, PlayerPawn); }
 	Asc->GiveAbility(FGameplayAbilitySpec(UGasNativeRepAbility::StaticClass(), 1));
 	Asc->ApplyGameplayEffectToSelf(GetDefault<UGasNativeRepBuffEffect>(), 1.f, Asc->MakeEffectContext());
 }
@@ -176,6 +181,12 @@ TSharedRef<FJsonObject> AGasNativeRepPlayerState::Snapshot() const
 	S->SetStringField(TEXT("replication_mode"), ReplicationModeName(Asc->ReplicationMode));
 	S->SetBoolField(TEXT("asc_owner_is_player_state"), Asc->GetOwnerActor() == this);
 	S->SetBoolField(TEXT("asc_avatar_is_player_state"), Asc->GetAvatarActor() == this);
+	const APawn* PlayerPawn = GetPawn();
+	S->SetBoolField(TEXT("pawn_present"), PlayerPawn != nullptr);
+	S->SetStringField(TEXT("pawn_local_role"), PlayerPawn ? RoleName(PlayerPawn->GetLocalRole()) : TEXT("none"));
+	const AActor* Avatar = Asc->GetAvatarActor();
+	S->SetStringField(TEXT("avatar_local_role"), Avatar ? RoleName(Avatar->GetLocalRole()) : TEXT("none"));
+	S->SetBoolField(TEXT("asc_avatar_is_pawn"), PlayerPawn && Avatar == PlayerPawn);
 	S->SetBoolField(TEXT("actor_info_has_player_controller"), Asc->AbilityActorInfo.IsValid() && Asc->AbilityActorInfo->PlayerController.IsValid());
 	S->SetBoolField(TEXT("actor_info_locally_controlled"), Asc->AbilityActorInfo.IsValid() && Asc->AbilityActorInfo->IsLocallyControlled());
 
@@ -229,9 +240,9 @@ void AGasNativeRepPlayerState::ClientBefore()
 			Activation->SetBoolField(TEXT("can_activate_ability_before_reinit"), Spec->Ability && Asc->AbilityActorInfo.IsValid() && Spec->Ability->CanActivateAbility(Spec->Handle, Asc->AbilityActorInfo.Get(), nullptr, nullptr, &Failed));
 			Activation->SetStringField(TEXT("can_activate_failure_tags"), Failed.ToStringSimple());
 		}
-		// The actor info was filled in when the component initialised, before the player state's owner (the controller) had replicated,
-		// so it may not know the controller. Fill it in again and ask once more; both answers are recorded.
-		Asc->InitAbilityActorInfo(this, this);
+		// The actor info was filled in when the component initialised, with the player state as owner and avatar. Fill it in again with the
+		// pawn as avatar (the pattern the server uses) and ask once more; both answers are recorded.
+		Asc->InitAbilityActorInfo(this, GetPawn() ? static_cast<AActor*>(GetPawn()) : static_cast<AActor*>(this));
 		Activation->SetBoolField(TEXT("reinit_actor_info_locally_controlled"), Asc->AbilityActorInfo.IsValid() && Asc->AbilityActorInfo->IsLocallyControlled());
 		const bool bAgain = Asc->TryActivateAbilityByClass(UGasNativeRepAbility::StaticClass());
 		Activation->SetBoolField(TEXT("try_activate_after_reinit"), bAgain);
@@ -272,6 +283,13 @@ void AGasNativeRepGameMode::PostLogin(APlayerController* NewPlayer)
 {
 	Super::PostLogin(NewPlayer);
 	if (bClientSeen || !NewPlayer) { return; }
+	if (!NewPlayer->GetPawn())
+	{
+		// The engine's Entry map has no player start, so no pawn was spawned: spawn the default pawn at the origin and possess it.
+		FActorSpawnParameters Params;
+		Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+		if (APawn* Spawned = GetWorld()->SpawnActor<APawn>(DefaultPawnClass, FTransform::Identity, Params)) { NewPlayer->Possess(Spawned); }
+	}
 	AGasNativeRepPlayerState* State = NewPlayer->GetPlayerState<AGasNativeRepPlayerState>();
 	if (!State)
 	{

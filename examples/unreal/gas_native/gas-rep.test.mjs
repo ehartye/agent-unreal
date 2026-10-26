@@ -7,7 +7,7 @@ import { evaluate, summarize, serverArguments, clientArguments, observationRows,
 
 const snapshot = (over) => ({
   net_mode: 'DedicatedServer', local_role: 'Authority', remote_role: 'SimulatedProxy', has_authority: true, has_player_controller: true, is_local_controller: false,
-  asc_replicates: true, replication_mode: 'Mixed', asc_owner_is_player_state: true, asc_avatar_is_player_state: true, actor_info_has_player_controller: false, actor_info_locally_controlled: false,
+  asc_replicates: true, replication_mode: 'Mixed', asc_owner_is_player_state: true, asc_avatar_is_player_state: true, pawn_present: true, pawn_local_role: 'AutonomousProxy', avatar_local_role: 'SimulatedProxy', asc_avatar_is_pawn: false, actor_info_has_player_controller: false, actor_info_locally_controlled: false,
   ability_count: 1, abilities: ['GasNativeRepAbility'], rep_ability_present: true, effect_count: 1, buff_tag: true,
   attribute_set_found: true, energy_current: 105, energy_base: 100, activations_authority: 0, activations_predicted: 0, ...over,
 });
