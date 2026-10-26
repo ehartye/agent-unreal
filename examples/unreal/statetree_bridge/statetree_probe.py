@@ -4,17 +4,21 @@
 Environment: ST_REPORT (JSON path), ST_MODE (build or run). The StateTreeNodes and StateTreeBridge modules must be built first
 (statetree_bridge.mjs does that).
 Mode build:
-  1. Creates three trees with StateTreeBridgeLibrary.create_tree and compiles them: ST_Probe (the transition fires after 3 ticks),
-     ST_Gated (the same tree with a threshold the pawn cannot reach, as a control) and ST_Broken (one task whose Context property no
-     context object can satisfy, so the compile fails and the messages come back).
+  1. Creates three trees with the AI component schema using StateTreeBridgeLibrary.create_tree and compiles them: ST_Probe (the
+     transition fires after 3 ticks), ST_Gated (the same tree with a threshold the pawn cannot reach, as a control) and ST_Broken (one
+     task whose Context property no context object can satisfy, so the compile fails and the messages come back).
   2. Reads the structure back with the Python API and saves ST_Probe and ST_Gated.
   3. Probes what Python reaches for authoring: the factory, the schema, the state and node properties.
-Mode run (a fresh editor session): loads the saved trees, places one probe pawn per tree, starts Play-In-Editor, and samples each pawn's
-tick counter and event list while its AI controller runs the tree.
+  4. Row S1: the same three trees with the component schema (ST_Comp_Probe, ST_Comp_Gated, ST_Comp_Broken), each with the schema class,
+     its context objects and what it allows read back; ST_Comp_Probe and ST_Comp_Gated are saved.
+  5. Row S2: ST_Param, an AI-schema tree whose transition condition is bound to a root parameter; it is saved.
+Mode run (a fresh editor session): loads the saved trees, places one probe pawn per tree (an AI controller pawn, or for the component
+schema a plain pawn that owns a StateTreeComponent), starts Play-In-Editor, and samples each pawn's tick counter and event list.
 Writes a JSON report and quits the editor. A failure in a step is recorded and the editor still quits.
 """
 import json
 import os
+import time
 import traceback
 
 import unreal
@@ -25,6 +29,7 @@ FOLDER = "/Game/StateTreeProbe"
 LIB = unreal.StateTreeBridgeLibrary
 report = {"engine": unreal.SystemLibrary.get_engine_version(), "mode": MODE, "steps": {}, "errors": []}
 state = {"gen": None, "wait": 3.0, "done": False}
+PARAM_THRESHOLD = 5   # the root parameter of ST_Param; the condition itself keeps 1000000, so only the binding can make it pass
 
 
 def step(name, fn):
@@ -45,13 +50,35 @@ def attempt(fn):
 
 
 # ---- build ----------------------------------------------------------------------------------------------------------------------
-def make_tree(name, min_ticks, broken):
-    tree = LIB.create_tree(FOLDER, name, min_ticks, broken)
-    if not tree:
-        return {"created": False}
+def describe(tree):
+    """Schema class, context objects, what the schema allows and the root parameters, read through StateTreeBridgeLibrary.describe_tree."""
+    try:
+        info = LIB.describe_tree(tree)
+        return {"schema_class": str(info.schema_class), "context_objects": [str(c) for c in info.context_objects], "root_parameters": [str(p) for p in info.root_parameters],
+                "allows_ai_task_base": bool(info.allows_ai_task_base), "allows_probe_task": bool(info.allows_probe_task),
+                "allows_evaluators": bool(info.allows_evaluators), "allows_global_parameters": bool(info.allows_global_parameters)}
+    except Exception as exc:   # a wrong Python field name must not lose the compile result next to it
+        return {"error": repr(exc)[:300]}
+
+
+def compile_and_report(tree):
     result = LIB.compile_tree(tree)
     return {"created": True, "path": tree.get_path_name(), "class": tree.get_class().get_name(), "compiled": bool(result.compiled), "messages": [str(m) for m in result.messages],
-            "ready": LIB.is_ready_to_run(tree), "needs_recompile": LIB.needs_recompile(tree)}
+            "ready": LIB.is_ready_to_run(tree), "needs_recompile": LIB.needs_recompile(tree), "info": describe(tree)}
+
+
+def make_tree(name, min_ticks, broken, component=False):
+    tree = LIB.create_tree(FOLDER, name, min_ticks, broken, component)
+    if not tree:
+        return {"created": False}
+    return compile_and_report(tree)
+
+
+def make_param_tree(name, threshold):
+    tree = LIB.create_parameter_tree(FOLDER, name, threshold)
+    if not tree:
+        return {"created": False}
+    return compile_and_report(tree)
 
 
 def read_structure(name):
@@ -72,7 +99,7 @@ def python_reach():
     """What Python does with authoring. Each attempt records the engine's own error text."""
     out = {}
     out["classes"] = {n: hasattr(unreal, n) for n in ("StateTree", "StateTreeFactory", "StateTreeEditorData", "StateTreeState", "StateTreeEditorNode", "StateTreeTransition",
-                                                    "StateTreeAIComponentSchema", "StateTreeEditingSubsystem", "StateTreeCompilerLog", "StateTreeTaskBase")}
+                                                    "StateTreeAIComponentSchema", "StateTreeComponentSchema", "StateTreeComponent", "StateTreeEditingSubsystem", "StateTreeCompilerLog", "StateTreeTaskBase")}
     factory = unreal.StateTreeFactory()
     out["factory_members"] = sorted(m for m in dir(factory) if not m.startswith("_") and m not in set(dir(unreal.Object)))
     out["factory_schema_property"] = attempt(lambda: factory.get_editor_property("state_tree_schema_class"))
@@ -81,7 +108,7 @@ def python_reach():
     out["python_only_create_asset"] = {"ok": created["ok"], "created": bool(created.get("value")), "error": created.get("error")}
 
     # Every write below goes to a throwaway tree, never to the saved ones. The counts after each attempt show whether it changed anything.
-    tree = LIB.create_tree(FOLDER, "ST_PythonProbe", 3, False)
+    tree = LIB.create_tree(FOLDER, "ST_PythonProbe", 3, False, False)
     data = unreal.StateTreeEditorData.get_editor_data(tree)
 
     def counts():
@@ -128,6 +155,15 @@ def script_build():
     step("structure_broken", lambda: read_structure("ST_Broken"))
     step("saved", lambda: {n: bool(unreal.EditorAssetLibrary.save_asset("%s/%s" % (FOLDER, n), only_if_is_dirty=False)) for n in ("ST_Probe", "ST_Gated")})
     step("python_reach", python_reach)
+    # Row S1: the same trees under the component schema (a pawn that owns a StateTreeComponent, no AI controller).
+    step("comp_probe", lambda: make_tree("ST_Comp_Probe", 3, False, True))
+    step("comp_gated", lambda: make_tree("ST_Comp_Gated", 1000000, False, True))
+    step("comp_broken", lambda: make_tree("ST_Comp_Broken", 3, True, True))
+    step("structure_comp", lambda: read_structure("ST_Comp_Probe"))
+    # Row S2: a root parameter bound to a transition condition's property.
+    step("param", lambda: make_param_tree("ST_Param", PARAM_THRESHOLD))
+    step("structure_param", lambda: read_structure("ST_Param"))
+    step("saved_extra", lambda: {n: bool(unreal.EditorAssetLibrary.save_asset("%s/%s" % (FOLDER, n), only_if_is_dirty=False)) for n in ("ST_Comp_Probe", "ST_Comp_Gated", "ST_Param")})
     yield 0.5
 
 
@@ -136,20 +172,35 @@ def game_world():
     return unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem).get_game_world()
 
 
+# (tree, pawn class, host). "ai": an AI controller owns a StateTreeAIComponent. "component": a plain pawn owns a StateTreeComponent.
+RUN_TREES = [("ST_Probe", "StateTreeProbePawn", "ai"), ("ST_Gated", "StateTreeProbePawn", "ai"),
+             ("ST_Comp_Probe", "StateTreeComponentProbePawn", "component"), ("ST_Comp_Gated", "StateTreeComponentProbePawn", "component"),
+             ("ST_Param", "StateTreeProbePawn", "ai")]
+
+
 def sample(pawn):
-    controller = pawn.get_controller()
-    comp = controller.state_tree_component if controller else None
-    return {"work_ticks": pawn.work_ticks, "events": [str(e) for e in pawn.events],
-            "controller": controller.get_class().get_name() if controller else None,
-            "running": bool(comp.is_running()) if comp else None, "run_status": str(comp.get_state_tree_run_status()) if comp else None}
+    try:
+        controller = pawn.get_controller()
+        comp = controller.state_tree_component if controller else getattr(pawn, "state_tree_component", None)
+        return {"t": time.time(), "work_ticks": pawn.work_ticks, "events": [str(e) for e in pawn.events],
+                "controller": controller.get_class().get_name() if controller else None,
+                "component": comp.get_class().get_name() if comp else None,
+                "running": bool(comp.is_running()) if comp else None, "run_status": str(comp.get_state_tree_run_status()) if comp else None}
+    except Exception as exc:
+        return {"error": repr(exc)[:300]}
 
 
 def script_run():
     loaded = {}
-    for i, name in enumerate(("ST_Probe", "ST_Gated")):
+    for i, (name, pawn_class, host) in enumerate(RUN_TREES):
         tree = unreal.load_asset("%s/%s" % (FOLDER, name))
-        loaded[name] = {"loaded": bool(tree), "ready": LIB.is_ready_to_run(tree), "needs_recompile": LIB.needs_recompile(tree)}
-        pawn = unreal.EditorLevelLibrary.spawn_actor_from_class(unreal.StateTreeProbePawn, unreal.Vector(0.0, 400.0 * i, 100.0))
+        loaded[name] = {"loaded": bool(tree), "host": host}
+        cls = getattr(unreal, pawn_class, None)
+        if not tree or cls is None:
+            loaded[name]["pawn_class_found"] = cls is not None
+            continue
+        loaded[name].update({"ready": LIB.is_ready_to_run(tree), "needs_recompile": LIB.needs_recompile(tree), "info": describe(tree)})
+        pawn = unreal.EditorLevelLibrary.spawn_actor_from_class(cls, unreal.Vector(0.0, 400.0 * i, 100.0))
         pawn.set_editor_property("tree", tree)
         pawn.tags = [name]
     report["steps"]["loaded"] = loaded
