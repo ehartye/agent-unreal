@@ -3,7 +3,7 @@
 // fail, so the judge cannot pass by accident.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { evaluate, summarize, compilerDiagnostics, unityIncludes, compiledUnits, adaptiveExcluded, chunks } from './unity-build-checks.mjs';
+import { evaluate, evaluateReadOnly, summarize, compilerDiagnostics, unityIncludes, compiledUnits, adaptiveExcluded, chunks, MODULE_FILES } from './unity-build-checks.mjs';
 
 const SRC = 'C:\\Temp\\unity-build-x\\Source\\UnityProbe';
 const I = 'C:/Temp/unity-build-x/Intermediate/Build/Win64/x64/UnrealEditor/Development/UnityProbe';
@@ -112,4 +112,70 @@ test('a missing phase fails its checks instead of throwing', () => {
   assert.equal(none.length, 11);
   assert.ok(none.every((c) => c.pass === false));
   assert.doesNotThrow(() => evaluate(undefined));
+});
+
+// ---- the opt-in read-only group (unity_build.mjs --readonly). The phases below are what reading SourceFileWorkingSet.cs and Unity.cs predicts, not a run: the shape is the
+// shape of the phases above, the expected values are an assumption, and the first run on an engine confirms or refutes them.
+const roGood = () => ({
+  roAll: { exit: 6, log: clashLog, unity: { 'Module.UnityProbe.cpp': ALL }, dllChanged: false, followOn: skipped, extraArgs: [] },
+  roBetaWritable: { exit: 0, log: excluded('ProbeBeta.cpp'), unity: { 'Module.UnityProbe.cpp': unityText('PerModuleInline.gen.cpp', 'ProbeAlpha.cpp', 'UnityProbeModule.cpp') }, dllChanged: true, followOn: ok, extraArgs: [] },
+  roHeaderWritable: { exit: 0, log: excluded('ProbeAlpha.cpp', 'ProbeBeta.cpp'), unity: { 'Module.UnityProbe.cpp': unityText('PerModuleInline.gen.cpp', 'UnityProbeModule.cpp') }, dllChanged: true, followOn: ok, extraArgs: [] },
+});
+const roFailing = (phases) => evaluateReadOnly(phases).filter((c) => !c.pass).map((c) => c.name);
+const RO_ALL = 'read-only files are not in the working set and share one unity file';
+const RO_STALE = 'a failed read-only build leaves the old binary and skips the guarded step';
+const RO_BETA = 'one writable source leaves the unity file and the build passes';
+const RO_HEADER = 'a writable header takes the sources that include it first out of the unity file';
+
+test('the read-only group passes on the phases the source predicts, and the default checks are untouched', () => {
+  assert.deepEqual(roFailing(roGood()), []);
+  assert.equal(evaluateReadOnly(roGood()).length, 4);
+  assert.deepEqual(MODULE_FILES, ['ProbeAlpha.cpp', 'ProbeBeta.cpp', 'UnityProbeModule.cpp', 'UnityProbeTypes.h', 'UnityProbe.Build.cs']);
+  assert.equal(evaluate({ ...good(), ...roGood() }).length, 11);
+});
+
+test('read-only sources that are excluded, built with -DisableAdaptiveUnity or not clashing fail the first check', () => {
+  const excludedAll = roGood(); excludedAll.roAll.log = `${clashLog}
+${excluded('ProbeAlpha.cpp')}`;
+  assert.deepEqual(roFailing(excludedAll), [RO_ALL]);
+  const passes = roGood(); passes.roAll = { ...passes.roAll, exit: 0, followOn: ok };
+  assert.ok(roFailing(passes).includes(RO_ALL));
+  const split = roGood(); split.roAll.unity = { 'Module.UnityProbe.cpp': GEN };
+  assert.ok(roFailing(split).includes(RO_ALL));
+  const flagged = roGood(); flagged.roAll.extraArgs = ['-DisableAdaptiveUnity'];
+  assert.deepEqual(roFailing(flagged), [RO_ALL]);
+});
+
+test('a read-only clash that changed the binary or ran the follow-on step fails the stale-binary check', () => {
+  const changed = roGood(); changed.roAll.dllChanged = true;
+  assert.deepEqual(roFailing(changed), [RO_STALE]);
+  const ran = roGood(); ran.roAll.followOn = ok;
+  assert.deepEqual(roFailing(ran), [RO_STALE]);
+});
+
+test('the one-writable-source phase needs exactly ProbeBeta.cpp excluded and a pass', () => {
+  const wrong = roGood(); wrong.roBetaWritable.log = excluded('ProbeAlpha.cpp');
+  assert.deepEqual(roFailing(wrong), [RO_BETA]);
+  const both = roGood(); both.roBetaWritable.log = excluded('ProbeAlpha.cpp', 'ProbeBeta.cpp');
+  assert.deepEqual(roFailing(both), [RO_BETA]);
+  const failed = roGood(); failed.roBetaWritable.exit = 6;
+  assert.deepEqual(roFailing(failed), [RO_BETA]);
+  const merged = roGood(); merged.roBetaWritable.unity = { 'Module.UnityProbe.cpp': ALL };
+  assert.deepEqual(roFailing(merged), [RO_BETA]);
+});
+
+test('the writable-header phase needs both first-include sources excluded and the module file left in', () => {
+  const onlyOne = roGood(); onlyOne.roHeaderWritable.log = excluded('ProbeBeta.cpp');
+  assert.deepEqual(roFailing(onlyOne), [RO_HEADER]);
+  const moduleToo = roGood(); moduleToo.roHeaderWritable.log = excluded('ProbeAlpha.cpp', 'ProbeBeta.cpp', 'UnityProbeModule.cpp');
+  assert.deepEqual(roFailing(moduleToo), [RO_HEADER]);
+  const failed = roGood(); failed.roHeaderWritable.exit = 6;
+  assert.deepEqual(roFailing(failed), [RO_HEADER]);
+});
+
+test('a missing read-only phase fails its checks instead of throwing', () => {
+  const none = evaluateReadOnly({});
+  assert.equal(none.length, 4);
+  assert.ok(none.every((c) => c.pass === false));
+  assert.doesNotThrow(() => evaluateReadOnly(undefined));
 });

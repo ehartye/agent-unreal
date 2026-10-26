@@ -40,6 +40,25 @@ About 50 s to build and 30 to 40 s per editor session. The editors start hidden 
 - The bridge builds `Idle` and `Walk` states and a transition, linked from the Entry node. The compiler warns `Idle to Walk will never be taken, please connect something to Can Enter Transition`, as it does in the editor.
 - A Blend Space written from Python has two samples and a 1 s play length after save, but its player holds the reference pose (0.00 cm of motion over 12 samples). After `ResampleBlendSpace` the same asset blends the clips at X = 0.5: the bone moves up to 47 cm, by equal amounts along both clip axes. A Sequence Player node made from Python plays its clip, as a control.
 
+## Runtime phase (opt-in)
+
+**Status:** Prepared 2026-10-26; not yet run on an engine. A first run tests the probe before it tests the engine.
+
+The item left open above, a state machine played at runtime, 2D Blend Spaces and linked layers, has its own runner, so the run above is unchanged:
+
+```text
+node examples/unreal/anim_bridge/anim_runtime.mjs --engine "<UE_5.8 folder>" [--keep] [--compiler <x.y.z>] [--sdk <10.0.n.n>]
+```
+
+- `module/AnimMachine/` (runtime): `UMachineAnimInstance`, a parent class with two Boolean variables (`bGoWalk`, `bGoIdle`) that transition rules read, and `GetMachineNames` and `GetMachineState`, which read the baked state machine's current state name.
+- `module/AnimMachineBridge/` (editor): `UAnimMachineBridgeLibrary` with `SetStateSequence` (a Sequence Player in a state's graph), `AddTransitionOnVariable` (a transition whose rule is a Get node for a Boolean variable), `AddAnimationLayer`, `SetLayerSequence`, `ImplementLayerInterface` and `DescribeLayers`. It uses `AnimBridgeLibrary.AddState` and `ResampleBlendSpace` from the default modules, which the runner builds too.
+- `anim_runtime_probe.py` runs in two editor sessions. Session `build` makes three clips (the last bone along +X, +Y and +Z), three Sequence Player controls, a two-state machine (Idle plays clip A, Walk plays clip B), a 2D Blend Space with the clips at (0, 0), (1, 0) and (0, 1) and four Blend Space Player graphs at three corners and at (1/3, 1/3), and a layer interface with one layer, implemented by a host and a guest. Session `play` is a fresh editor: it plays all of them in Play-In-Editor, sets `bGoWalk` at 1.2 s and `bGoIdle` at 3.2 s, links the guest's layers to the host and unlinks them, and reads the bone and the state name every 0.1 s.
+- `anim-runtime-checks.mjs` judges the reports and `anim-runtime.test.mjs` tests that logic with hand-built reports (it runs in `node scripts/check.mjs`). The report shape is an assumption until the first run.
+
+What it checks (counted): the four modules compile and the new classes are visible in Python; each control clip moves the bone along its own axis; the machine builds with content and a rule on each transition and compiles with no node errors and without the empty-rule warning; the state name reads Idle, then Walk, then Idle, and the pose follows it; the 2D Blend Space builds, resamples and its four players compile; the three corners play one clip each and the interior point blends all three; the linked layer interface, host and guest build, the host has a linked Linked Anim Layer node, and the host swaps between its own layer, the guest's and its own again. The Blueprint action names the host offers for the layer and the way the interface asset was created print as observations.
+
+Not prepared: montage slot groups other than the default (no API for a slot group was confirmed in this pass), and a linked layer whose guest is a separate skeleton.
+
 ## Not verified
 
-A state machine played at runtime (the states here have no content and the transition has no rule), 2D Blend Spaces, linked layers, and montage slot groups other than the default.
+By the run above: a state machine played at runtime (the states here have no content and the transition has no rule), 2D Blend Spaces, linked layers, and montage slot groups other than the default. The runtime phase prepares the first three; none has been run.

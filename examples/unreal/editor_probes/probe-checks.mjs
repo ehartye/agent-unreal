@@ -11,6 +11,8 @@ export const PROBES = {
   doc: { script: 'doc_probe.py', input: 'PROBE_CALLABLES', flag: '--callables', extras: [] },
   system: { script: 'inspect_system.py', input: 'PROBE_SYSTEMS', flag: '--systems', extras: [{ env: 'PROBE_MODULES', flag: '--modules' }] },
   asset: { script: 'asset_probe.py', input: 'PROBE_ASSETS', flag: '--assets', extras: [] },
+  // Holds the editor for N seconds so the launcher can be tried under --timeout (probe_timeout.mjs). Prepared, not yet run on an engine.
+  hang: { script: 'hang_probe.py', input: 'PROBE_HANG', flag: '--hold', extras: [] },
 };
 
 /** Names separated by commas, semicolons or white space; empty entries and repeats are dropped, order is kept. */
@@ -79,6 +81,8 @@ function checkEntry(probe, key, entry, problems) {
     else for (const [mod, value] of Object.entries(entry.modules)) checkEntry('module', `${key} / ${mod}`, value, problems);
   } else if (probe === 'module') {
     if (!Array.isArray(entry.inputs)) problems.push(`${key}: found without inputs`);
+  } else if (probe === 'hang') {
+    if (typeof entry.slept_seconds !== 'number') problems.push(`${key}: found without slept_seconds`);
   } else if (probe === 'asset') {
     if (typeof entry.class !== 'string' || !entry.class) return problems.push(`${key}: found without a class`);
     const fields = ASSET_FIELDS[entry.class];

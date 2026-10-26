@@ -19,6 +19,26 @@ node examples/unreal/unity_build/unity_build.mjs --engine "C:/Program Files/Epic
 
 About six minutes: the first build of each project takes about a minute, the rest 1 to 15 s. Needs `git` on the path for project two. Unreal Build Tool and the compiler start hidden.
 
+## Opt-in: the read-only working set
+
+**Status:** Prepared 2026-10-26; not yet run on an engine. A first run tests the probe before it tests the engine. The default run above is unchanged.
+
+```text
+node examples/unreal/unity_build/unity_build.mjs --engine "C:/Program Files/Epic Games/UE_5.8" --only-readonly [--keep]
+```
+
+`--readonly` adds the group to the default run (15 checks); `--only-readonly` runs just the group (4 checks, about four minutes: one first build and two short ones).
+
+The question is the Perforce case: a workspace syncs files read-only, and an installed engine without git then treats a file as part of the working set only when it is not read-only (`Engine/Source/Programs/UnrealBuildTool/System/SourceFileWorkingSet.cs`, `PerforceSourceFileWorkingSet.Contains` and `TryCreatePerforceWorkingSet`). The group makes a third throwaway project with no git repository and builds it three times without `-DisableAdaptiveUnity`, rewriting the sources and rules before each build so that their timestamps are newer than the makefile (`System/TargetMakefile.cs`, the working set check):
+
+| Phase | Read-only | Writable | Predicted from the source |
+|---|---|---|---|
+| `ro-all` | the three sources, the header, the rules | nothing | nothing excluded, one unity file, the four clash codes |
+| `ro-beta` | the other two sources, the header, the rules | `ProbeBeta.cpp` | only `ProbeBeta.cpp` excluded, the build passes |
+| `ro-header` | the three sources, the rules | `UnityProbeTypes.h` | `ProbeAlpha.cpp` and `ProbeBeta.cpp` excluded because `System/Unity.cs` (`GetAdaptiveFiles`) leaves out a source whose first include is a same-named working-set header; `UnityProbeModule.cpp` stays in; the build passes |
+
+The third row may explain why a scratch run that made only the sources read-only still saw them excluded: both sources include `UnityProbeTypes.h` first, and the header stayed writable (a hypothesis; what that run changed was not recorded). Every prediction here is a reading of the source, not an observation; the checks in `unity-build-checks.mjs` (`evaluateReadOnly`) state each prediction, and a failed check means the prediction was wrong. Node sets and clears the read-only attribute with `chmodSync`; the run clears it again before deleting the folders.
+
 ## What it checks (11 checks)
 
 - With three files and the default rules, each file compiles alone. With the threshold lowered and adaptive unity on, an installed engine and no git repository exclude all three writable files from the unity file, so the clashing sources still build.
@@ -28,4 +48,4 @@ About six minutes: the first build of each project takes about a minute, the res
 
 ## Not verified
 
-The Perforce read-only working set (a run with read-only files still excluded them), `-ForceUnity` (it did not group the files in a scratch run), a module of 32 or more files in more than one chunk, and a Linux or macOS toolchain.
+The Perforce read-only working set (prepared above, not yet run; an earlier scratch run with read-only sources still excluded them), `-ForceUnity` (it did not group the files in a scratch run), a module of 32 or more files in more than one chunk, and a Linux or macOS toolchain.

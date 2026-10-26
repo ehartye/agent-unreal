@@ -3,6 +3,8 @@
 //   A phase is { exit, timedOut, log, unity: { '<unity file name>': '<its text>' }, dllChanged, followOn: { ran, reason? } }.
 
 const FILES = ['ProbeAlpha.cpp', 'ProbeBeta.cpp', 'UnityProbeModule.cpp'];
+/** Every file of the module that unity_build.mjs --readonly locks and unlocks: the sources, the header both sources include first, and the rules file. */
+export const MODULE_FILES = [...FILES, 'UnityProbeTypes.h', 'UnityProbe.Build.cs'];
 
 /** Compiler diagnostics in an Unreal Build Tool log: { file, line, kind, code, text } for each MSVC "error Cnnnn" or "warning Cnnnn". */
 export function compilerDiagnostics(log) {
@@ -104,6 +106,41 @@ export function evaluate(phases) {
     'Once the committed file is written again (a checkout, a rebase), its timestamp is newer than the makefile, the makefile is rebuilt with the file back in the unity file, and the clash returns.',
     failedWith(p.gitRewritten, CLASH_CODES) && sharedChunk(p.gitRewritten),
     `exit ${p.gitRewritten?.exit}; error codes: ${codeList(p.gitRewritten)}`);
+
+  return checks;
+}
+
+/**
+ * The checks of the opt-in read-only group (unity_build.mjs --readonly). Prepared, not yet run on an engine: the expectations come from reading SourceFileWorkingSet.cs (the
+ * Perforce rule: a file is in the working set when it is not read-only) and Unity.cs (a source file whose first include is a same-named header that is in the working set is
+ * left out of the unity file too), so a first run confirms or refutes them. `phases` needs roAll, roBetaWritable and roHeaderWritable.
+ */
+export function evaluateReadOnly(phases) {
+  const p = phases ?? {};
+  const checks = [];
+  const add = (name, claim, pass, detail) => checks.push({ name, claim, pass: !!pass, detail });
+  const excluded = (phase) => adaptiveExcluded(phase?.log);
+  const list = (names) => names.join(', ') || 'none';
+
+  add('read-only files are not in the working set and share one unity file',
+    'With an installed engine, no git repository and every module file read-only (the header too), adaptive unity excludes nothing, the three sources share one unity file and the build fails with the four clash codes, without -DisableAdaptiveUnity.',
+    failedWith(p.roAll, CLASH_CODES) && sharedChunk(p.roAll) && excluded(p.roAll).length === 0 && (p.roAll?.extraArgs ?? []).length === 0,
+    `exit ${p.roAll?.exit}; error codes: ${codeList(p.roAll)}; excluded: ${list(excluded(p.roAll))}; extra arguments: ${JSON.stringify(p.roAll?.extraArgs)}; chunks: ${JSON.stringify(chunks(p.roAll?.unity))}`);
+
+  add('a failed read-only build leaves the old binary and skips the guarded step',
+    'After the read-only clash the module binary is untouched and the follow-on step is skipped.',
+    !!p.roAll && p.roAll.exit !== 0 && p.roAll.dllChanged === false && p.roAll.followOn?.ran === false && /build failed/.test(p.roAll.followOn?.reason ?? ''),
+    `binary changed: ${p.roAll?.dllChanged}; follow-on ran: ${p.roAll?.followOn?.ran} (${p.roAll?.followOn?.reason ?? 'no reason'})`);
+
+  add('one writable source leaves the unity file and the build passes',
+    'With only ProbeBeta.cpp writable (header and the other sources read-only) the log names ProbeBeta.cpp as the one excluded file, it is compiled alone, and the same sources pass.',
+    succeeded(p.roBetaWritable) && excluded(p.roBetaWritable).join() === 'ProbeBeta.cpp' && !sharedChunk(p.roBetaWritable),
+    `exit ${p.roBetaWritable?.exit}; excluded: ${list(excluded(p.roBetaWritable))}; chunks: ${JSON.stringify(chunks(p.roBetaWritable?.unity))}`);
+
+  add('a writable header takes the sources that include it first out of the unity file',
+    'With only UnityProbeTypes.h writable, ProbeAlpha.cpp and ProbeBeta.cpp (it is their first include) are excluded although they are read-only, UnityProbeModule.cpp stays in the unity file, and the build passes.',
+    succeeded(p.roHeaderWritable) && ['ProbeAlpha.cpp', 'ProbeBeta.cpp'].every((f) => excluded(p.roHeaderWritable).includes(f)) && !excluded(p.roHeaderWritable).includes('UnityProbeModule.cpp') && !sharedChunk(p.roHeaderWritable),
+    `exit ${p.roHeaderWritable?.exit}; excluded: ${list(excluded(p.roHeaderWritable))}; chunks: ${JSON.stringify(chunks(p.roHeaderWritable?.unity))}`);
 
   return checks;
 }

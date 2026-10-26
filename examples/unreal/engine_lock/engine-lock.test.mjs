@@ -1,7 +1,9 @@
 // node --test examples/unreal/engine_lock/engine-lock.test.mjs  (no Unreal; needs pwsh and Windows named mutexes)
-import { test } from 'node:test';
+import { after, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawn, spawnSync } from 'node:child_process';
+import { rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { randomUUID } from 'node:crypto';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -11,7 +13,17 @@ const hasPwsh = process.platform === 'win32' && spawnSync('pwsh', ['-NoProfile',
 const skip = hasPwsh ? false : 'needs pwsh and Windows named mutexes';
 
 /** A mutex name no other run uses, so a test never waits on a real engine run. */
-const uniqueName = () => `agent-unreal-test-${randomUUID()}`;
+const usedNames = [];
+const uniqueName = () => {
+  const name = `agent-unreal-test-${randomUUID()}`;
+  usedNames.push(name);
+  return name;
+};
+
+// A holder that the test kills cannot remove its own holder file, so the test does.
+after(() => {
+  for (const name of usedNames) rmSync(join(tmpdir(), `${name}.holder`), { force: true });
+});
 const wrapped = (name, args, env = {}) =>
   spawnSync('pwsh', ['-NoProfile', '-File', script, ...args], {
     encoding: 'utf8',
