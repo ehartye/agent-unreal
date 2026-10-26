@@ -1,6 +1,6 @@
 ---
 name: unreal-native
-description: Build, run, verify, package and profile a native C++ Unreal game from an agent: the build and capture loop, content-only versus native construction, presentation, input replay, material and UV validation, cooking and staging, frame-time profiling against a budget, and side-by-side comparison scenes. Not for importing assets (use unreal-import) or for choosing an Unreal system (use unreal-rendering, unreal-effects, unreal-animation, unreal-gameplay or unreal-procedural) or scripting the editor from Python (use unreal-editor-scripting).
+description: Build, run, verify, package and profile a native C++ Unreal game from an agent: the build and capture loop, content-only versus native construction, presentation, input replay, material and UV validation, cooking and staging, frame-time profiling against a budget, and side-by-side comparison scenes. Not for importing assets (use unreal-import) or for choosing an Unreal system (use unreal-rendering, unreal-effects, unreal-animation, unreal-gameplay or unreal-procedural) or scripting the editor from Python (use unreal-editor-scripting) or auditing a project's tests, CI or performance practice (use unreal-quality) or its module and state structure (use unreal-architecture).
 when_to_use: Use when building native C++ for an Unreal game, running real gameplay and checking screenshots or automation results, cooking or staging a Windows build, replaying input in native tests, rejecting default-material cook fallbacks, writing or running automation tests, a build that passes and then fails on code you did not change (adaptive unity), a content step that fails with locked asset files (PermissionError), diagnosing lost procedural geometry or collision, profiling an Unreal game's frame time on a quiet machine, capturing an Unreal Insights trace (utrace, -trace channels, trace regions), exporting timer statistics headless, reading a frame time percentile or maximum, hitting a frame budget, costing extra content, or comparing implementations side by side on a stage.
 ---
 
@@ -10,7 +10,9 @@ Unreal 5.8 on Windows, driven by an agent. Each reference holds the commands, th
 and what was not verified. Importing assets is `unreal-import`;
 choosing a system and Niagara are the domain skills (for example
 [unreal-effects](../unreal-effects/SKILL.md)); scripting the editor from Python is
-[unreal-editor-scripting](../unreal-editor-scripting/SKILL.md).
+[unreal-editor-scripting](../unreal-editor-scripting/SKILL.md). This skill runs, captures and profiles; judging
+whether a project's tests, CI and performance claims can be trusted is [unreal-quality](../unreal-quality/SKILL.md), and
+reviewing its module and state structure is [unreal-architecture](../unreal-architecture/SKILL.md).
 
 | You are about to | Read |
 |---|---|

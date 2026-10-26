@@ -2,7 +2,7 @@
 
 A Claude Code plugin of skills for working in Unreal Engine 5.8 from a coding agent. It picks the engine system that
 fits a goal and says how an agent drives it (Python, Blueprint, C++, console variables or project settings), builds,
-packages and profiles a native C++ game, authors for UEFN, and imports [agent-meshes](https://github.com/ehartye/agent-meshes)
+packages and profiles a native C++ game, audits a project's structure and its testing and performance practice against Epic's documentation and plans the fixes, authors for UEFN, and imports [agent-meshes](https://github.com/ehartye/agent-meshes)
 models, [agent-sprites](https://github.com/ehartye/agent-sprites) atlases and
 [agent-beeps](https://github.com/ehartye/agent-beeps) sounds into Unreal with a guarded importer. It pairs with
 [agent-engine](https://github.com/ehartye/agent-engine), which chooses an engine and imports into Unity, Godot and the web,
@@ -14,7 +14,7 @@ repository is marked as tested.
 
 ## Status
 
-Early (0.11.0). Nine skills.
+Early (0.12.0). Eleven skills.
 
 The skills moved here from agent-engine 0.14.0, where their history up to that tag lives; `unreal-import` and its importer scripts followed in 0.2.0. The scripts in `examples/`
 were run on Windows against Unreal 5.7.3, 5.8.2 and 5.8.3 as each README states; other platforms were not run.
@@ -85,6 +85,8 @@ from current Fortnite cook, navigation and performance acceptance.
 | `unreal-rendering` | Lumen, MegaLights, directional lights (a sun and a moon), Virtual Shadow Maps, Nanite, Substrate and Toon, Temporal Super Resolution, and a production stack that combines them. |
 | `unreal-editor-scripting` | Editor Python run modes, cameras and whole-map builds; the Python-to-C++ bridge; enabling a plugin; the example scenes. |
 | `unreal-native` | Build, run, verify, package and profile a native C++ Unreal game from an agent: the build and capture loop, content pipeline, presentation, input replay, material and UV validation, cooking, frame-time profiling against a budget and side-by-side comparison scenes. |
+| `unreal-architecture` | Audit and plan a project's code and project structure against Epic's 5.8 documentation: modules, plugins and dependency direction, where state and rules live, Game Features, hard and soft references, lifecycle and object pointers, targets, configuration and layout, with an ownership map, ranked findings and a remediation plan. |
+| `unreal-quality` | Audit and plan a project's testing strategy and performance measurement against Epic's 5.8 documentation: which Automation, CQTest, Spec, Functional or Low-Level test fits which behaviour, deterministic tests, headless runs and lanes, and trustworthy frame-time, memory and shader-hitch measurement, with ranked findings and a remediation plan whose steps each have a check. |
 | `unreal-import` | Import agent-sprites atlases, agent-meshes GLBs and agent-beeps WAVs into an Unreal 5.7 or 5.8 project from a script: Interchange and Paper2D notes, FBX clips and Epic's MCP server, a per-mesh import policy read back from the saved asset, guarded reuse and regenerated projects. The importer scripts are in the skill. |
 | `uefn` | Author and import into UEFN from an agent: Epic's MCP tools and their gaps, native Python and Sequence authoring, WAV and FBX import, saved controls and capture, with the evidence behind each claim. |
 
@@ -110,7 +112,7 @@ non-required Linux observer on ready pull requests, and also runs weekly, manual
 `node scripts/check.mjs` runs the dependency-free merge checks: the Node tests and the skill lint. Native-engine
 acceptance (building, cooking and running Unreal) is separate and needs the documented engine setup.
 `scripts/lint-skills.mjs` checks frontmatter, relative links, the "You are about to / Read" table, size budgets,
-placeholders and evidence labels. `unreal-native` passes the strict rules and `uefn` passes the default rules; the six domain skills and `unreal-import` are checked for
+placeholders and evidence labels. `unreal-native` passes the strict rules, and `uefn`, `unreal-architecture` and `unreal-quality` pass the default rules; the six domain skills and `unreal-import` are checked for
 structure and size. `node scripts/check.mjs --skill <name>` (repeatable or comma-separated) lints only those skills with the gate's flags and skips the tests; `--no-tests` runs every lint without the test step. The gate runs every step even after a failure and prints all findings. Every folder under `skills/` is linted, and a new skill with no strictness-table entry in `scripts/check.mjs` gets the default rules and fails until it complies or earns an entry. Structural checks do not
 establish that a skill improves an agent's work.
 
