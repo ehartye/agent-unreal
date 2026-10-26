@@ -182,7 +182,9 @@ def run_interactive():
                 report["phases"][-1]["screenshot"] = shot
                 write_report()   # recorded first: take_high_res_screenshot can run the Slate tick again from inside the call
                 clock["shot_at"] = None
-                unreal.AutomationLibrary.take_high_res_screenshot(1280, 720, shot)
+                # take_high_res_screenshot asks for a shot without UI, and FScreenshotRequest::RequestScreenshot then turns the renderer's on-screen messages off for it (UnrealClient.cpp);
+                # the Shot console command with showui keeps them (GameViewportClient.cpp HandleScreenshotCommand)
+                unreal.SystemLibrary.execute_console_command(game_world(), "Shot showui nosuffix filename=" + shot[:-4])
             due = SETTLE_SECONDS if clock["index"] < 0 else clock["phase_start"] + PHASE_SECONDS
             if clock["seconds"] < due:
                 return
