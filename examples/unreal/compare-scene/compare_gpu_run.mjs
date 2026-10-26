@@ -61,7 +61,7 @@ public class ${moduleName} : ModuleRules
 	{
 		PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
 		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine" });
-		PrivateDependencyModuleNames.AddRange(new string[] { "Json", "RHI", "RenderCore", "Niagara" });
+		PrivateDependencyModuleNames.AddRange(new string[] { "InputCore", "Json", "RHI", "RenderCore", "Niagara" });
 	}
 }
 `);

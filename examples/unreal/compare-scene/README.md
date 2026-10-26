@@ -23,10 +23,10 @@ Built as part of a C++ project, cooked and packaged, and run with `compare.ps1` 
 ## Adopt it in a native C++ game
 
 1. Copy `AECompare.h` and `AECompare.cpp` into your game module, and `ExampleSets.cpp` too if you want the example.
-2. Module dependencies in your `*.Build.cs`: `Core`, `CoreUObject`, `Engine` (as any game module has), plus `Json`, `RHI` and `RenderCore` for the harness (`RenderCore` for the game and render thread times, `RHI` for the GPU's frame time), and `Niagara` for the example set:
+2. Module dependencies in your `*.Build.cs`: `Core`, `CoreUObject`, `Engine` (as any game module has), plus `InputCore` (the live mode's key bindings), `Json`, `RHI` and `RenderCore` for the harness (`RenderCore` for the game and render thread times, `RHI` for the GPU's frame time), and `Niagara` for the example set:
 
    ```csharp
-   PrivateDependencyModuleNames.AddRange(new[] { "Json", "RHI", "RenderCore", "Niagara" });
+   PrivateDependencyModuleNames.AddRange(new[] { "InputCore", "Json", "RHI", "RenderCore", "Niagara" });
    ```
 
 3. `.uproject` plugins: Niagara is enabled by default. A set that uses another plugin's content lists that plugin as well.
