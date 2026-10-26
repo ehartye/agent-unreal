@@ -49,3 +49,23 @@ TimingInsights.ExporTimers <out>/timers-typo.csv
 ## Not verified
 
 A rendered frame (`-nullrhi` throws render data away), the `gpu` and `rendercommands` channels, the render thread's frame time, a packaged build, trace overhead, and bookmarks read back from the trace (no headless export command reads them).
+
+## Measurement commands (opt-in)
+
+**Status:** Prepared 2026-10-26; not yet run on an engine. A first run tests the probe before it tests the engine.
+
+Backs [Measurement conditions and budgets](../../../skills/unreal-quality/references/unreal-quality-measurement.md) and [Profiling tools: what each answers](../../../skills/unreal-quality/references/unreal-quality-profiling-tools.md). The run above captures one trace with the default channels; this phase runs the commands those pages name. It is a separate runner, so the run above is unchanged:
+
+```text
+node examples/unreal/insights_capture/insights_stats.mjs --engine "<UE_5.8 folder>" [--held 300000] [--freed 1500000] [--keep]
+```
+
+- `insights_stats_probe.py` has two modes. `stats` runs `stat help`, a bare `stat`, `stat unit`, `stat fps` and `stat startfile` ... `stat stopfile` in a headless game process (`UnrealEditor-Cmd.exe -game -nullrhi`) and leaves the output in the log. `memory` sets bookmarks `LeakA`, `LeakB`, `LeakC`, makes two engine allocations between the first two (a held array and an array freed before `LeakC`) and stops the trace.
+- `insights_stats.mjs` writes the same content-only project as `insights_capture.mjs`, runs the stats mode, then the memory mode twice: started with `-trace=default,memory -tracefile=<path>` and with `-trace=default -tracefile=<path>` (no memory channel). `UnrealInsights.exe -NoUI -AutoQuit -ExecOnAnalysisCompleteCmd=@=<file>.rsp` then runs `MemoryInsights.ExportAllocs` (rules `aAf` Active Alloc, `AaBCf` Memory Leaks, `AaBfC` Limited Lifetime, with `-BookmarkA/B/C` and `-Columns=Size,StartTime,EndTime`) on both traces. The command, its rule names and its parameters are read from `Engine/Source/Developer/TraceInsights/Private/Insights/MemoryProfiler/MemoryProfilerManager.cpp` and `MemoryExportCommandParser.cpp`.
+- `insights-stats-checks.mjs` judges the log, the `.uestats` files and the exported CSV files; `insights-stats.test.mjs` tests it with hand-built data (it runs in `node scripts/check.mjs`). The CSV shape is an assumption until the first run.
+
+What it checks (counted): the stats run finished; `stat help` lists the Unit and FPS commands with their descriptions; a bare `stat` prints the stat help; `stat startfile` then `stat stopfile` leaves a `.uestats` file; the memory trace answers Active Alloc; Memory Leaks returns the held array and not the freed one; Limited Lifetime returns the freed one; a trace without the memory channel answers nothing.
+
+Expected to fail from the source, so a first run is likely to report a failure on this line: the `.uestats` check. `Engine/Source/Runtime/Core/Private/Stats/StatsCommand.cpp` compiles the `startfile`, `stopfile`, `startfileraw` and `testfile` commands only when `UE_ENABLE_STATS_FILE_DEPRECATED_IN_5_8` is 1, and `Engine/Source/Runtime/Core/Public/Stats/StatsFile.h` defaults it to 0. A run that writes no file confirms the source reading for the installed build, not that the probe is wrong.
+
+Not prepared: reading `stat unit` (Frame, Game, Draw, GPU, RHIT) and `stat fps`, which draw on a rendered viewport and have no log or file output to judge; a packaged or Test-configuration build; `ContextSwitch` and `Task` channels (`ContextSwitch` needs administrator rights); `-trace=default,memory,metadata,assetmetadata` per-asset cost.
