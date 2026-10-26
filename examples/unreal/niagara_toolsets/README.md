@@ -14,6 +14,43 @@ It starts eight hidden headless commandlets and one hidden editor (the stack-iss
 
 `--keep` leaves the project folder. When the `startup` phase ran, that folder holds a project `init_unreal.py` that raises on purpose, so any other script run against it exits 1 until that file is deleted; the run prints a note with its path.
 
+## Opt-in probes
+
+Status: Prepared 2026-10-26; not yet run on an engine. A first run tests the probe before it tests the engine.
+
+`nts_probe.mjs` runs probes for questions the validator above does not answer. It is separate from `nts_validate.mjs`: the default run is unchanged, and no validator file refers to the probes (a test checks that). It is not part of `node scripts/check.mjs`; the pure checks have node tests (`nts-probe.test.mjs`) in the merge lane.
+
+```text
+node examples/unreal/niagara_toolsets/nts_probe.mjs --engine "C:/Program Files/Epic Games/UE_5.8" [--only renderers,emit,frame,wire,gradient] [--keep] [--plan]
+        [--scenes <folder>] [--glb <file|builtin>] [--atlas-png <file>] [--atlas-json <file>]
+```
+
+Each group gets its own throwaway project in the OS temp folder. A group with a `sim` phase builds assets and a level in a commandlet, then plays the level offscreen in the editor (a GPU window, no interactive session) to read simulation caches and take screenshots. `--plan` prints what would run and resolves the wire assets without starting anything. The exit code is 0 when every check of the groups that ran passes.
+
+| Group | Question | Phases |
+|---|---|---|
+| `renderers` | `AddRenderer` between existing renderers (index 1 of two, 0, the old count, one past it, -2), renderer classes other than Light, two renderers of one class against `rendererClasses`, how many renderers each of the 14 templates holds | commandlet |
+| `emit` | which authoring step leaves a system that never emits: nine variants (factory or template system; Fountain or burst emitter; template emitters kept or removed; modules added) counted in a simulation cache, a negative control (SpawnRate 0), and a count that moves with a stack input | build, sim |
+| `frame` | Direct Frame Index linked to a user parameter set from Python: the link read back, `SubImageIndex` from a simulation cache at two values, screenshots at both against a baseline | build, sim |
+| `wire` | a GLB through Interchange into a mesh renderer, and a sprite atlas into a Sub UV flipbook: particles counted, screenshots against a baseline; a Static Mesh user parameter and the runtime override call | build, sim |
+| `gradient` | the System toolset's tool and skill lists (to compare 5.8.2 with 5.8.3), and a gradient or curve input written as a whole and read back | commandlet |
+
+`wire` imports a sample model and an atlas. Pass `--scenes <folder>` (or set `AGENT_UNREAL_SCENES`) with the workspace layout in [the sample scene notes](../README.md), or `--glb`, `--atlas-png` and `--atlas-json`. When `wire` is named with `--only` and a file is missing the run stops with exit code 2 before any engine start and names the file; without `--only` it is skipped. The sample model is rigged and Interchange makes a skeletal mesh from it, which a mesh renderer cannot take, so a small built-in cube is imported as well (`--glb builtin` imports only the cube). The atlas grid (the Sub Image Size) is computed from the atlas JSON, and an atlas whose cells do not tile the sheet is refused.
+
+| File | What it does |
+|---|---|
+| `nts_probe.mjs` | the runner: options, one throwaway project per group, the engine phases, the screenshots read back, the judging |
+| `nts-probe-checks.mjs` | the options, the phase table and one check per claim; `nts-probe-assets.mjs` holds the atlas grid, the asset lookup, the built-in cube, a small PNG reader and the pixel comparison |
+| `nts-probe.test.mjs` | canned reports with a failing case per check, a missing-report case, and consistency checks between the scripts and the checks |
+| `nts_probe_common.py` | shared helpers: tool calls, stack references, the report and manifest writers, the level builder |
+| `nts_probe_renderers.py`, `nts_probe_gradient.py` | the commandlet probes |
+| `nts_probe_emit_build.py`, `nts_probe_frame_build.py`, `nts_probe_wire_build.py` | the build halves: assets, a level, and the manifest the sim half reads |
+| `nts_probe_sim.py` | the run half: plays the level, counts particles with a simulation cache, reads attributes, takes screenshots, quits |
+
+The report shapes in the node tests are assumptions until a first run; a check that fails on its first run may need the script or the check fixed before it says anything about the engine. Engine facts the probes rely on were read from the install (symbols are cited in each script); the engine calls that were not checked are listed there.
+
+Not prepared: whether the Light renderer's MegaLights switches change what is drawn (needs a rendering run with lights); binding the mesh renderer to the user parameter that the override call sets (the JSON shape of `FNiagaraParameterBinding` was not confirmed, so the override is checked for acceptance, not for appearance); inputs held inside a dynamic input chain (the gradient scan reads the module inputs only); stencil outlines, ribbons and mesh particles for the stylized look, and frame cost.
+
 ## Files
 
 | File | What it does |
