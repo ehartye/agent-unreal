@@ -145,6 +145,14 @@ def link():
             "linked": any(a.get("kind_after") == "NiagaraExt_StackInputData_Linked" and str(a.get("link_after")).endswith(SHORT_NAME) for a in attempts)}
 
 
+def link_other():
+    """Link Direct Frame Index to Emitter.Age instead of the user parameter: whether any link takes effect in this module."""
+    target = c.at(SYSTEM, "Sprite", "ParticleUpdateScript", "SubUVAnimation", ["Direct Frame Index"])
+    written = c.call("SetStackInputData", {"stackInputRef": target, "inputData": {"struct": {"refPath": c.LINKED}, "value": {"linkedVariable": {"name": "Emitter.Age", "type": {"classStructOrEnum": {"refPath": c.FLOAT}}}}}})
+    read = c.get_input(target)
+    return {"set_error": written["error"], "read": read["value"]}
+
+
 try:
     unreal.AssetRegistryHelpers.get_asset_registry().search_all_assets(True)
     eal.make_directory(FOLDER)
@@ -152,7 +160,7 @@ try:
 except Exception as exc:
     probe.step("setup", error=str(exc)[:300])
 
-steps = (("texture", texture), ("material", material), ("system", system), ("user_variable", user_variable), ("link", link) if VARIANT in ("link", "modelast") else ("const", lambda: c.set_float(c.at(SYSTEM, "Sprite", "ParticleUpdateScript", "SubUVAnimation", ["Direct Frame Index"]), 5.0)))
+steps = (("texture", texture), ("material", material), ("system", system), ("user_variable", user_variable), ("link", link) if VARIANT in ("link", "modelast") else ("link_other", link_other) if VARIANT == "emitterage" else ("const", lambda: c.set_float(c.at(SYSTEM, "Sprite", "ParticleUpdateScript", "SubUVAnimation", ["Direct Frame Index"]), 5.0)))
 if VARIANT == "modelast":   # the mode is written again after the link, to see whether the order decides the compiled behaviour
     steps += (("mode_again", lambda: {"error": c.call("SetStackInputData", {"stackInputRef": c.at(SYSTEM, "Sprite", "ParticleUpdateScript", "SubUVAnimation", ["SubUV Animation Mode"]), "inputData": ENUM_DIRECT})["error"]}),)
 for name, fn in steps:
