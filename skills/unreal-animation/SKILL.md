@@ -1,12 +1,12 @@
 ---
 name: unreal-animation
-description: Choose and drive Unreal Engine 5.8 character animation and cinematics: Control Rig and IK Rig, Animation Blueprints (slot-only graphs from Python, state machines through a C++ bridge), Motion Matching and Pose Search, cloth and flesh, Hair Strands, Sequencer, and Movie Render Queue for offline rendering. Not for character movement or abilities (use unreal-gameplay), effects (unreal-effects) or importing animated models (use unreal-import).
-when_to_use: Use when asked to rig, retarget or animate procedurally; to build or script an Animation Blueprint, state machine, blend space or montage slot; about Motion Matching; for cloth, outfits, soft bodies, hair or fur; to author, record or play cinematics or Level Sequences; or to render a movie or image sequence offline or from a command line.
+description: "Choose and drive Unreal Engine 5.8 character animation and cinematics: Control Rig and IK Rig, Animation Blueprints (slot-only graphs from Python, state machines and other nodes through a C++ bridge), Motion Matching and Pose Search, cloth and flesh, Hair Strands, Sequencer, and Movie Render Queue for offline rendering. Not for character movement or abilities (use unreal-gameplay), effects (unreal-effects) or importing animated models (use unreal-import)."
+when_to_use: "Use when asked to rig, retarget or animate procedurally; to build or script an Animation Blueprint, state machine, blend space or montage slot; to add AnimDynamics, Two Bone IK or another AnimGraph node from code; about Motion Matching; for cloth, outfits, soft bodies, hair or fur, or a cloth asset built from a script; to author, record or play cinematics or Level Sequences; or to render a movie or image sequence offline or from a command line."
 ---
 
 # Choosing an Unreal animation or cinematics system
 
-Unreal 5.8 on Windows. Pick the feature from the goal, then read that system's reference: when to use it, what to use instead, how an agent drives it. Brackets show each plugin's shipped state. Other domains: `unreal-effects`, `unreal-animation`, `unreal-gameplay`, `unreal-procedural`, `unreal-rendering`, `unreal-editor-scripting`.
+Unreal 5.8 on Windows. Pick the feature from the goal, then read that system's reference: when to use it, what to use instead, how an agent drives it. Brackets show each plugin's shipped state. Other Unreal skills: `unreal-effects`, `unreal-gameplay`, `unreal-procedural`, `unreal-rendering`, `unreal-editor-scripting`, `unreal-native`, `unreal-import`, `uefn`, `unreal-architecture`, `unreal-quality`.
 
 | You are about to | Read |
 |---|---|

@@ -1,12 +1,12 @@
 ---
 name: unreal-procedural
-description: Choose and drive Unreal Engine 5.8 procedural world, mesh and audio systems: World Partition and large open worlds, Landscape and Landmass, Water, PCG in the editor and in a running game, Geometry Scripting, the Procedural Mesh Component, and MetaSounds. Not for lighting or rendering (use unreal-rendering), scripting the editor from Python (unreal-editor-scripting), importing fixed assets (use unreal-import) or deciding whether Blender or Unreal should make a mesh (mesh-tool-selection in agent-meshes).
-when_to_use: Use when asked to build an open world, a large landscape with rivers, a partitioned map, terrain, oceans or lakes; to scatter foliage, props or biomes by rules; when PCG output is missing in a running game; to build or edit meshes from code or at runtime; or for parameter-driven procedural audio.
+description: "Choose and drive Unreal Engine 5.8 procedural world, mesh and audio systems: World Partition and large open worlds, Landscape and Landmass, Water, PCG in the editor and in a running game, Geometry Scripting, the Procedural Mesh Component, and MetaSounds. Not for lighting or rendering (use unreal-rendering), scripting the editor from Python (unreal-editor-scripting), importing fixed assets (use unreal-import) or deciding whether Blender or Unreal should make a mesh (mesh-tool-selection in agent-meshes)."
+when_to_use: "Use when asked to build an open world, a large landscape with rivers, a partitioned map, terrain, oceans or lakes; to scatter foliage, props or biomes by rules; when PCG output is missing in a running game; to build or edit meshes from code or at runtime, or a generated mesh sits at the wrong height or rotation; or for parameter-driven procedural audio."
 ---
 
 # Choosing an Unreal procedural system
 
-Unreal 5.8 on Windows. Pick the feature from the goal, then read that system's reference: when to use it, what to use instead, how an agent drives it. Brackets show each plugin's shipped state. Other domains: `unreal-effects`, `unreal-animation`, `unreal-gameplay`, `unreal-procedural`, `unreal-rendering`, `unreal-editor-scripting`.
+Unreal 5.8 on Windows. Pick the feature from the goal, then read that system's reference: when to use it, what to use instead, how an agent drives it. Brackets show each plugin's shipped state. Other Unreal skills: `unreal-effects`, `unreal-animation`, `unreal-gameplay`, `unreal-rendering`, `unreal-editor-scripting`, `unreal-native`, `unreal-import`, `uefn`, `unreal-architecture`, `unreal-quality`.
 
 | You are about to | Read |
 |---|---|
@@ -20,7 +20,7 @@ Unreal 5.8 on Windows. Pick the feature from the goal, then read that system's r
 
 ## Rules of thumb
 
-- A Landscape is created by the Open World template or an editor C++ module; Python has no function that creates one.
+- A Landscape is created by the Open World template or an editor C++ module ([Python to C++ bridge](../unreal-editor-scripting/references/unreal-python-cpp-bridge.md)); Python has no function that creates one.
 - Import a fixed asset (GLB, WAV, sprite atlas) with `unreal-import`. Blender or Unreal for a mesh: `mesh-tool-selection`.
 
 Enable only the plugin a system needs: the steps are under Enable a feature in [unreal-editor-scripting](../unreal-editor-scripting/SKILL.md).
