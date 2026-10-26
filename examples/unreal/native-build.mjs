@@ -2,7 +2,8 @@
 //   - discoverToolchain(): finds the Visual Studio 2022 MSVC toolset and the Windows SDK that are actually installed, so no
 //     compiler version is written into a script. Override with the options { compiler, sdk } or the flags the runners pass on.
 //   - writeCodeProject(): writes a throwaway Unreal code project (descriptor, two target files, module sources).
-//   - buildEditor(): runs Epic's Build.bat for the project's Editor target, hidden, logging to a file.
+//   - buildEditor(), buildGame(): run Epic's Build.bat for the project's Editor or Game target, hidden, logging to a file.
+//   - packageGame(): runs RunUAT.bat BuildCookRun (build, cook, stage, pak, archive) for a Windows Development game.
 //   - runIfBuilt(): runs a follow-on step (a replay, a test run) only when the build succeeded, and says so when it skipped it.
 import { spawn, spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, openSync, closeSync, readdirSync, writeFileSync, cpSync } from 'node:fs';
@@ -96,11 +97,8 @@ public class ${name}${suffix}Target : TargetRules
   return join(root, `${name}.uproject`);
 }
 
-/** Runs Build.bat for `<name>Editor` hidden; resolves { exit, seconds, timedOut }. Output goes to `logPath`. `extraArgs` are appended to the Build.bat arguments (for example "-ForceUnity"). */
-export function buildEditor({ engine, uproject, name, toolchain, logPath, timeoutMs = 1800000, extraArgs = [] }) {
-  const bat = join(engine, 'Engine', 'Build', 'BatchFiles', 'Build.bat').replace(/\//g, '\\');
-  const args = buildArguments({ target: `${name}Editor`, uproject: uproject.replace(/\//g, '\\'), compiler: toolchain.compiler, sdk: toolchain.sdk, extraArgs });
-  const line = `""${bat}" ${args.map((a) => (/[\s]/.test(a) ? `"${a}"` : a)).join(' ')}"`;
+/** Runs a hidden cmd.exe command line, logging to `logPath`; resolves { exit, seconds, timedOut }. */
+function runHidden({ line, logPath, timeoutMs }) {
   const fd = openSync(logPath, 'w');
   const started = Date.now();
   return new Promise((resolve) => {
@@ -109,6 +107,36 @@ export function buildEditor({ engine, uproject, name, toolchain, logPath, timeou
     const timer = setTimeout(() => { timedOut = true; spawnSync('taskkill', ['/PID', String(child.pid), '/T', '/F'], { windowsHide: true }); }, timeoutMs);
     child.on('exit', (code) => { clearTimeout(timer); closeSync(fd); resolve({ exit: code, seconds: Math.round((Date.now() - started) / 1000), timedOut }); });
   });
+}
+
+const quoteArg = (a) => (/[\s]/.test(a) ? `"${a}"` : a);
+
+/** Runs Build.bat for `<name>Editor` hidden; resolves { exit, seconds, timedOut }. Output goes to `logPath`. `extraArgs` are appended to the Build.bat arguments (for example "-ForceUnity"). */
+export function buildEditor({ engine, uproject, name, toolchain, logPath, timeoutMs = 1800000, extraArgs = [] }) {
+  const bat = join(engine, 'Engine', 'Build', 'BatchFiles', 'Build.bat').replace(/\//g, '\\');
+  const args = buildArguments({ target: `${name}Editor`, uproject: uproject.replace(/\//g, '\\'), compiler: toolchain.compiler, sdk: toolchain.sdk, extraArgs });
+  return runHidden({ line: `""${bat}" ${args.map(quoteArg).join(' ')}"`, logPath, timeoutMs });
+}
+
+/** Runs Build.bat for the Game target `<name>` (Win64 Development) hidden; same result and arguments as buildEditor. */
+export function buildGame({ engine, uproject, name, toolchain, logPath, timeoutMs = 1800000, extraArgs = [] }) {
+  const bat = join(engine, 'Engine', 'Build', 'BatchFiles', 'Build.bat').replace(/\//g, '\\');
+  const args = buildArguments({ target: name, uproject: uproject.replace(/\//g, '\\'), compiler: toolchain.compiler, sdk: toolchain.sdk, extraArgs });
+  return runHidden({ line: `""${bat}" ${args.map(quoteArg).join(' ')}"`, logPath, timeoutMs });
+}
+
+/** The RunUAT.bat argument list that builds, cooks, stages, paks and archives a Windows Development game. */
+export function packageArguments({ uproject, archiveDirectory, compiler, sdk, extraArgs = [] }) {
+  return ['BuildCookRun', `-project=${uproject}`, '-platform=Win64', '-clientconfig=Development', '-build', '-cook', '-stage', '-pak', '-archive',
+    `-archivedirectory=${archiveDirectory}`, '-noP4', '-utf8output', '-unattended', ...(compiler ? [`-CompilerVersion=${compiler}`] : []),
+    ...(sdk ? [`-WindowsSDKVersion=${sdk}`] : []), ...extraArgs];
+}
+
+/** Runs RunUAT.bat BuildCookRun hidden (see packageArguments); resolves { exit, seconds, timedOut }. */
+export function packageGame({ engine, uproject, archiveDirectory, toolchain, logPath, timeoutMs = 3600000, extraArgs = [] }) {
+  const bat = join(engine, 'Engine', 'Build', 'BatchFiles', 'RunUAT.bat').replace(/\//g, '\\');
+  const args = packageArguments({ uproject: uproject.replace(/\//g, '\\'), archiveDirectory: archiveDirectory.replace(/\//g, '\\'), compiler: toolchain.compiler, sdk: toolchain.sdk, extraArgs });
+  return runHidden({ line: `""${bat}" ${args.map(quoteArg).join(' ')}"`, logPath, timeoutMs });
 }
 
 /** True when a buildEditor() result is a success: exit code 0 and no timeout. Anything else (including a killed build, exit null) is not. */
