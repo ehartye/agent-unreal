@@ -25,3 +25,20 @@ The runner takes about three to five minutes. Both engine binaries start hidden 
 - The same form on the failing test writes `failed: 1`, `state: "Fail"`, the message `Expected 'two plus two is five' to be 5, but it was 4.` with file and line; the process exits 255.
 - With `-TestExit="Automation Test Queue Empty"` and both tests the report counts one success and one failure while the process exits 0.
 - `UnrealEditor.exe` gives the same counts. A filter that matches nothing writes no report and the log says `No automation tests matched`.
+
+## Reference commands (opt-in)
+
+**Status:** Prepared 2026-10-26; not yet run on an engine. A first run tests the probe before it tests the engine.
+
+Backs [Headless runs, reports and lanes](../../../skills/unreal-quality/references/unreal-quality-lanes.md). The run above uses `Automation RunTests` with a space after the semicolon; this phase uses the command shape the lanes reference gives, so a reader can paste it:
+
+```text
+node examples/unreal/automation_test/automation_reference.mjs --engine "<UE_5.8 folder>" [--keep] [--compiler <x.y.z>] [--sdk <10.0.n.n>]
+node examples/unreal/automation_test/headless_routes.mjs --engine "<UE_5.8 folder>" [--json]
+```
+
+- `automation_reference.mjs` builds the same `AutomationProbe` module and runs `UnrealEditor-Cmd.exe <project> -Unattended -NullRHI -ExecCmds="Automation RunTest <filter>;Quit" -ReportExportPath=<dir>` for the passing and the failing test, then a `Group:<Name>` run for two groups defined in the project's `DefaultEngine.ini` (section `/Script/AutomationController.AutomationControllerSettings`, as the engine source declares it), a group that does not exist, and a `+ExcludeTest` run (section `AutomationTestExcludelist`; the exclusion is written last because it would otherwise skip the failing test in every earlier run). The Data Validation commandlet (`-run=DataValidation`) runs once as an observation: a project with no assets gives it nothing to fail on.
+- `automation-reference-checks.mjs` judges the runs: the report through `automation_report.mjs`, the log lines `Test Started.`, `Test Completed. Result={...}` and `**** TEST COMPLETE. EXIT CODE: <n> ****` (formats from the engine source), the process exit code, the tests a group selects, the `No matching group named` error, and a skipped test with its reason. `automation-reference.test.mjs` tests it with hand-built reports (it runs in `node scripts/check.mjs`). The skipped-test report shape is an assumption until the first run.
+- `headless_routes.mjs` reads an install and says whether a headless route exists for the commands that are not an Automation run. Low-Level Tests: `RunUAT BuildGraph -Script="Engine/Build/LowLevelTests.xml"` needs that script and the generated `Engine/Build/LowLevelTests` metadata folder; the 5.8.2 installed (Launcher) build read here has `RunUAT.bat`, the LowLevelTests AutomationTool script binaries and the `LowLevelTestsRunner` module source, but neither the script nor the metadata folder, so the command needs a source-built engine. Content tools: the Asset Manager editor module registers five console commands (`AssetManager.AssetAudit`, `FindDepChain`, `FindDepClasses`, `DumpAssetRegistry`, `DumpAssetDependencies`), only when the editor is not running a commandlet; none opens or dumps the Reference Viewer or Size Map, so those are editor UI only, and `AssetManager.AssetAudit` logs statistics rather than driving the Asset Audit window or its CSV export. Its node test runs in the merge lane.
+
+Not prepared: a Low-Level Tests run, a Reference Viewer, Size Map or Audit Assets capture, and a failing Data Validation run (it needs a validator class).
