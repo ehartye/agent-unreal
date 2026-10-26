@@ -42,7 +42,9 @@ const fatal = (log) => /Fatal error/.test(log ?? '');
 export const OBSERVATIONS = [
   { name: 'client activation had the granted spec', side: 'client', path: ['activation', 'had_spec'], expect: true, source: `${GA}Private/AbilitySystemComponent.cpp:1861`, why: 'ActivatableAbilities replicates to the owner (COND_ReplayOrOwner)' },
   { name: 'client TryActivateAbilityByClass returned', side: 'client', path: ['activation', 'try_activate_returned'], expect: true, source: `${GA}Public/Abilities/GameplayAbility.h:715`, why: 'NetExecutionPolicy LocalPredicted lets the client activate before the server answers' },
-  { name: 'client prediction ran at the call', side: 'client', path: ['activation', 'predicted_count_right_after_call'], expect: 1, source: `${GA}Public/Abilities/GameplayAbility.h:715`, why: 'a locally predicted activation runs ActivateAbility on the client first' },
+  { name: 'client actor info knows its controller before the call', side: 'client', path: ['phases', 'before', 'actor_info_locally_controlled'], expect: true, source: `${GA}Private/AbilitySystemComponent_Abilities.cpp:1645`, why: 'LocalPredicted activation needs IsLocallyControlled on the actor info' },
+  { name: 'client TryActivateAbilityByClass returned after InitAbilityActorInfo again', side: 'client', path: ['activation', 'try_activate_after_reinit'], expect: true, source: `${GA}Private/GameplayAbilityTypes.cpp (InitFromActor)`, why: 'InitFromActor walks the owner chain for the player controller; the owner has replicated by then' },
+  { name: 'client prediction ran at the call', side: 'client', path: ['activation', 'predicted_count_after_reinit'], expect: 1, source: `${GA}Public/Abilities/GameplayAbility.h:715`, why: 'a locally predicted activation runs ActivateAbility on the client first' },
   { name: 'client predicted activations after settling', side: 'client', path: ['phases', 'after', 'activations_predicted'], expect: 1, source: `${GA}Public/Abilities/GameplayAbility.h:715`, why: 'the same count, read again after the settle time' },
   { name: 'server authority activations', side: 'server', path: ['phases', 'after', 'activations_authority'], expect: 1, source: `${GA}Public/Abilities/GameplayAbility.h:715`, why: 'the client asks the server, which runs the ability with authority' },
   { name: 'server Energy base after the cost', side: 'server', path: ['phases', 'after', 'energy_base'], expect: 90, source: 'module/GasNative/GasNativeRep.cpp (UGasNativeRepCostEffect)', why: '100 minus the 10 Energy cost' },
@@ -89,8 +91,8 @@ export function evaluate({ build, server, client, serverLog = '', clientLog = ''
     !!server && !!client && !fatal(serverLog) && !fatal(clientLog),
     `server exit ${serverExit ?? 'killed or running'}, receipt ${server ? 'written' : 'missing'}${fatal(serverLog) ? ', fatal error in the log' : ''}; client exit ${clientExit ?? 'killed or running'}, receipt ${client ? 'written' : 'missing'}${fatal(clientLog) ? ', fatal error in the log' : ''}`);
   check('server is a dedicated server and the client joined', 'the server receipt says DedicatedServer and a joined client; the client receipt says Client',
-    server?.net_mode === 'DedicatedServer' && server?.client_joined === true && server?.player_count >= 1 && client?.net_mode === 'Client',
-    `server ${server?.net_mode}, joined ${server?.client_joined}, players ${server?.player_count}; client ${client?.net_mode}`);
+    server?.net_mode === 'DedicatedServer' && server?.client_joined === true && server?.player_count_at_after >= 1 && client?.net_mode === 'Client',
+    `server ${server?.net_mode}, joined ${server?.client_joined}, players ${server?.player_count_at_after}; client ${client?.net_mode}`);
   check('server grants and applies', 'on the server the player state\'s component is in Mixed mode, owned by the player state, holds the granted ability and the active buff, and Energy reads 105 (100 base plus 5)',
     joined?.has_authority === true && joined?.replication_mode === 'Mixed' && joined?.asc_owner_is_player_state === true && joined?.rep_ability_present === true
     && joined?.ability_count === 1 && joined?.effect_count === 1 && joined?.buff_tag === true && joined?.energy_current === 105 && joined?.energy_base === 100,

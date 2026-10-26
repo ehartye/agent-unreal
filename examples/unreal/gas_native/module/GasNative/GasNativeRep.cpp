@@ -21,6 +21,7 @@ namespace
 	// state's BeginPlay. The values leave room for the client to load the map after the server logs the join.
 	constexpr float ClientBeforeAt = 3.f;       // client: snapshot, then try the activation
 	constexpr float ClientSettleFor = 2.f;      // client: wait this long, snapshot again, write the receipt
+	constexpr float ServerAfterAt = 4.5f;       // server: snapshot the player state while the client (gone about 5 s after the join) is still connected
 	constexpr float ServerReceiptAt = 8.f;      // server: write the receipt
 	constexpr float ServerFallbackAt = 90.f;    // server: no client ever joined, write the receipt anyway
 
@@ -174,6 +175,8 @@ TSharedRef<FJsonObject> AGasNativeRepPlayerState::Snapshot() const
 	S->SetStringField(TEXT("replication_mode"), ReplicationModeName(Asc->ReplicationMode));
 	S->SetBoolField(TEXT("asc_owner_is_player_state"), Asc->GetOwnerActor() == this);
 	S->SetBoolField(TEXT("asc_avatar_is_player_state"), Asc->GetAvatarActor() == this);
+	S->SetBoolField(TEXT("actor_info_has_player_controller"), Asc->AbilityActorInfo.IsValid() && Asc->AbilityActorInfo->PlayerController.IsValid());
+	S->SetBoolField(TEXT("actor_info_locally_controlled"), Asc->AbilityActorInfo.IsValid() && Asc->AbilityActorInfo->IsLocallyControlled());
 
 	TArray<TSharedPtr<FJsonValue>> Abilities;
 	for (const FGameplayAbilitySpec& Spec : Asc->GetActivatableAbilities())
@@ -216,6 +219,16 @@ void AGasNativeRepPlayerState::ClientBefore()
 	if (bHasSpec) { bReturned = Asc->TryActivateAbilityByClass(UGasNativeRepAbility::StaticClass()); }
 	Activation->SetBoolField(TEXT("try_activate_returned"), bReturned);
 	Activation->SetNumberField(TEXT("predicted_count_right_after_call"), ActivationsPredicted);
+	if (bHasSpec && !bReturned)
+	{
+		// The actor info was filled in when the component initialised, before the player state's owner (the controller) had replicated,
+		// so it may not know the controller. Fill it in again and ask once more; both answers are recorded.
+		Asc->InitAbilityActorInfo(this, this);
+		Activation->SetBoolField(TEXT("reinit_actor_info_locally_controlled"), Asc->AbilityActorInfo.IsValid() && Asc->AbilityActorInfo->IsLocallyControlled());
+		const bool bAgain = Asc->TryActivateAbilityByClass(UGasNativeRepAbility::StaticClass());
+		Activation->SetBoolField(TEXT("try_activate_after_reinit"), bAgain);
+		Activation->SetNumberField(TEXT("predicted_count_after_reinit"), ActivationsPredicted);
+	}
 	ClientReceipt->SetObjectField(TEXT("activation"), Activation);
 
 	UE_LOG(LogGasNativeRep, Display, TEXT("GasNativeRep: client activation called, had spec %d, returned %d"), bHasSpec, bReturned);
@@ -262,6 +275,8 @@ void AGasNativeRepGameMode::PostLogin(APlayerController* NewPlayer)
 	Joined = State->Snapshot();
 	UE_LOG(LogGasNativeRep, Display, TEXT("GasNativeRep: client joined, ability granted and buff applied"));
 	GetWorldTimerManager().ClearTimer(FallbackTimer);
+	JoinedState = State;
+	GetWorldTimerManager().SetTimer(AfterTimer, FTimerDelegate::CreateLambda([this]() { if (JoinedState.IsValid()) { After = JoinedState->Snapshot(); AfterPlayerCount = GetNumPlayers(); } }), ServerAfterAt, false);
 	GetWorldTimerManager().SetTimer(ReceiptTimer, FTimerDelegate::CreateLambda([this]() { WriteServerReceipt(true); }), ServerReceiptAt, false);
 }
 
@@ -272,20 +287,12 @@ void AGasNativeRepGameMode::WriteServerReceipt(bool bClientJoined)
 	Root->SetStringField(TEXT("net_mode"), NetModeName(GetNetMode()));
 	Root->SetBoolField(TEXT("client_joined"), bClientJoined);
 	Root->SetNumberField(TEXT("player_count"), GetNumPlayers());
+	Root->SetNumberField(TEXT("player_count_at_after"), AfterPlayerCount);
 	TSharedRef<FJsonObject> Phases = MakeShared<FJsonObject>();
 	Root->SetObjectField(TEXT("phases"), Phases);
 	if (Joined.IsValid()) { Phases->SetObjectField(TEXT("joined"), Joined); }
-	if (GameState)
-	{
-		for (APlayerState* State : GameState->PlayerArray)
-		{
-			if (const AGasNativeRepPlayerState* Ours = Cast<AGasNativeRepPlayerState>(State))
-			{
-				Phases->SetObjectField(TEXT("after"), Ours->Snapshot());
-				break;
-			}
-		}
-	}
+	// The client has left by now; the "after" snapshot was taken while it was still connected.
+	if (After.IsValid()) { Phases->SetObjectField(TEXT("after"), After); }
 	WriteReceipt(Root);
 	FPlatformMisc::RequestExit(false);
 }

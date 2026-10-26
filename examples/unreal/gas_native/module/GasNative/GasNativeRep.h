@@ -124,7 +124,11 @@ private:
 	void WriteServerReceipt(bool bClientJoined);
 
 	FTimerHandle ReceiptTimer;
+	FTimerHandle AfterTimer;
 	FTimerHandle FallbackTimer;
 	TSharedPtr<FJsonObject> Joined;
+	TSharedPtr<FJsonObject> After;
+	int32 AfterPlayerCount = 0;
+	TWeakObjectPtr<class AGasNativeRepPlayerState> JoinedState;
 	bool bClientSeen = false;
 };

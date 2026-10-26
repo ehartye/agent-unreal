@@ -7,7 +7,7 @@ import { evaluate, summarize, serverArguments, clientArguments, observationRows,
 
 const snapshot = (over) => ({
   net_mode: 'DedicatedServer', local_role: 'Authority', remote_role: 'SimulatedProxy', has_authority: true, has_player_controller: true, is_local_controller: false,
-  asc_replicates: true, replication_mode: 'Mixed', asc_owner_is_player_state: true, asc_avatar_is_player_state: true,
+  asc_replicates: true, replication_mode: 'Mixed', asc_owner_is_player_state: true, asc_avatar_is_player_state: true, actor_info_has_player_controller: false, actor_info_locally_controlled: false,
   ability_count: 1, abilities: ['GasNativeRepAbility'], rep_ability_present: true, effect_count: 1, buff_tag: true,
   attribute_set_found: true, energy_current: 105, energy_base: 100, activations_authority: 0, activations_predicted: 0, ...over,
 });
@@ -18,7 +18,7 @@ const good = () => ({
   serverLog: 'LogGasNativeRep: Display: GasNativeRep: server ready',
   clientLog: 'LogGasNativeRep: Display: GasNativeRep: client activation called',
   server: {
-    role: 'server', net_mode: 'DedicatedServer', client_joined: true, player_count: 1,
+    role: 'server', net_mode: 'DedicatedServer', client_joined: true, player_count: 0, player_count_at_after: 1,
     phases: {
       joined: snapshot({}),
       after: snapshot({ energy_current: 95, energy_base: 90, activations_authority: 1 }),
@@ -30,7 +30,7 @@ const good = () => ({
       before: snapshot({ net_mode: 'Client', local_role: 'SimulatedProxy', remote_role: 'Authority', has_authority: false, is_local_controller: true }),
       after: snapshot({ net_mode: 'Client', local_role: 'SimulatedProxy', remote_role: 'Authority', has_authority: false, is_local_controller: true, energy_current: 95, energy_base: 90, activations_predicted: 1 }),
     },
-    activation: { had_spec: true, try_activate_returned: true, predicted_count_right_after_call: 1 },
+    activation: { had_spec: true, try_activate_returned: false, predicted_count_right_after_call: 0, reinit_actor_info_locally_controlled: true, try_activate_after_reinit: true, predicted_count_after_reinit: 1 },
   },
   pieRequested: false,
 });
@@ -86,7 +86,7 @@ test('exit codes are reported, not judged', () => {
 test('a server that is not dedicated, or a client that never joined, fails the join check', () => {
   const a = good(); a.server.net_mode = 'ListenServer';
   assert.deepEqual(failing(a), ['server is a dedicated server and the client joined']);
-  const b = good(); b.server.client_joined = false; b.server.player_count = 0;
+  const b = good(); b.server.client_joined = false; b.server.player_count_at_after = 0;
   assert.deepEqual(failing(b), ['server is a dedicated server and the client joined']);
 });
 
