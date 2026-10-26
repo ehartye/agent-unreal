@@ -3,11 +3,8 @@
 #include "GasNativeAttributeSet.h"
 #include "GasNativeTags.h"
 
-void UGasNativeEffectBase::MakeTimed(float Seconds, const FGameplayTag& GrantedTag)
+void UGasNativeEffectBase::AddGrantedTags(const FGameplayTag& GrantedTag)
 {
-	DurationPolicy = EGameplayEffectDurationType::HasDuration;
-	DurationMagnitude = FGameplayEffectModifierMagnitude(FScalableFloat(Seconds));
-
 	// In a constructor a component is a default subobject: CreateDefaultSubobject, then add it to GEComponents by hand.
 	// AddComponent and FindOrAddComponent call NewObject with no name, which the engine refuses inside a constructor.
 	UTargetTagsGameplayEffectComponent* Granted = CreateDefaultSubobject<UTargetTagsGameplayEffectComponent>(TEXT("GrantedTags"));
@@ -16,6 +13,19 @@ void UGasNativeEffectBase::MakeTimed(float Seconds, const FGameplayTag& GrantedT
 	FInheritedTagContainer Mods;
 	Mods.AddTag(GrantedTag);
 	Granted->SetAndApplyTargetTagChanges(Mods);
+}
+
+void UGasNativeEffectBase::MakeTimed(float Seconds, const FGameplayTag& GrantedTag)
+{
+	DurationPolicy = EGameplayEffectDurationType::HasDuration;
+	DurationMagnitude = FGameplayEffectModifierMagnitude(FScalableFloat(Seconds));
+	AddGrantedTags(GrantedTag);
+}
+
+void UGasNativeEffectBase::MakeInfinite(const FGameplayTag& GrantedTag)
+{
+	DurationPolicy = EGameplayEffectDurationType::Infinite;
+	AddGrantedTags(GrantedTag);
 }
 
 UGasNativeCostEffect::UGasNativeCostEffect()
@@ -31,4 +41,9 @@ UGasNativeCostEffect::UGasNativeCostEffect()
 UGasNativeCooldownEffect::UGasNativeCooldownEffect()
 {
 	MakeTimed(2.f, Tag_GasNative_Cooldown_Pulse.GetTag());
+}
+
+UGasNativeBonusEffect::UGasNativeBonusEffect()
+{
+	MakeInfinite(Tag_GasNative_Case_Bonus.GetTag());
 }
