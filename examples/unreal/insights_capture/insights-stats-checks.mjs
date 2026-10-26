@@ -1,12 +1,11 @@
 // Judges what insights_stats.mjs collects. Pure functions, no Unreal and no dependencies.
 // The stat help lines copy the registration text in Engine/Source/Runtime/Engine/Private/UnrealEngine.cpp (EngineStats); the Memory Insights export is
-// a CSV whose header names the requested columns (MemoryExporter.cpp). No engine run has produced either yet, so the node test builds them by hand
-// and the first run confirms their shape (see README.md).
+// a CSV whose header names the requested columns (MemoryExporter.cpp). A 5.8.2 run confirmed both shapes; the node test builds them by hand
 //   stats   = { exit, report, log, uestats: [file names under Saved/Profiling/UnrealStats] }
 //   memory  = { exit, report, insightsLog, exports: { active, leaks, limited } (CSV text or ''), traceBytes }  a trace started with -trace=default,memory
 //   control = the same shape for a trace started with -trace=default only
 
-/** Why `stat startfile` is expected to write nothing in a default 5.8 build, from the install's source. */
+/** Why `stat startfile` writes nothing in the installed 5.8.2 build (observed), from the install's source. */
 export const STARTFILE_SOURCE_NOTE = 'Engine/Source/Runtime/Core/Private/Stats/StatsCommand.cpp compiles the startfile and stopfile commands only when UE_ENABLE_STATS_FILE_DEPRECATED_IN_5_8 is 1, and Engine/Source/Runtime/Core/Public/Stats/StatsFile.h defaults it to 0';
 
 /** Parse CSV text (a byte order mark is tolerated; quoted fields may hold commas). Returns { header, rows } or undefined for empty text. */
@@ -40,11 +39,13 @@ export function evaluate({ stats, memory, control, options = {} }) {
   const fps = hasLine(log, /\bFPS\b.*Display average FPS/i);
   add('stat help lists stat unit and stat fps', '"stat help" names the Unit and FPS stat commands with their descriptions, so both are registered in this build', unit && fps, `unit ${unit}, fps ${fps}`);
   add('a bare stat prints the stat help', 'an empty stat command prints "Empty stat command!" and the brief list of stat commands', hasLine(log, /Empty stat command!/) && hasLine(log, /stat dumpframe/), `header ${hasLine(log, /Empty stat command!/)}, list ${hasLine(log, /stat dumpframe/)}`);
-  const listsFile = hasLine(log, /stat startfile - starts dumping a capture/) && hasLine(log, /stat stopfile - stops dumping a capture/);
+  // Observed on 5.8.2 (an installed Launcher build): the commands are compiled out, so neither the help nor the log mentions them and no file is written.
+  const listsFile = hasLine(log, /stat startfile\b/i) || hasLine(log, /stat stopfile\b/i);
   const files = stats?.uestats ?? [];
-  add('stat startfile and stopfile write a .uestats file', '"stat startfile" then "stat stopfile" leaves a .uestats file under Saved/Profiling/UnrealStats',
-    files.length > 0 && hasLine(log, /Wrote stats file/),
-    files.length ? `files ${JSON.stringify(files)}` : `no .uestats file; help lists the commands ${listsFile}; ${STARTFILE_SOURCE_NOTE}`);
+  const wroteFile = files.length > 0 || hasLine(log, /Wrote stats file/);
+  add('stat startfile and stopfile are compiled out of the installed build', '"stat startfile" and "stat stopfile" are absent from the stat help and write no .uestats file under Saved/Profiling/UnrealStats',
+    !!stats?.report && !listsFile && !wroteFile,
+    `help lists the commands ${listsFile}; .uestats files ${JSON.stringify(files)}; ${STARTFILE_SOURCE_NOTE}`);
   add('observation: the on-screen readout', 'stat unit (Frame, Game, Draw, GPU, RHIT) and stat fps draw on a viewport; a headless run toggles them and cannot read them, so the bottleneck rule of thumb is not exercised here', true,
     'read the numbers in a rendered session; nothing in this run judges them', true);
 
@@ -54,12 +55,16 @@ export function evaluate({ stats, memory, control, options = {} }) {
     active ? `${active.length} allocations alive at LeakC; trace ${m.traceBytes ?? 0} bytes` : `no usable export; Insights log errors ${(String(m?.insightsLog ?? '').match(/Error:/g) ?? []).length}`);
   const leaks = columnNumbers(m?.exports?.leaks, 'Size') ?? [];
   const limited = columnNumbers(m?.exports?.limited, 'Size') ?? [];
-  const heldFloor = held * 4;
-  const freedFloor = freed * 4;
-  add('Memory Leaks finds the held allocation and not the freed one', `the AaBCf query returns an allocation of at least ${heldFloor} bytes (the held array) and none of ${freedFloor} bytes or more (the array freed before LeakC)`,
-    leaks.some((s) => s >= heldFloor && s < freedFloor) && !leaks.some((s) => s >= freedFloor), `${leaks.length} rows, largest ${leaks.length ? Math.max(...leaks) : 'none'}`);
-  add('Limited Lifetime finds the freed allocation', `the AaBfC query returns an allocation of at least ${freedFloor} bytes (the array freed between LeakB and LeakC)`,
-    limited.some((s) => s >= freedFloor), `${limited.length} rows, largest ${limited.length ? Math.max(...limited) : 'none'}`);
+  // A float array holds 4 bytes per element and its allocation is recorded at exactly that size (observed: 1200000 and 6000000). Other engine
+  // allocations of several megabytes (an 8388608-byte arena, for one) also start and survive inside the window, so a size floor is not a
+  // discriminator: the checks look for the two exact sizes.
+  const heldBytes = held * 4;
+  const freedBytes = freed * 4;
+  const largest = (sizes) => (sizes.length ? `largest ${Math.max(...sizes)}` : 'none');
+  add('Memory Leaks finds the held allocation and not the freed one', `the AaBCf query returns the ${heldBytes}-byte allocation (the held array) and no ${freedBytes}-byte one (the array freed before LeakC)`,
+    leaks.includes(heldBytes) && !leaks.includes(freedBytes), `${leaks.length} rows, held size ${leaks.includes(heldBytes)}, freed size ${leaks.includes(freedBytes)}, ${largest(leaks)}`);
+  add('Limited Lifetime finds the freed allocation', `the AaBfC query returns the ${freedBytes}-byte allocation (the array freed between LeakB and LeakC)`,
+    limited.includes(freedBytes), `${limited.length} rows, freed size ${limited.includes(freedBytes)}, ${largest(limited)}`);
   const c = control;
   const controlActive = columnNumbers(c?.exports?.active, 'Size');
   add('a trace without the memory channel answers nothing', 'the same query on a trace started with -trace=default (no memory channel) returns no allocations',

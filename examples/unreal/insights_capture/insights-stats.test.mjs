@@ -1,6 +1,5 @@
 // node --test examples/unreal/insights_capture/insights-stats.test.mjs  (no Unreal, no dependencies)
-// The stat help lines copy the registration text in the 5.8.2 install's UnrealEngine.cpp and StatsCommand.cpp. The CSV exports are an assumption built from
-// MemoryExporter.cpp (a header naming the requested columns, one row per allocation, Size in bytes): the first run confirms their shape (see README.md).
+// The stat help lines copy the registration text in the 5.8.2 install's UnrealEngine.cpp and StatsCommand.cpp. The CSV exports follow what the 5.8.2 run wrote// (a header naming the requested columns, one row per allocation, Size in bytes, EndTime +inf while alive). Each test changes one fact and expects the matching check to change.
 // Each test changes one fact and expects the matching check to change.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -19,8 +18,8 @@ const statsReport = { mode: 'stats', ticks: 51, commands: Array.from({ length: 8
 const csv = (sizes) => ['Size,StartTime,EndTime', ...sizes.map((s) => `${s},1.5,-1`)].join('\n');
 const traceRun = (exports, extra = {}) => ({ exit: 0, report: { mode: 'memory' }, insightsLog: 'LogMemoryProfiler: Log: SUCCESS! Exported', traceBytes: 900000000, exports, ...extra });
 const good = () => ({
-  stats: { exit: 0, report: statsReport, log: `${helpLog}\n${startfileLines}`, uestats: ['a.uestats'] },
-  memory: traceRun({ active: csv([64, 1200000, 4096]), leaks: csv([1200000 + 240000, 512]), limited: csv([6000000 + 1000, 256]) }),
+  stats: { exit: 0, report: statsReport, log: helpLog, uestats: [] },
+  memory: traceRun({ active: csv([64, 1200000, 4096]), leaks: csv([8388608, 1200000, 512]), limited: csv([6291456, 6000000, 256]) }),
   control: { exit: 0, report: { mode: 'memory' }, insightsLog: 'LogMemoryExporter: Error: AllocationsProvider exists but not initialized', traceBytes: 40000000, exports: { active: '', leaks: '', limited: '' } },
   options: { heldElements: HELD, freedElements: FREED },
 });
@@ -45,29 +44,33 @@ test('parseCsv and columnNumbers read the exported table', () => {
 
 test('missing runs fail the checks that need them instead of throwing', () => {
   const none = evaluate({});
-  for (const name of ['the stats run finished', 'stat help lists stat unit and stat fps', 'memory trace answers Active Alloc', 'Memory Leaks finds the held allocation and not the freed one']) {
+  for (const name of ['the stats run finished', 'stat startfile and stopfile are compiled out of the installed build', 'stat help lists stat unit and stat fps', 'memory trace answers Active Alloc', 'Memory Leaks finds the held allocation and not the freed one']) {
     assert.ok(failing(none).includes(name), name);
   }
 });
 
-test('stat startfile writing nothing fails its own check and names the source reason', () => {
-  const run = good();
-  run.stats = { ...run.stats, uestats: [], log: helpLog };
-  const checks = evaluate(run);
-  assert.deepEqual(failing(checks), ['stat startfile and stopfile write a .uestats file']);
-  assert.ok(checks.find((c) => c.name === 'stat startfile and stopfile write a .uestats file').detail.includes(STARTFILE_SOURCE_NOTE));
+test('a build that writes a stats file, or lists the commands, fails the compiled-out check and the detail names the source reason', () => {
+  const name = 'stat startfile and stopfile are compiled out of the installed build';
+  const written = good();
+  written.stats = { ...written.stats, uestats: ['a.uestats'], log: `${helpLog}\n${startfileLines}` };
+  const checks = evaluate(written);
+  assert.deepEqual(failing(checks), [name]);
+  assert.ok(checks.find((c) => c.name === name).detail.includes(STARTFILE_SOURCE_NOTE));
+  const listed = good();
+  listed.stats = { ...listed.stats, log: `${helpLog}\nLogConsoleResponse: Display: stat startfile - starts dumping a capture` };
+  assert.deepEqual(failing(evaluate(listed)), [name]);
 });
 
 test('each fact turns its own check red', () => {
   const withStats = (patch) => { const g = good(); g.stats = { ...g.stats, ...patch }; return evaluate(g); };
-  assert.deepEqual(failing(withStats({ report: undefined })), ['the stats run finished']);
-  assert.deepEqual(failing(withStats({ log: startfileLines })), ['stat help lists stat unit and stat fps', 'a bare stat prints the stat help']);
-  assert.deepEqual(failing(withStats({ log: helpLog.replace('FPS: Display average FPS.', '') + startfileLines })), ['stat help lists stat unit and stat fps']);
+  assert.deepEqual(failing(withStats({ report: undefined })), ['the stats run finished', 'stat startfile and stopfile are compiled out of the installed build']);
+  assert.deepEqual(failing(withStats({ log: '' })), ['stat help lists stat unit and stat fps', 'a bare stat prints the stat help']);
+  assert.deepEqual(failing(withStats({ log: helpLog.replace('FPS: Display average FPS.', '') })), ['stat help lists stat unit and stat fps']);
   const withMemory = (exports, patch = {}) => { const g = good(); g.memory = traceRun({ ...g.memory.exports, ...exports }, patch); return evaluate(g); };
   assert.deepEqual(failing(withMemory({ active: '' })), ['memory trace answers Active Alloc']);
-  assert.deepEqual(failing(withMemory({ leaks: csv([6000000 + 8]) })), ['Memory Leaks finds the held allocation and not the freed one']);   // the freed array is reported as a leak
+  assert.deepEqual(failing(withMemory({ leaks: csv([1200000, 6000000]) })), ['Memory Leaks finds the held allocation and not the freed one']);   // the freed array is reported as a leak
   assert.deepEqual(failing(withMemory({ leaks: csv([100, 200]) })), ['Memory Leaks finds the held allocation and not the freed one']);        // the held array is missing
-  assert.deepEqual(failing(withMemory({ limited: csv([300000]) })), ['Limited Lifetime finds the freed allocation']);
+  assert.deepEqual(failing(withMemory({ limited: csv([300000, 6291456]) })), ['Limited Lifetime finds the freed allocation']);
   const g = good();
   g.control = { ...g.control, exports: { active: csv([64, 128]), leaks: '', limited: '' } };
   assert.deepEqual(failing(evaluate(g)), ['a trace without the memory channel answers nothing']);
