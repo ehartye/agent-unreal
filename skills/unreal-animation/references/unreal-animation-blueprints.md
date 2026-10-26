@@ -35,7 +35,7 @@ Animation Blueprints are part of the engine; no plugin is needed. Plugins:
 | Task | Route | What to call |
 |---|---|---|
 | AnimGraph nodes: Slot, Sequence Player, Blend Space Player, State Machine | Python | `unreal.BlueprintGraphEditor`, `compile_blueprint` (Script it) |
-| States, transitions, Blend Space resampling | C++ editor module | `examples/unreal/anim_bridge/` |
+| States, transitions, Blend Space resampling, AnimDynamics, Two Bone IK and other nodes | C++ editor module | [AnimGraph from C++](unreal-animgraph-from-cpp.md); `examples/unreal/anim_bridge/` |
 | Create the asset | Python; editor UI | AssetTools `create_asset` (see `examples/unreal/build_scene.py`) with `AnimBlueprintFactory` (`ParentClass`, `TargetSkeleton`, `PreviewSkeletalMesh`, `bTemplate`) or `AnimLayerInterfaceFactory` [tested] |
 | Edit sequence and montage data | Python | `unreal.AnimationLibrary` (script name of `UAnimationBlueprintLibrary` in the install): `add_animation_notify_event`, `add_animation_notify_state_event`, `add_animation_notify_track`, `get_montage_slot_names`, curve, sync-marker and root-motion setters |
 | Play montages at runtime | Blueprint; C++ | `Montage_Play`, `Montage_Stop`, `Montage_JumpToSection`, `PlaySlotAnimationAsDynamicMontage(Asset, SlotNodeName, ...)` on `AnimInstance` (install header); Epic's Play Montage node |
@@ -48,9 +48,7 @@ Animation Blueprints are part of the engine; no plugin is needed. Plugins:
 
 - [tested] Python builds a slot-only Animation Blueprint: `AnimBlueprintFactory`, then `BlueprintGraphEditor.get_graph_editor(graph).create_node_from_name("Animation|Montage|Slot'DefaultSlot'", ...)`, `try_create_connection` to the Root pin and `compile_blueprint` (`BS_UP_TO_DATE`, no errors). `list_available_nodes([])` lists other names, such as `Animation|StateMachines|StateMachine` and `Animation|BlendSpaces|BlendspacePlayer`.
 - [tested] A `UAnimInstance` subclass whose `UFUNCTION` calls `PlaySlotAnimationAsDynamicMontage` (`AnimInstance.h` line 590) played two clips through that slot in Play-In-Editor; the keyed bone moved 80 cm and returned to rest when the montage ended.
-- [tested] Python cannot add states or transitions: `AnimationGraph.Nodes` is protected and a state machine graph offers only comment actions. The C++ bridge's `AddState` and `AddTransition` built them.
-- [tested] Python writes a Blend Space (`blend_parameters`, `sample_data`), but the player holds the reference pose until C++ `ResampleData` runs (`BlendSpace.h` line 660); the bridge's `ResampleBlendSpace` fixes it.
-- Details: [anim_bridge README](../../../examples/unreal/anim_bridge/README.md). Not verified: a state machine played at runtime, 2D Blend Spaces.
+- [tested] Python cannot add states or transitions, and a Blend Space it writes plays the reference pose until C++ resamples it; the bridge, other AnimGraph nodes and foot-planting IK are in [AnimGraph from C++](unreal-animgraph-from-cpp.md).
 
 ## Workflow
 
