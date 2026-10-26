@@ -1,6 +1,6 @@
 // Judges what chaos_break.mjs collects. Pure functions, no Unreal and no dependencies.
-// The report shapes are those ChaosBreakBuildCommandlet.cpp and ChaosBreakRunSubsystem.cpp write. No engine run has produced one yet,
-// so the node test builds them by hand; the first run confirms the shape (see README.md).
+// The report shapes are those ChaosBreakBuildCommandlet.cpp and ChaosBreakRunSubsystem.cpp write; the node test builds them by hand
+// in the shape an engine run produced (see README.md).
 //   buildReport = JSON of the commandlet run (variants built from a static mesh).
 //   runs        = { verbose, silent, exec } each { exit, report, log } for a game process running the break scenarios.
 
@@ -82,7 +82,7 @@ export function evaluate({ build, buildReport, runs = {}, options = {} }) {
 
   const idle = find(vr, 'healthy_idle');
   add('the control does not break', 'the same asset with no strain applied produces no break event during the run',
-    !!idle && idle.spawned && idle.breaksFinal === 0, idle ? `${idle.breaksFinal} break events` : 'scenario missing');
+    !!idle && idle.spawned && idle.breaksFinal === 0, idle ? `${idle.breaksFinal} break events${idle.breaksFinal > 0 ? `, the first at run second ${idle.firstBreakSeconds} at height ${idle.firstBreakZ} cm with vertical velocity ${idle.firstBreakVelocityZ} cm/s` : ''}` : 'scenario missing');
 
   const noHullRun = find(vr, 'nohull_strain');
   const noHullVerdict = judgeBreakRun(noHullRun, verbose?.log);

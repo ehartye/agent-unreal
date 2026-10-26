@@ -20,7 +20,7 @@ class UGeometryCollectionComponent;
  *   action: none (control, nothing is applied), strain (ApplyExternalStrain, then CrumbleActiveClusters), noproxy (destroy the physics
  *           state first, then the same calls: they are silent no-ops without a physics proxy).
  *   spawn:  deferred (SpawnActorDeferred, SetRestCollection, FinishSpawning) or late (FinishSpawning, then SetRestCollection).
- * Every scenario is spawned high above the floor, so an intact one only falls while the run lasts.
+ * Every scenario is spawned far above the floor, so an intact one is still falling when the run ends.
  */
 UCLASS()
 class UChaosBreakRunSubsystem : public UGameInstanceSubsystem
@@ -45,6 +45,10 @@ private:
 		int32 NumTransforms = 0;
 		int32 BreaksAfterStrain = 0;
 		int32 BreaksFinal = 0;
+		float FirstBreakSeconds = -1.f;   // run time of the first break event, -1 when none
+		float FirstBreakZ = 0.f;          // world height of the first breaking piece (centimetres)
+		float FirstBreakVelocityZ = 0.f;  // vertical velocity of the first breaking piece (cm/s)
+		bool bFirstBreakFromCrumble = false;
 		TSet<int32> DistinctIndices;
 		TWeakObjectPtr<AGeometryCollectionActor> Actor;
 	};
@@ -60,7 +64,7 @@ private:
 
 	TArray<FScenario> Scenarios;
 	FString ReportPath;
-	FDelegateHandle TickHandle;
+	FTSTicker::FDelegateHandle TickHandle;
 	float RunSeconds = 0.f;
 	float PhaseStart = 0.f;
 	int32 Phase = 0;
