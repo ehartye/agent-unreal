@@ -4,7 +4,7 @@ Same method as the other scenes in [Example scenes](unreal-example-scenes.md): e
 
 ## Content and tooling scenes (`niagara_toolsets/`, `editor_python_friction/`, `constructor_locks/`, `anim_bridge/`, `contention/`)
 
-- [tested] [`niagara_toolsets`](../../../examples/unreal/niagara_toolsets/README.md) (25 checks, counted from the `check(` calls in `nts-validate-checks.mjs`; the README reports 25 of 25 on 5.8.2): create a system, edit an input, set the material, delete and recreate, add a renderer. Backs [Niagara toolsets](../../unreal-effects/references/unreal-niagara-toolsets.md).
+- [tested] [`niagara_toolsets`](../../../examples/unreal/niagara_toolsets/README.md) (25 checks, counted from the `check(` calls in `nts-validate-checks.mjs`; passed on 5.8.2 when the 25 checks were last run): create a system, edit an input, set the material, delete and recreate, add a renderer. Backs [Niagara toolsets](../../unreal-effects/references/unreal-niagara-toolsets.md).
 - [tested] [`editor_python_friction`](../../../examples/unreal/editor_python_friction/README.md) (8): `unreal.Box` construction and the benign Interchange alpha-mode log line.
 - [tested] [`constructor_locks`](../../../examples/unreal/constructor_locks/README.md) (11): constructor-loaded asset files are locked while the editor is open. Backs [Content pipeline](../../unreal-native/references/unreal-native-content-pipeline.md).
 - [tested] [`anim_bridge`](../../../examples/unreal/anim_bridge/README.md) (22): slot-only Animation Blueprints from Python and C++; states, transitions and blend-space resampling need C++. Backs [Animation Blueprints](../../unreal-animation/references/unreal-animation-blueprints.md).
