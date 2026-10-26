@@ -43,8 +43,8 @@ export const OBSERVATIONS = [
   { name: 'client activation had the granted spec', side: 'client', path: ['activation', 'had_spec'], expect: true, source: `${GA}Private/AbilitySystemComponent.cpp:1861`, why: 'ActivatableAbilities replicates to the owner (COND_ReplayOrOwner)' },
   { name: 'client TryActivateAbilityByClass returned', side: 'client', path: ['activation', 'try_activate_returned'], expect: true, source: `${GA}Public/Abilities/GameplayAbility.h:715`, why: 'NetExecutionPolicy LocalPredicted lets the client activate before the server answers' },
   { name: 'client actor info knows its controller before the call', side: 'client', path: ['phases', 'before', 'actor_info_locally_controlled'], expect: true, source: `${GA}Private/AbilitySystemComponent_Abilities.cpp:1645`, why: 'LocalPredicted activation needs IsLocallyControlled on the actor info' },
-  { name: 'client TryActivateAbilityByClass returned after InitAbilityActorInfo with the pawn as avatar', side: 'client', path: ['activation', 'try_activate_after_reinit'], expect: true, source: `${GA}Private/Abilities/GameplayAbility.cpp:463`, why: 'CanActivateAbility refuses when the avatar actor is a simulated proxy; a player state is one on its owning client, a pawn is an autonomous proxy' },
-  { name: 'client prediction ran at the call', side: 'client', path: ['activation', 'predicted_count_after_reinit'], expect: 1, source: `${GA}Public/Abilities/GameplayAbility.h:715`, why: 'a locally predicted activation runs ActivateAbility on the client first' },
+  { name: 'client TryActivateAbilityByClass returned after InitAbilityActorInfo with the pawn as avatar', side: 'client', path: ['activation', 'try_activate_after_reinit'], optional: true, expect: true, source: `${GA}Private/Abilities/GameplayAbility.cpp:463`, why: 'CanActivateAbility refuses when the avatar actor is a simulated proxy; a player state is one on its owning client, a pawn is an autonomous proxy' },
+  { name: 'client prediction ran at the call', side: 'client', path: ['activation', 'predicted_count_after_reinit'], optional: true, expect: 1, source: `${GA}Public/Abilities/GameplayAbility.h:715`, why: 'a locally predicted activation runs ActivateAbility on the client first' },
   { name: 'client predicted activations after settling', side: 'client', path: ['phases', 'after', 'activations_predicted'], expect: 1, source: `${GA}Public/Abilities/GameplayAbility.h:715`, why: 'the same count, read again after the settle time' },
   { name: 'server authority activations', side: 'server', path: ['phases', 'after', 'activations_authority'], expect: 1, source: `${GA}Public/Abilities/GameplayAbility.h:715`, why: 'the client asks the server, which runs the ability with authority' },
   { name: 'server Energy base after the cost', side: 'server', path: ['phases', 'after', 'energy_base'], expect: 90, source: 'module/GasNative/GasNativeRep.cpp (UGasNativeRepCostEffect)', why: '100 minus the 10 Energy cost' },
@@ -70,7 +70,7 @@ export function observationRows({ server, client }) {
   return OBSERVATIONS.map((o) => {
     const receipt = o.side === 'server' ? server : client;
     const observed = dig(receipt, o.path);
-    return { name: o.name, side: o.side, observed, expect: o.expect, matches: 'expect' in o ? observed === o.expect : undefined, source: o.source, why: o.why };
+    return { name: o.name, side: o.side, optional: !!o.optional, observed, expect: o.expect, matches: 'expect' in o ? observed === o.expect : undefined, source: o.source, why: o.why };
   });
 }
 
@@ -114,7 +114,7 @@ export function evaluate({ build, server, client, serverLog = '', clientLog = ''
     `client ${after?.energy_current}/${after?.energy_base}; server ${serverAfter?.energy_current}/${serverAfter?.energy_base}`);
   const rows = observationRows({ server, client });
   check('client activation recorded (observe)', 'the receipts hold every reading of the client-side activation; the outcome is printed against the source-derived expectation and not asserted',
-    rows.every((r) => r.observed !== undefined), `${rows.filter((r) => r.observed !== undefined).length} of ${rows.length} readings present; ${rows.filter((r) => r.matches === true).length} of ${rows.filter((r) => r.matches !== undefined).length} match the expectation`);
+    rows.every((r) => r.observed !== undefined || r.optional), `${rows.filter((r) => r.observed !== undefined).length} of ${rows.length} readings present (the re-initialised activation is optional: it is recorded only when the first call is refused); ${rows.filter((r) => r.matches === true).length} of ${rows.filter((r) => r.matches !== undefined).length} match the expectation`);
   if (pieRequested) {
     check('PIE settings read back (observe)', 'Python reads LevelEditorPlaySettings without starting Play In Editor; every value is printed and none is asserted',
       !!pie && typeof pie.class_found === 'boolean' && typeof pie.reads === 'object' && pie.reads !== null, pie ? `class found ${pie.class_found}; ${Object.keys(pie.reads ?? {}).length} properties read` : 'no read-back report');
