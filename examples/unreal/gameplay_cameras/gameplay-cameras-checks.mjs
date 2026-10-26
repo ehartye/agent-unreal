@@ -7,7 +7,7 @@
 //   component - the pawn's component runs its own camera system and drives a child camera component; the manager is the stock one.
 //   stock     - two camera actors and the stock view-target blend, in normal time and in a world held at 0.0001 of real time.
 //
-// Report shape (assumed until a first run; see the README): every key below is a snapshot written by CameraProbeGame.cpp Snapshot():
+// Report shape (confirmed by runs on 5.8.2; see the README): every key below is a snapshot written by CameraProbeGame.cpp Snapshot():
 //   { label, frame, world_time, real_time, time_dilation, eye[3], rotation[3], fov, view_target, pending_target, blend_time_to_go,
 //     pawn[3], distance_to_pawn }, plus the extra fields named in the checks. A view target that is not set reads "None".
 
@@ -33,10 +33,16 @@ export function elapsed(start, end) {
   return { real, world };
 }
 
+// An error or fatal error, or any camera-system warning except the one the camera manager's null context raises (its own check
+// below counts it): see HITCH_WARNING.
+const HITCH_WARNING = /LogCameraSystem: Warning: Camera rig '([^']*)' may experience a hitch because its initial result isn't valid\./g;
+const BAD_LOG = /Fatal error|LogCameraSystem: Error|LogCameraSystem: Warning: (?!Camera rig '[^']*' may experience a hitch because its initial result isn't valid\.)/;
+const hitchWarnings = (log) => [...(log ?? '').matchAll(HITCH_WARNING)].map((m) => m[1]);
+
 const sessionRan = (label, s) => {
   const r = s?.report;
   const errors = r?.errors ?? [];
-  const bad = /Fatal error|LogCameraSystem: (Error|Warning)/.exec(s?.log ?? '');
+  const bad = BAD_LOG.exec(s?.log ?? '');
   return {
     name: `${label}: session ran`,
     claim: 'the game process started on the engine map, ran the scenario with a fixed 30 fps time step, wrote the report and the log has no camera-system error or warning',
@@ -64,6 +70,16 @@ function rigChecks(label, s) {
       : setup.camera_manager_class === 'PlayerCameraManager' && setup.standalone_camera_system === true && setup.has_evaluation_context === true,
     detail: `manager class ${setup.camera_manager_class}; standalone ${setup.standalone_camera_system}; evaluation context ${setup.has_evaluation_context}`,
   });
+  const hitches = hitchWarnings(s?.log);
+  const sprintHitches = hitches.filter((n) => n === 'ProbeSprintRig').length;
+  checks.push({
+    name: manager ? 'manager: a modifier started on the manager warns once per start' : 'component: a modifier started on the component does not warn',
+    claim: manager
+      ? 'StartGlobalCameraModifierRig on AGameplayCamerasPlayerCameraManager runs the rig in the manager null context, whose initial result is never marked valid (EnsureNullContext), so the blend stack logs a LogCameraSystem warning that the rig may experience a hitch because its initial result is not valid, once for each of the two starts; the view still blends (the other checks)'
+      : 'StartGlobalCameraModifierRig on the component runs the rig in the component own evaluation context, whose initial result is valid, so the log has no such warning',
+    pass: manager ? sprintHitches === 2 : hitches.length === 0,
+    detail: `hitch warnings naming the modifier rig: ${sprintHitches}; others: ${JSON.stringify(hitches.filter((n) => n !== 'ProbeSprintRig'))}`,
+  });
   checks.push({
     name: `${label}: rigs from the assembler`,
     claim: 'FCameraRigAssetAssembler builds the base rig (attach to player pawn, boom arm, collision push, field of view) and a modifier rig with hand-made enter and exit transitions; both report a clean build status, and the pawn was possessed before the camera was activated',
@@ -82,9 +98,18 @@ function rigChecks(label, s) {
   const traceDist = trace.map((t) => t.distance_to_pawn);
   checks.push({
     name: `${label}: boom lag after a move`,
-    claim: 'after the pawn moves 1000 cm in one frame the eye reads far from the pawn in the first frames (more than 100 cm beyond the boom length) while the boom\'s lag catches up, and it is back within 10 cm of the boom length after ten seconds',
+    claim: 'after the pawn moves 1000 cm in one frame with a plain move (ETeleportType::None) the eye reads far from the pawn in the first frames (more than 100 cm beyond the boom length) while the boom\'s lag catches up, and it is back within 10 cm of the boom length after ten seconds',
     pass: !!rest && first.length === 12 && Number.isFinite(firstMax) && firstMax > rest.expected_distance + 100 && trace.length === 10 && near(settled, rest.expected_distance, 10),
     detail: `largest distance in 12 frames ${fixed(firstMax)} cm; after ten seconds ${fixed(settled)} cm; per second ${traceDist.map((d) => fixed(d, 0)).join(' ')}`,
+  });
+
+  const tele = r?.teleport_frames ?? [];
+  const teleMax = Math.max(...tele.map((f) => f.distance_to_pawn).filter((v) => typeof v === 'number'));
+  checks.push({
+    name: `${label}: a teleport is a camera cut`,
+    claim: 'the same 1000 cm move as a teleport (ETeleportType::TeleportPhysics) shows no boom lag: UGameplayCameraComponentBase::OnUpdateTransform marks the next frame a camera cut, the boom arm re-uses its pull on a cut, so the eye is within 5 cm of the boom length in each of the next three frames',
+    pass: !!rest && tele.length === 3 && Number.isFinite(teleMax) && tele.every((f) => near(f.distance_to_pawn, rest.expected_distance, 5)),
+    detail: `distance in the three frames after the teleport (largest) ${fixed(teleMax)} of ${fixed(rest?.expected_distance)} cm; plain move peaked at ${fixed(firstMax)} cm`,
   });
 
   const on = r?.mode_on, mid = r?.mode_on_mid, start = r?.mode_on_start;
@@ -129,7 +154,7 @@ function rigChecks(label, s) {
 
 function stockChecks(s) {
   const r = s?.report;
-  const b = r?.base, done = r?.control_done, back = r?.control_back, st0 = r?.stalled_start, st = r?.stalled, cut = r?.cut, cutBack = r?.cut_back;
+  const b = r?.base, done = r?.control_done, back = r?.control_back, st0 = r?.stalled_start, st = r?.stalled, sameFrame = r?.same_frame, cutPending = r?.cut_to_pending, cutAbort = r?.cut_abort, cut = r?.cut, cutBack = r?.cut_back;
   const checks = [sessionRan('stock', s)];
   checks.push({
     name: 'stock: starts on the base camera',
@@ -157,8 +182,26 @@ function stockChecks(s) {
     detail: st ? `photo camera lens ${fixed(st.photo_camera_fov)}; view ${fixed(st.fov)}; eye ${fixed(st.eye_to_photo_camera_cm, 0)} cm from the photo camera` : 'no snapshot',
   });
   checks.push({
+    name: 'stock: a blend started in the frame that sets the dilation gets one frame',
+    claim: 'a 0.35 s blend started in the same frame that sets the world to 0.0001 of real time is not stalled from the first frame: the frame that sets the dilation passes its undilated delta (1/30 s) to the blend, so after two seconds of real time about 0.3167 s of the blend remains and the view has moved off the base field of view',
+    pass: !!sameFrame && sameFrame.pending_target !== 'None' && near(sameFrame.blend_time_to_go, 0.35 - 1 / 30, 0.005) && sameFrame.fov < BASE_FOV - 1 && sameFrame.fov > PHOTO_FOV,
+    detail: sameFrame ? `pending ${sameFrame.pending_target}; blend time to go ${fixed(sameFrame.blend_time_to_go, 4)}; view fov ${fixed(sameFrame.fov)}` : 'no snapshot',
+  });
+  checks.push({
+    name: 'stock: a cut to the pending target does nothing',
+    claim: 'in the stalled state, a cut (blend time 0) to the photo camera, which the blend is already heading for, is ignored (APlayerCameraManager::SetViewTarget returns early when the new target is the pending one): three frames later the photo camera is still pending and the view still shows the base camera field of view',
+    pass: !!cutPending && cutPending.pending_target !== 'None' && near(cutPending.fov, BASE_FOV, 0.5) && cutPending.eye_to_photo_camera_cm > 1000,
+    detail: cutPending ? `pending ${cutPending.pending_target}; view fov ${fixed(cutPending.fov)}; eye ${fixed(cutPending.eye_to_photo_camera_cm, 0)} cm from the photo camera` : 'no snapshot',
+  });
+  checks.push({
+    name: 'stock: a cut back to the base camera aborts the blend',
+    claim: 'a cut to the base camera, the current view target, aborts the stalled blend in a held world: nothing is pending and the view shows the base camera (78 degrees, eye at the base camera) within three frames',
+    pass: !!cutAbort && cutAbort.pending_target === 'None' && near(cutAbort.fov, BASE_FOV, 0.5) && near(cutAbort.eye_to_base_camera_cm, 0, 5),
+    detail: cutAbort ? `pending ${cutAbort.pending_target}; view fov ${fixed(cutAbort.fov)}; eye ${fixed(cutAbort.eye_to_base_camera_cm)} cm from the base camera` : 'no snapshot',
+  });
+  checks.push({
     name: 'stock: a cut works in a held world',
-    claim: 'a cut (blend time 0) to the photo camera and back takes effect within three frames although the world is held: the view shows 30 degrees at the photo camera with nothing pending, then 78 again',
+    claim: 'once the blend is aborted, a cut (blend time 0) to the photo camera and back takes effect within three frames although the world is held: the view shows 30 degrees at the photo camera with nothing pending, then 78 again',
     pass: !!cut && !!cutBack && near(cut.fov, PHOTO_FOV, 0.5) && near(cut.eye_to_photo_camera_cm, 0, 5) && cut.pending_target === 'None' && near(cutBack.fov, BASE_FOV, 0.5),
     detail: cut ? `cut fov ${fixed(cut.fov)}; eye ${fixed(cut.eye_to_photo_camera_cm)} cm from the photo camera; pending ${cut.pending_target}; back ${fixed(cutBack?.fov)}` : 'no snapshot',
   });

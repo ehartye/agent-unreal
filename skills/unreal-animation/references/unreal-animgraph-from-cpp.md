@@ -12,7 +12,10 @@ Target: Unreal Engine 5.8, Windows. Python places the Slot, Sequence Player, Ble
 - [tested] Python cannot add states or transitions: `AnimationGraph.Nodes` is protected and a state machine graph offers only comment actions. The bridge's `AddState` and `AddTransition` built them.
 - [tested] Python writes a Blend Space (`blend_parameters`, `sample_data`), but the player holds the reference pose until C++ `ResampleData` runs (`BlendSpace.h` line 660); the bridge's `ResampleBlendSpace` fixes it.
 - [tested] Add a node with `FGraphNodeCreator<UAnimGraphNode_Slot>` on the animation graph (`Engine/Source/Runtime/Engine/Classes/EdGraph/EdGraph.h`): `CreateNode()`, set members of the node's `Node` struct, `Finalize()`, connect pose pins with the graph schema's `TryCreateConnection`, then `FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified` and `FKismetEditorUtilities::CompileBlueprint`. The editor module lists `AnimGraph` and `AnimGraphRuntime` as dependencies.
-- Details: [anim_bridge README](../../../examples/unreal/anim_bridge/README.md). Not verified: a state machine played at runtime, 2D Blend Spaces.
+- [tested] A played state machine, on 5.8.2: `AddState`, `SetStateSequence` (a Sequence Player in a state's graph) and `AddTransitionOnVariable` (a Boolean-variable rule on each transition) build Idle and Walk with no node errors. At runtime the state name reads Idle, Walk, Idle, and the bone pose follows the state.
+- [tested] A 2D Blend Space, on 5.8.2: written from Python and resampled by `ResampleBlendSpace`, it plays one clip at each corner sample and blends all three clips at an interior point.
+- [tested] Linked layers, on 5.8.2: an interface with one layer, a host and a guest that implement it, and a Linked Anim Layer node in the host build and compile clean. At runtime the host swaps to the guest's layer after `LinkAnimClassLayers` and back to its own after `LinkAnimClassLayers` with no class. Not run: a guest on a separate skeleton, and montage slot groups other than the default.
+- Details: [anim_bridge README](../../../examples/unreal/anim_bridge/README.md) (the runtime phase is `anim_runtime.mjs`; 13 of 13 checks passed on 5.8.2).
 
 ## Add a skeletal-control node: AnimDynamics
 

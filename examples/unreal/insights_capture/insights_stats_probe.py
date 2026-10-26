@@ -1,4 +1,4 @@
-# Prepared, not yet run on an engine. Run inside a throwaway game process by insights_stats.mjs (-ExecCmds="py insights_stats_probe.py").
+# Run on 5.8.2 (8 of 8 checks pass). Run inside a throwaway game process by insights_stats.mjs (-ExecCmds="py insights_stats_probe.py").
 # Two modes, chosen by STATS_MODE:
 #   stats   runs the stat commands the unreal-quality references name and leaves their output in the log: "stat help" (lists the engine's stat
 #           commands), a bare "stat" (the stat help text), "stat unit", "stat fps", and "stat startfile" ... "stat stopfile" around a few ticks.
@@ -38,6 +38,13 @@ def make_array(count):
     return array
 
 
+def churn(count=4000):
+    """Many short-lived engine allocations (each unreal.Array holds its elements in an engine TArray): at least two memory events each."""
+    for _ in range(count):
+        small = unreal.Array(float)
+        small.append(0.0)
+
+
 def finish():
     unreal.unregister_slate_post_tick_callback(handle)
     if MODE == "memory":
@@ -60,18 +67,24 @@ def tick(delta):
             finish()
             return
     else:
+        # An allocation event carries the time of the last memory marker, and the engine writes a marker once per 4096 memory events
+        # (source: Engine/Source/Runtime/Core/Private/ProfilingDebugging/MemoryTrace.cpp, MarkerSamplePeriod and MemoryTrace_UpdateInternal).
+        # A bookmark and an allocation made in the same few milliseconds can therefore be ordered the wrong way round in the trace, so
+        # churn() runs thousands of small engine allocations between each step to push a marker past it.
         if n == 30:
             cmd("Trace.Bookmark LeakA")
-        elif n == 31:
+        elif n in (31, 32, 33, 36, 37, 38, 41, 42, 43, 46, 47, 48, 51, 52, 53):
+            churn()
+        elif n == 35:
             state["held"] = make_array(HELD)       # alive at LeakC: a leak
             state["freed"] = make_array(FREED)     # freed between LeakB and LeakC: not a leak
-        elif n == 32:
-            cmd("Trace.Bookmark LeakB")
         elif n == 40:
+            cmd("Trace.Bookmark LeakB")
+        elif n == 45:
             state["freed"] = None                  # the engine array behind it is freed here
-        elif n == 60:
+        elif n == 50:
             cmd("Trace.Bookmark LeakC")
-        elif n > 70:
+        elif n > 58:
             finish()
             return
     state["tick"] = n + 1

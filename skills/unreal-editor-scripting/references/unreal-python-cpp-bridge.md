@@ -65,6 +65,12 @@ All three runs used `UnrealEditor.exe -nullrhi -ExecCmds="py <script>"` (no rend
 - [tested] `examples/unreal/anim_bridge/` ([README](../../../examples/unreal/anim_bridge/README.md)) uses the same layout for an `AnimBridge` editor module and a `SlotClip` runtime module. Probe Python first: on 5.8.2 `unreal.BlueprintGraphEditor` already places Slot, Sequence Player and Blend Space Player nodes, so the bridge only adds what `dir()` and the action list do not reach: `AddState`, `AddTransition` and `ResampleBlendSpace`. Routes, numbers and the Animation Blueprint rules are in [Animation Blueprints](../../unreal-animation/references/unreal-animation-blueprints.md).
 - [tested] A bridge function that returns a `USTRUCT` reaches Python as a struct with snake_case fields (`unreal.SlotBridgeResult`), and a `UEdGraph*` parameter accepts the state machine graph Python found with `BlueprintEditorLibrary.list_graphs`.
 
+## A third example: skeletal mesh material slots
+
+- [tested] `examples/unreal/skeletal_materials/` ([README](../../../examples/unreal/skeletal_materials/README.md)) ran 15 of 15 checks on 5.8.2, headless and with `--rendering`. Python reads a skeletal mesh's slots with `get_editor_property("materials")`; `slots[0].material_interface = m` on the returned array raises nothing and changes nothing, saved or not. The editor-module route is a `UFUNCTION(BlueprintCallable)` static, `USkeletalMaterialsBridgeLibrary::SetSkeletalMeshMaterials(USkeletalMesh*, const TArray<UMaterialInterface*>&)`.
+- [tested] It writes `GetMaterials()[i].MaterialInterface` between `Modify()` and `PostEditChange()`, then `MarkPackageDirty()`. Python calls `unreal.SkeletalMaterialsBridgeLibrary.set_skeletal_mesh_materials(mesh, [materials])`. A wrong count returns False with an error logged and the slots unchanged; one and two slots are set in order, a default save writes the file and a fresh process reads the same materials.
+- [tested] Python-side findings for the same example (the slot-name read, the registry-tag read, the commandlet scan before `duplicate_asset`, the assign-back route) are in [Unreal import policy](../../unreal-import/references/unreal-import-policy.md).
+
 ## Not verified
 
 Landscape materials, weight layers, Nanite, Water and Landmass brushes on a bridged Landscape, heights beyond what `uint16` stores, and the module in a packaged game or a commandlet were not run.

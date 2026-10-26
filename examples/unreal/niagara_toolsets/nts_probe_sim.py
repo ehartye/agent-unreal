@@ -17,7 +17,9 @@ The manifest (written by nts_probe_*_build.py; the shape is this file's own cont
 Each step: apply `set`, restart the system, capture `frames` simulation-cache frames and record the particle count per emitter after
 every frame and the attributes of the last frame; then, when `shot` is set, show or hide the actor, restart it, wait `live_seconds`
 and take a screenshot named <prefix>_<shot>.png (Saved/Screenshots/WindowsEditor). The compile state and stack issues of each system in
-`systems` are asked from the editor tick before Play-In-Editor starts.
+`systems` are asked from the editor tick before Play-In-Editor starts. A capture of a system that already completed is refused
+(NiagaraSimCache.cpp WriteFrame, "System already completed its simulation"): the call returns None, and the step records `captured`
+false and `refused_frames`, the number of frames refused.
 
 Engine calls, all already used by niagara_verify.py or stylized_render.py (5.8.2 runs): NiagaraSimCacheFunctionLibrary.create_niagara_sim_cache /
 capture_niagara_sim_cache_immediate, NiagaraSimCache.get_emitter_names / get_num_frames / read_position_attribute / read_float_attribute,
@@ -117,8 +119,10 @@ def capture(world, comp, step, metric_emitter):
     seconds = float(step.get("step_seconds", 1.0 / 60.0))
     totals, per_frame, attributes, errors = [], [], {}, []
     got = None
+    refused = 0
     for _ in range(int(step["frames"])):
         got = lib.capture_niagara_sim_cache_immediate(cache, params, comp, True, seconds)
+        refused += got is None   # a system that completed refuses the capture (the log says "System already completed its simulation")
         counts = {}
         if got is not None:
             last = got.get_num_frames() - 1
@@ -133,7 +137,7 @@ def capture(world, comp, step, metric_emitter):
         totals.append(sum(v for v in counts.values() if isinstance(v, int)))
     out = {"captured": got is not None, "valid": bool(got.is_cache_valid()) if got is not None else False,
            "num_frames": got.get_num_frames() if got is not None else 0, "emitters": sorted(per_frame[-1].keys()) if per_frame else [],
-           "totals": totals, "max_total": max(totals) if totals else 0, "read_errors": errors}
+           "totals": totals, "refused_frames": refused, "max_total": max(totals) if totals else 0, "read_errors": errors}
     out["last"] = {k: v for k, v in (per_frame[-1] if per_frame else {}).items()}
     out["max_by_emitter"] = {}
     for counts in per_frame:

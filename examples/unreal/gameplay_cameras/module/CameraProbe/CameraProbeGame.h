@@ -100,6 +100,7 @@ private:
 	TArray<TSharedPtr<class FJsonValue>> Errors;
 	TArray<TSharedPtr<class FJsonValue>> FirstFrames;
 	TArray<TSharedPtr<class FJsonValue>> FollowTrace;
+	TArray<TSharedPtr<class FJsonValue>> TeleportFrames;
 
 	FCameraRigInstanceID ModifierId;
 

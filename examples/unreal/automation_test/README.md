@@ -28,7 +28,7 @@ The runner takes about three to five minutes. Both engine binaries start hidden 
 
 ## Reference commands (opt-in)
 
-**Status:** Prepared 2026-10-26; not yet run on an engine. A first run tests the probe before it tests the engine.
+**Status:** Prepared and first run 2026-10-26 on Unreal 5.8.2: `automation_reference.mjs` passed 7 of 7 checks in 152 s with no change to the probe; `headless_routes.mjs` reads the install and ran without an engine. Not run on 5.8.3.
 
 Backs [Headless runs, reports and lanes](../../../skills/unreal-quality/references/unreal-quality-lanes.md). The run above uses `Automation RunTests` with a space after the semicolon; this phase uses the command shape the lanes reference gives, so a reader can paste it:
 

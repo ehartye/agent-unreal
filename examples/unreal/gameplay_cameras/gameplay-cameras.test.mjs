@@ -1,7 +1,7 @@
 // node --test examples/unreal/gameplay_cameras/gameplay-cameras.test.mjs  (no Unreal, no dependencies)
-// ASSUMED SHAPE: no run of this probe exists yet. The reports below follow what CameraProbeGame.cpp Snapshot() and the two scenario
-// builders write, with values the rigs' numbers predict (boom offset -400, 0, 100 cm; modifier 95 degrees and 120 cm back; base 78
-// degrees). A first engine run confirms the shape and the values. Each test changes one fact and expects the matching check to fail.
+// The reports below follow what CameraProbeGame.cpp Snapshot() and the scenario builders wrote on 5.8.2 (the keys), with values the
+// rigs' numbers predict (boom offset -400, 0, 100 cm; modifier 95 degrees and 120 cm back; base 78 degrees). Each test changes one
+// fact and expects the matching check to fail.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { evaluate, summarize, progress, elapsed } from './gameplay-cameras-checks.mjs';
@@ -11,13 +11,18 @@ const snap = (label, over = {}) => ({
   view_target: 'CameraProbePawn_0', pending_target: 'None', blend_time_to_go: 0, pawn: [0, 0, 1000], distance_to_pawn: 412.3, ...over,
 });
 
+const HITCH = (rig) => `LogCameraSystem: Warning: Camera rig '${rig}' may experience a hitch because its initial result isn't valid.
+`;
+// the manager's session logs one for an engine rig at start-up and one for each of the two modifier starts
+const HITCH_LINES = HITCH('CameraRigAsset_0') + HITCH('ProbeSprintRig') + HITCH('ProbeSprintRig');
+
 function rigSession(host) {
   const manager = host === 'manager';
   const trace = [];
   for (let i = 0; i < 10; i++) trace.push(snap(`follow_second_${i + 1}`, { distance_to_pawn: 412.3 + 600 * Math.exp(-(i + 1) * 0.9) }));
   trace[9].distance_to_pawn = 412.5;
   return {
-    log: 'LogCameraProbe: Display: CameraProbe report written (done)',
+    log: `${manager ? HITCH_LINES : ''}LogCameraProbe: Display: CameraProbe report written (done)`,
     report: {
       host, engine_version: '5.8.2-0+++UE5+Release-5.8', fixed_step: true, fixed_delta: 1 / 30, finished: 'done', frames: 640, errors: [],
       setup: {
@@ -28,6 +33,7 @@ function rigSession(host) {
       rest: snap('rest', { expected_eye: [-300, -250, 930], expected_distance: 412.3, expected_fov: 78, eye_error_cm: 0.4 }),
       follow_first_frames: Array.from({ length: 12 }, (_, i) => snap(`follow_frame_${i}`, { distance_to_pawn: 1100 - i * 30 })),
       follow_trace: trace,
+      teleport_frames: Array.from({ length: 3 }, (_, i) => snap(`teleport_frame_${i}`, { distance_to_pawn: 412.3 })),
       mode_on_start: { id_valid: true },
       mode_on_mid: snap('mode_on_mid', { fov: 86.4 }),
       mode_on: snap('mode_on', { fov: 95, distance_to_pawn: 529.6, expected_distance: 529.5, expected_fov: 95 }),
@@ -54,6 +60,9 @@ function stockSession() {
       control_back: snap('control_back', { ...cams({}), fov: 78 }),
       stalled_start: snap('stalled_start', { ...cams({}), time_dilation: 0.0001, real_time: 40, world_time: 30, pending_target: 'None' }),
       stalled: snap('stalled', { ...cams({}), time_dilation: 0.0001, real_time: 42.03, world_time: 30.0002, pending_target: 'CameraActor_1', blend_time_to_go: 0.3499, fov: 78 }),
+      same_frame: snap('same_frame', { ...cams({}), time_dilation: 0.0001, pending_target: 'CameraActor_1', blend_time_to_go: 0.3167, fov: 73.4 }),
+      cut_to_pending: snap('cut_to_pending', { ...cams({}), time_dilation: 0.0001, pending_target: 'CameraActor_1', blend_time_to_go: 0.3499, fov: 78 }),
+      cut_abort: snap('cut_abort', { ...cams({}), time_dilation: 0.0001, fov: 78 }),
       cut: snap('cut', { ...cams({ eye_to_photo_camera_cm: 0.1, eye_to_base_camera_cm: 2236 }), time_dilation: 0.0001, fov: 30 }),
       cut_back: snap('cut_back', { ...cams({}), time_dilation: 0.0001, fov: 78 }),
     },
@@ -69,7 +78,7 @@ const mutate = (fn) => { const g = good(); fn(g); return g; };
 
 test('every check passes on the predicted reports', () => {
   assert.deepEqual(failing(good()), []);
-  assert.deepEqual(summarize(evaluate(good())), { passed: 1 + 2 * 10 + 6, total: 1 + 2 * 10 + 6 });
+  assert.deepEqual(summarize(evaluate(good())), { passed: 1 + 2 * 12 + 9, total: 1 + 2 * 12 + 9 });
 });
 
 test('progress and elapsed are plain arithmetic and tolerate missing values', () => {
@@ -87,7 +96,7 @@ test('a failed build fails the build check', () => {
 test('a session left out is not judged, and a missing report fails its checks without throwing', () => {
   const only = good(); delete only.sessions.component; delete only.sessions.stock;
   assert.deepEqual(failing(only), []);
-  assert.equal(evaluate(only).length, 1 + 10);
+  assert.equal(evaluate(only).length, 1 + 12);
   const none = mutate((g) => { g.sessions.manager = { report: undefined, log: '' }; });
   assert.ok(failing(none).includes('manager: session ran'));
   assert.ok(failing(none).includes('manager: eye at rest'));
@@ -95,8 +104,15 @@ test('a session left out is not judged, and a missing report fails its checks wi
 });
 
 test('a camera-system error or a fatal error in the log fails the session check', () => {
-  assert.deepEqual(failing(mutate((g) => { g.sessions.manager.log = 'LogCameraSystem: Error: Can\'t run AttatchToPlayerPawn camera node because the player controller has no pawn.'; })), ['manager: session ran']);
+  assert.deepEqual(failing(mutate((g) => { g.sessions.manager.log += 'LogCameraSystem: Error: Can\'t run AttatchToPlayerPawn camera node because the player controller has no pawn.'; })), ['manager: session ran']);
   assert.deepEqual(failing(mutate((g) => { g.sessions.stock.log = 'Fatal error: [File:Unknown] [Line: 1]'; })), ['stock: session ran']);
+});
+
+test('the hitch warning of the camera manager is judged by its own check and any other camera warning fails the session', () => {
+  const other = "LogCameraSystem: Warning: Freezing camera rig 'X' because its evaluation context isn't valid anymore.\n";
+  assert.deepEqual(failing(mutate((g) => { g.sessions.manager.log += other; })), ['manager: session ran']);
+  assert.deepEqual(failing(mutate((g) => { g.sessions.manager.log = HITCH('CameraRigAsset_0') + HITCH('ProbeSprintRig'); })), ['manager: a modifier started on the manager warns once per start']);
+  assert.deepEqual(failing(mutate((g) => { g.sessions.component.log += HITCH('ProbeSprintRig'); })), ['component: a modifier started on the component does not warn']);
 });
 
 test('a free-running time step fails the session check', () => {
@@ -113,6 +129,9 @@ test('each rig check fails when its fact changes', () => {
   assert.deepEqual(failing(mutate((g) => { g.sessions.component.report.follow_first_frames.forEach((f) => { f.distance_to_pawn = 413; }); })), ['component: boom lag after a move']);
   // the settled distance is the reference for the two modifier checks, so an unsettled boom fails them as well
   assert.deepEqual(failing(mutate((g) => { g.sessions.component.report.follow_trace[9].distance_to_pawn = 700; })).slice(0, 1), ['component: boom lag after a move']);
+  // a plain move that shows no lag (the finding the first run made when the probe teleported) and a teleport that does lag
+  assert.deepEqual(failing(mutate((g) => { g.sessions.manager.report.teleport_frames[1].distance_to_pawn = 900; })), ['manager: a teleport is a camera cut']);
+  assert.deepEqual(failing(mutate((g) => { g.sessions.component.report.teleport_frames.pop(); })), ['component: a teleport is a camera cut']);
   assert.deepEqual(failing(mutate((g) => { g.sessions.manager.report.mode_on_start.id_valid = false; })), ['manager: modifier rig starts and blends in']);
   assert.deepEqual(failing(mutate((g) => { g.sessions.manager.report.mode_on_mid.fov = 95; })), ['manager: modifier rig starts and blends in']);
   assert.deepEqual(failing(mutate((g) => { g.sessions.manager.report.mode_on.distance_to_pawn = 412.5; })), ['manager: modifier rig starts and blends in']);
@@ -133,6 +152,9 @@ test('each stock check fails when its fact changes', () => {
   assert.deepEqual(failing(mutate((g) => { g.sessions.stock.report.control_done.pending_target = 'CameraActor_1'; })), ['stock: a view blend finishes in normal time']);
   assert.deepEqual(failing(mutate((g) => { g.sessions.stock.report.stalled.pending_target = 'None'; g.sessions.stock.report.stalled.fov = 30; })).includes('stock: the same blend never finishes in a held world'), true);
   assert.deepEqual(failing(mutate((g) => { g.sessions.stock.report.stalled.photo_camera_fov = 78; })), ['stock: reading the photo camera would have passed']);
+  assert.deepEqual(failing(mutate((g) => { g.sessions.stock.report.same_frame.blend_time_to_go = 0.35; g.sessions.stock.report.same_frame.fov = 78; })), ['stock: a blend started in the frame that sets the dilation gets one frame']);
+  assert.deepEqual(failing(mutate((g) => { g.sessions.stock.report.cut_to_pending.pending_target = 'None'; g.sessions.stock.report.cut_to_pending.fov = 30; })), ['stock: a cut to the pending target does nothing']);
+  assert.deepEqual(failing(mutate((g) => { g.sessions.stock.report.cut_abort.pending_target = 'CameraActor_1'; })), ['stock: a cut back to the base camera aborts the blend']);
   assert.deepEqual(failing(mutate((g) => { g.sessions.stock.report.cut.fov = 78; })), ['stock: a cut works in a held world']);
   assert.deepEqual(failing(mutate((g) => { g.sessions.stock.report.stalled.world_time = 31; })), ['stock: the same blend never finishes in a held world']);
 });

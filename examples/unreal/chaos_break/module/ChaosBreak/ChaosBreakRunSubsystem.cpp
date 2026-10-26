@@ -28,9 +28,10 @@ namespace
 	constexpr float FallBeforeStrainSeconds = 1.0f;
 	constexpr float StrainToCrumbleSeconds = 0.75f;
 	constexpr float CrumbleToReportSeconds = 1.0f;
-	// Distance between scenarios, and the height they are spawned at (centimetres). 5000 cm of free fall lasts about 3.2 s.
+	// Distance between scenarios, and the height they are spawned at (centimetres). The no-strain control must not reach the floor while the run lasts:
+	// at 5000 cm it landed about 2.7 s after the spawn and broke from the impact, so the height is far above what the fall covers in the run.
 	constexpr double ScenarioSpacing = 1500.0;
-	constexpr double SpawnHeight = 5000.0;
+	constexpr double SpawnHeight = 100000.0;
 }
 
 bool UChaosBreakRunSubsystem::ShouldCreateSubsystem(UObject* Outer) const
@@ -197,6 +198,13 @@ void UChaosBreakRunSubsystem::OnBreak(const FChaosBreakEvent& BreakEvent)
 		if (Owner && Scenario.Actor.Get() == Owner)
 		{
 			++Scenario.BreaksFinal;
+			if (Scenario.FirstBreakSeconds < 0.f)
+			{
+				Scenario.FirstBreakSeconds = RunSeconds;
+				Scenario.FirstBreakZ = BreakEvent.Location.Z;
+				Scenario.FirstBreakVelocityZ = BreakEvent.Velocity.Z;
+				Scenario.bFirstBreakFromCrumble = BreakEvent.bFromCrumble;
+			}
 			Scenario.DistinctIndices.Add(BreakEvent.Index);
 			return;
 		}
@@ -213,10 +221,10 @@ void UChaosBreakRunSubsystem::WriteReportAndQuit(UWorld* World)
 	for (int32 i = 0; i < Scenarios.Num(); ++i)
 	{
 		const FScenario& S = Scenarios[i];
-		Json += FString::Printf(TEXT("    {\"label\": \"%s\", \"asset\": \"%s\", \"action\": \"%s\", \"spawn\": \"%s\", \"assetLoaded\": %s, \"spawned\": %s, \"hasProxyAtStrain\": %s, \"transforms\": %d, \"breaksAfterStrain\": %d, \"breaksFinal\": %d, \"distinctFinal\": %d}%s\n"),
+		Json += FString::Printf(TEXT("    {\"label\": \"%s\", \"asset\": \"%s\", \"action\": \"%s\", \"spawn\": \"%s\", \"assetLoaded\": %s, \"spawned\": %s, \"hasProxyAtStrain\": %s, \"transforms\": %d, \"breaksAfterStrain\": %d, \"breaksFinal\": %d, \"distinctFinal\": %d, \"firstBreakSeconds\": %.2f, \"firstBreakZ\": %.1f, \"firstBreakVelocityZ\": %.1f, \"firstBreakFromCrumble\": %s}%s\n"),
 			*JsonEscape(S.Label), *JsonEscape(S.AssetPath), *JsonEscape(S.Action), *JsonEscape(S.Spawn),
 			S.bAssetLoaded ? TEXT("true") : TEXT("false"), S.bSpawned ? TEXT("true") : TEXT("false"), S.bHasProxyAtStrain ? TEXT("true") : TEXT("false"),
-			S.NumTransforms, S.BreaksAfterStrain, S.BreaksFinal, S.DistinctIndices.Num(), i + 1 < Scenarios.Num() ? TEXT(",") : TEXT(""));
+			S.NumTransforms, S.BreaksAfterStrain, S.BreaksFinal, S.DistinctIndices.Num(), S.FirstBreakSeconds, S.FirstBreakZ, S.FirstBreakVelocityZ, S.bFirstBreakFromCrumble ? TEXT("true") : TEXT("false"), i + 1 < Scenarios.Num() ? TEXT(",") : TEXT(""));
 	}
 	Json += TEXT("  ],\n  \"errors\": [");
 	for (int32 i = 0; i < Errors.Num(); ++i)

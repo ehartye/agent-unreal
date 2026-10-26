@@ -4,10 +4,11 @@ Same method as the other scenes in [Example scenes](unreal-example-scenes.md): e
 
 ## Content and tooling scenes (`niagara_toolsets/`, `editor_python_friction/`, `constructor_locks/`, `anim_bridge/`, `contention/`)
 
-- [tested] [`niagara_toolsets`](../../../examples/unreal/niagara_toolsets/README.md) (25 checks, counted from the `check(` calls in `nts-validate-checks.mjs`; passed on 5.8.2 when the 25 checks were last run): create a system, edit an input, set the material, delete and recreate, add a renderer. Backs [Niagara toolsets](../../unreal-effects/references/unreal-niagara-toolsets.md).
+- [tested] [`niagara_toolsets`](../../../examples/unreal/niagara_toolsets/README.md) (25 of 25 on 5.8.2, 134 s; `--only author` takes 44 s): create a system, edit an input, set the material, delete and recreate, add a renderer. Backs [Niagara toolsets](../../unreal-effects/references/unreal-niagara-toolsets.md).
 - [tested] [`editor_python_friction`](../../../examples/unreal/editor_python_friction/README.md) (8): `unreal.Box` construction and the benign Interchange alpha-mode log line.
 - [tested] [`constructor_locks`](../../../examples/unreal/constructor_locks/README.md) (11): constructor-loaded asset files are locked while the editor is open. Backs [Content pipeline](../../unreal-native/references/unreal-native-content-pipeline.md).
 - [tested] [`anim_bridge`](../../../examples/unreal/anim_bridge/README.md) (22): slot-only Animation Blueprints from Python and C++; states, transitions and blend-space resampling need C++. Backs [Animation Blueprints](../../unreal-animation/references/unreal-animation-blueprints.md).
+- [tested] [`anim_runtime.mjs`](../../../examples/unreal/anim_bridge/README.md) (13 of 13 on 5.8.2, 99 s, with the first compile of the two C++ modules): a state machine built with `AddState`, `SetStateSequence` and `AddTransitionOnVariable` reads Idle, Walk, Idle at run time; a 2D Blend Space's corners play one clip each; linked layers swap and swap back.
 - [tested] [`contention`](../../../examples/unreal/contention/README.md): a helper that stamps other-editor count and free memory into a receipt. Backs [profiling facts](../../unreal-native/references/unreal-native-profiling-facts.md).
 
 ## Rendering probes (`examples/unreal/rendering_probes/`)
@@ -52,3 +53,16 @@ About six minutes: it builds the Editor target 10 times in two throwaway project
 - [tested] With the threshold lowered, adaptive unity on, an installed engine and no git repository, all three writable files stay out of the unity file and the clashing sources build.
 - [tested] With `-DisableAdaptiveUnity` the files share one unity file and the build fails with `C2374`, `C2086`, `C4459` and `C2872` in `ProbeBeta.cpp`; the old binary is unchanged. `bUseUnity = false`, file-prefixed names and one unity file per source all build.
 - [tested] In a git project the clean tree fails; an edited file leaves the chunk and the build passes; committing alone does not regroup; writing the committed file again, as a checkout or rebase does, brings the clash back.
+
+## More runs that passed on 5.8.2
+
+Same method and manual lane. Commands take `--engine "<UE_5.8 folder>"`; each folder's README has the results.
+
+- [tested] `editor_probes/probe_timeout.mjs [--timeout-ms 60000]`: the probe launcher under a time limit, 7 of 7 in 108 s. Backs [Editor Python](unreal-editor-python.md).
+- [tested] `skeletal_materials/skeletal_materials.mjs [--rendering]`: skeletal material slots from Python and from an editor module, 15 of 15 headless and with `--rendering`. Backs [Python to C++ bridge](unreal-python-cpp-bridge.md) and [import policy](../../unreal-import/references/unreal-import-policy.md).
+- [tested] `unity_build/unity_build.mjs --only-readonly`: 4 of 4 in 62 s, with no git repository and read-only files. Backs [Unity builds](../../unreal-native/references/unreal-native-unity-builds.md).
+- [tested] `niagara_toolsets/nts_probe.mjs --only renderers` (6 of 6, 26 s) and `--only emit` (8 of 8 over 23 variants, two runs). Backs [Niagara toolsets](../../unreal-effects/references/unreal-niagara-toolsets.md).
+- [tested] `automation_test/automation_reference.mjs` (7 of 7, 152 s): the documented `Automation RunTest` command shape, `Group:` selection and exclusion. `headless_routes.mjs` reads source with no engine run. Backs [Automation tests](../../unreal-native/references/unreal-native-automation-tests.md).
+- [tested] `insights_capture/insights_stats.mjs` (8 of 8 on two runs): `stat` commands, memory trace channels and `MemoryInsights.ExportAllocs`. Backs [Insights capture](../../unreal-native/references/unreal-native-insights-capture.md).
+- [tested] `chaos_break/chaos_break.mjs [--render]` (11 of 11 each): a Geometry Collection built in code breaks in a running game. Backs [Chaos destruction from C++](../../unreal-effects/references/unreal-chaos-destruction-native.md).
+- [tested] `gameplay_cameras/gameplay_cameras.mjs` (34 of 34 on the third run): camera rigs, cuts and time dilation. Backs [Gameplay Cameras](../../unreal-gameplay/references/unreal-gameplay-cameras.md).
