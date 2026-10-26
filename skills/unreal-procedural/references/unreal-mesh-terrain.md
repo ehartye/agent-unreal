@@ -82,7 +82,7 @@ Target: Unreal Engine 5.8, Windows. **Experimental.** [documented] Epic calls Me
 
 ## Not covered by the pages
 
-Python or C++ creation, build commandlets, plugin default states, runtime edits, performance limits. The hub links Mesh Terrain Material and Runtime Virtual Textures pages, not read here.
+Python or C++ creation, build commandlets, plugin default states, runtime edits, performance limits. Materials and Runtime Virtual Textures: [Mesh Terrain materials](unreal-mesh-terrain-materials.md).
 
 ## Sources
 
