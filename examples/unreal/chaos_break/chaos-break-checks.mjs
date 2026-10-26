@@ -16,7 +16,7 @@ const escapeRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 /** Parse report text; a byte order mark is tolerated. Returns undefined for missing or unreadable text. */
 export function parseReport(text) {
   if (!text) return undefined;
-  try { return JSON.parse(String(text).replace(/^﻿/, '')); } catch { return undefined; }
+  try { return JSON.parse(String(text).replace(/^\uFEFF/, '')); } catch { return undefined; }
 }
 
 /** Log lines that name the scenario's component: the engine prints the component's full name, which holds the actor label. */

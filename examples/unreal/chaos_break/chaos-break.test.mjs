@@ -49,7 +49,7 @@ test('a good set of reports passes every counted check and records the observati
 });
 
 test('parseReport tolerates a byte order mark and rejects missing or unreadable text', () => {
-  assert.equal(parseReport('﻿{"a":1}').a, 1);
+  assert.equal(parseReport('\uFEFF{"a":1}').a, 1);
   assert.equal(parseReport(''), undefined);
   assert.equal(parseReport(undefined), undefined);
   assert.equal(parseReport('{not json'), undefined);

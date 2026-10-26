@@ -11,7 +11,7 @@ export const STARTFILE_SOURCE_NOTE = 'Engine/Source/Runtime/Core/Private/Stats/S
 
 /** Parse CSV text (a byte order mark is tolerated; quoted fields may hold commas). Returns { header, rows } or undefined for empty text. */
 export function parseCsv(text) {
-  const lines = String(text ?? '').replace(/^﻿/, '').split(/\r?\n/).filter((l) => l.length > 0);
+  const lines = String(text ?? '').replace(/^\uFEFF/, '').split(/\r?\n/).filter((l) => l.length > 0);
   if (lines.length === 0) return undefined;
   const split = (line) => { const out = []; let cur = ''; let quoted = false; for (const ch of line) { if (ch === '"') quoted = !quoted; else if (ch === ',' && !quoted) { out.push(cur); cur = ''; } else cur += ch; } out.push(cur); return out; };
   return { header: split(lines[0]), rows: lines.slice(1).map(split) };

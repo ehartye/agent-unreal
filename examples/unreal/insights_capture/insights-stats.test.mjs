@@ -36,7 +36,7 @@ test('a good set of runs passes every counted check', () => {
 });
 
 test('parseCsv and columnNumbers read the exported table', () => {
-  assert.deepEqual(parseCsv('﻿Size,Tag\r\n10,"a,b"\r\n20,c\r\n'), { header: ['Size', 'Tag'], rows: [['10', 'a,b'], ['20', 'c']] });
+  assert.deepEqual(parseCsv('\uFEFFSize,Tag\r\n10,"a,b"\r\n20,c\r\n'), { header: ['Size', 'Tag'], rows: [['10', 'a,b'], ['20', 'c']] });
   assert.equal(parseCsv(''), undefined);
   assert.deepEqual(columnNumbers(csv([5, 7]), 'Size'), [5, 7]);
   assert.equal(columnNumbers(csv([5]), 'Nope'), undefined);
