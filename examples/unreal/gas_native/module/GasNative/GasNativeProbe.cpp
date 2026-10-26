@@ -7,6 +7,7 @@
 #include "GameplayEffectComponents/TargetTagsGameplayEffectComponent.h"
 #include "GasNativeAbility.h"
 #include "GasNativeAttributeSet.h"
+#include "GasNativeCases.h"
 #include "GasNativeEffects.h"
 #include "GasNativeTags.h"
 #include "CoreGlobals.h"
@@ -142,10 +143,28 @@ int32 UGasNativeProbeCommandlet::Main(const FString& Params)
 		Steps->SetObjectField(TEXT("runtime_add_component"), S);
 	}
 
-	FString Json;
-	TSharedRef<TJsonWriter<>> Writer = TJsonWriterFactory<>::Create(&Json);
-	FJsonSerializer::Serialize(Report, Writer);
-	if (!ReportPath.IsEmpty()) { FFileHelper::SaveStringToFile(Json, *ReportPath); }
+	// The report is written after every phase, so a crash in a later phase leaves the earlier results on disk.
+	auto Flush = [&]()
+	{
+		FString Json;
+		TSharedRef<TJsonWriter<>> Writer = TJsonWriterFactory<>::Create(&Json);
+		FJsonSerializer::Serialize(Report, Writer);
+		if (!ReportPath.IsEmpty()) { FFileHelper::SaveStringToFile(Json, *ReportPath); }
+	};
+	Flush();
+
+	// 6. The effect-component cases (GasNativeCases.cpp): each component with a control, observed on a fresh actor per case.
+	{
+		TArray<TSharedPtr<FJsonValue>> Rows;
+		GasNativeCases::Run(World, [&](float Seconds)
+		{
+			const int32 Steps = FMath::RoundToInt(Seconds / Step);
+			for (int32 i = 0; i < Steps; ++i) { Tick(); }
+		}, Rows);
+		Report->SetArrayField(TEXT("component_cases"), Rows);
+	}
+
+	Flush();
 	UE_LOG(LogGasNativeProbe, Display, TEXT("GasNativeProbe report written"));
 
 	GEngine->DestroyWorldContext(World);

@@ -4,9 +4,11 @@
 // modules: module/StateTreeNodes (runtime: a custom task, a custom condition, their instance data, a probe pawn and an AI controller) and
 // module/StateTreeBridge (editor only: builds and compiles the tree). It builds the Editor target with Unreal Build Tool and starts the
 // editor twice with statetree_probe.py. Session "build" creates and compiles three trees, reads them back, saves two and probes what Python
-// reaches. Session "run" is a fresh editor that loads the saved trees and runs them in Play-In-Editor on probe pawns.
+// reaches; it then builds three more under the component schema (row S1) and one with a bound root parameter (row S2). Session "run" is a
+// fresh editor that loads the saved trees and runs them in Play-In-Editor on probe pawns: an AI controller pawn, or for the component schema
+// a plain pawn that owns a StateTreeComponent. Rows S1 and S2 ran on 5.8.3.
 // The compiler and Windows SDK are discovered from the installed Visual Studio (override with --compiler / --sdk).
-// Takes about five minutes. Exit code 0 when every check passes. Not part of node scripts/check.mjs; the checks are tested there.
+// Takes about five minutes. Exit code 0 when every asserted check passes (observations are recorded, never judged). Not part of node scripts/check.mjs; the checks are tested there.
 import { spawnSync } from 'node:child_process';
 import { mkdtempSync, mkdirSync, readFileSync, existsSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -59,8 +61,8 @@ const buildRun = built.exit === 0 ? run('build') : { report: undefined, log: '' 
 const playRun = buildRun.report ? run('run') : { report: undefined, log: '' };
 
 const checks = evaluate({ build, buildReport: buildRun.report, runReport: playRun.report, buildLog: buildRun.log, runLog: playRun.log });
-for (const c of checks) console.log(`${c.pass ? 'PASS' : 'FAIL'}  ${c.name}\n      claim: ${c.claim}\n      ${c.detail}`);
-const { passed, total } = summarize(checks);
-console.log(`${passed} of ${total} checks passed`);
+for (const c of checks) console.log(`${c.observe ? (c.pass ? 'OBSERVE' : 'NOT RECORDED') : c.pass ? 'PASS' : 'FAIL'}  ${c.name}\n      claim: ${c.claim}\n      ${c.detail}`);
+const { passed, total, observed, observedRecorded } = summarize(checks);
+console.log(`${passed} of ${total} checks passed; ${observedRecorded} of ${observed} observations recorded`);
 if (keep) console.log(`kept ${root}`); else rmSync(root, { recursive: true, force: true });
 process.exit(passed === total ? 0 : 1);

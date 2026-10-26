@@ -40,11 +40,23 @@ Generic replication is built in and is the default. Plugins:
 | Check role | C++ / Blueprint | `GetLocalRole()`, `GetRemoteRole()`: `ROLE_Authority`, `ROLE_AutonomousProxy`, `ROLE_SimulatedProxy` |
 | Relevancy and priority, Iris | C++ / config | Iris Filtering (owner, connection, group, dynamic) via `[/Script/IrisCore.NetObjectFilterDefinitions]`; Iris Prioritization (`SphereNetObjectPrioritizer` default) |
 | Dormancy | C++ | `SetNetDormancy(DORM_DormantAll)`, `FlushNetDormancy()`, `ForceNetUpdate()` |
-| PIE players and mode | Editor UI; Python by reflection | `LevelEditorPlaySettings`: `PlayNetMode`, `PlayNumberOfClients` (1 to 10), `RunUnderOneProcess`, `bLaunchSeparateServer`, `ServerPort` are `EditAnywhere` in the 5.8 install header, so `set_editor_property` should reach them (Epic: `EditAnywhere` members are editor properties); Epic does not document this class; not run |
+| PIE players and mode | Editor UI | `LevelEditorPlaySettings`: `PlayNetMode`, `PlayNumberOfClients` (1 to 10), `RunUnderOneProcess`, `bLaunchSeparateServer`, `ServerPort` are `EditAnywhere` in the 5.8 install header; Epic does not document this class; see the Python result below |
 
 Dedicated server setup, the numbered workflow and the net console commands are in [Networking workflow](unreal-networking-workflow.md).
 
 Related: [Gameplay Ability System](unreal-gameplay-ability-system.md), [Enhanced Input](unreal-enhanced-input.md).
+
+## Replicated play on one machine
+
+`examples/unreal/gas_native/gas_rep.mjs` ran a dedicated server and one client on one machine: 10 of 10 checks on 5.8.3 (the tenth records that the readings are present), after two fixes to the example's own probe.
+
+- [tested] Launch on 5.8.3, from the editor target (no Game target, no packaging, no `-log`): server `UnrealEditor-Cmd.exe <uproject> /Engine/Maps/Entry?game=<game mode class> -server -game -Port=<free UDP port> -nullrhi -abslog=<file> -unattended -nosplash -nosound -notraceserver -nopause`; client `UnrealEditor.exe <uproject> 127.0.0.1:<port> -game -nullrhi -windowed -ResX=640 -ResY=360 -abslog=<file>`. The server was ready 4 to 7 s after launch, the scenario took 23 to 27 s and both processes exited 0.
+- [tested] An Ability System Component in Mixed mode on a player state (`SetIsReplicated(true)`), with a replicated attribute (Energy 100) and, on join, a granted LocalPredicted ability and an infinite effect (+5 Energy, grants a tag), replicated to the owning client: component Mixed and owned by its player state, the ability listed, the effect active, its tag owned, Energy 105 current and 100 base. After the client's predicted activation (cost 10): client predicted activations 1, server authority activations 1, Energy 90 base and 95 current on both.
+- [tested] With the player state as both owner and avatar, `TryActivateAbilityByClass` on the owning client returned false with no log line at default verbosity, even after calling `InitAbilityActorInfo` again; with the pawn as avatar the same call returned true. The client's player state had local role `SimulatedProxy`; its pawn `AutonomousProxy`.
+- [documented] `UGameplayAbility::CanActivateAbility` returns false when the avatar's local role is `ROLE_SimulatedProxy` (`ShouldActivateAbility`, `Engine/Plugins/Runtime/GameplayAbilities/Source/GameplayAbilities/Private/Abilities/GameplayAbility.cpp`, lines 445 and 463 in the 5.8 install).
+- [general] Make the pawn the avatar and the player state the owner: in the run above the pawn as avatar activated and the player state as avatar did not.
+- [tested] `LevelEditorPlaySettings` was not found as a Python class on 5.8.3 (0 properties read), so the Play settings route is not scriptable by that name from the example's probe.
+- [general] Not covered by these runs: Play In Editor itself, more than one client, Minimal and Full replication modes, Iris, lag or loss, a listen server, a Game target.
 
 ## Sources
 

@@ -7,6 +7,7 @@
 
 class UStateTree;
 class UStateTreeAIComponent;
+class UStateTreeComponent;
 
 /** A pawn that records what its StateTree did: a tick counter and an ordered event list that Python reads back. */
 UCLASS()
@@ -44,4 +45,23 @@ public:
 
 protected:
 	virtual void OnPossess(APawn* InPawn) override;
+};
+
+/**
+ * A plain pawn with no AI controller: it owns a UStateTreeComponent (the component schema's host) and starts its Tree at BeginPlay.
+ * It derives from the probe pawn so the same task and condition structs, which cast their Actor context to AStateTreeProbePawn, run on it.
+ */
+UCLASS()
+class STATETREENODES_API AStateTreeComponentProbePawn : public AStateTreeProbePawn
+{
+	GENERATED_BODY()
+
+public:
+	AStateTreeComponentProbePawn();
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Probe")
+	TObjectPtr<UStateTreeComponent> StateTreeComponent;
+
+protected:
+	virtual void BeginPlay() override;
 };

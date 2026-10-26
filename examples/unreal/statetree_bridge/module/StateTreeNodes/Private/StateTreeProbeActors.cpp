@@ -1,5 +1,6 @@
 #include "StateTreeProbeActors.h"
 #include "Components/StateTreeAIComponent.h"
+#include "Components/StateTreeComponent.h"
 #include "StateTree.h"
 
 AStateTreeProbePawn::AStateTreeProbePawn()
@@ -23,6 +24,26 @@ void AStateTreeProbeController::OnPossess(APawn* InPawn)
 	{
 		Probe->Events.Add(TEXT("started"));
 		StateTreeComponent->SetStateTree(Probe->Tree);
+		StateTreeComponent->StartLogic();
+	}
+}
+
+AStateTreeComponentProbePawn::AStateTreeComponentProbePawn()
+{
+	// No AI controller: the base pawn would spawn one for a placed or spawned pawn. The component runs the tree and its owner is this pawn.
+	AutoPossessAI = EAutoPossessAI::Disabled;
+	StateTreeComponent = CreateDefaultSubobject<UStateTreeComponent>(TEXT("StateTreeComponent"));
+	// The tree is set at BeginPlay from the Tree property, so the component must not start an empty one itself.
+	StateTreeComponent->SetStartLogicAutomatically(false);
+}
+
+void AStateTreeComponentProbePawn::BeginPlay()
+{
+	Super::BeginPlay();
+	if (Tree)
+	{
+		Events.Add(TEXT("started"));
+		StateTreeComponent->SetStateTree(Tree);
 		StateTreeComponent->StartLogic();
 	}
 }

@@ -10,6 +10,8 @@ node examples/unreal/pcg_game/pcg_validate.mjs --engine "C:/Program Files/Epic G
 
 It makes the project in the OS temp folder, runs the editor many times (about ten minutes, and a GPU for the offscreen runs), prints PASS or FAIL per claim with the measured values, and exits 0 when all pass. `--keep` leaves the project and its logs; `--shot` copies the game-process screenshot. `node --test examples/unreal/pcg_game/pcg-validate.test.mjs` tests the check logic without Unreal and is part of `node scripts/check.mjs`.
 
+A game process here is the editor binary with `-game`. PCG in a packaged (cooked) game, `GENERATE_AT_RUNTIME` and streaming with a partitioned map were run on 5.8.3 in [pcg_packaged](../pcg_packaged/README.md).
+
 ## What each script does
 
 | Script | Mode | Role |

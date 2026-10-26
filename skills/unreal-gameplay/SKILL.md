@@ -15,6 +15,7 @@ Unreal 5.8 on Windows. Pick the feature from the goal, then read that system's r
 | Give characters abilities, stat effects, costs or predicted actions (GameplayAbilities; off) | [Gameplay Ability System](references/unreal-gameplay-ability-system.md) |
 | Set up GAS in order: ASC placement, attribute sets, prediction, cues (GameplayAbilities) | [GAS workflow](references/unreal-gameplay-ability-system-workflow.md) |
 | Write Gameplay Effects, attribute sets, native tags or a cost and cooldown in C++ (GameplayAbilities) | [GAS in C++](references/unreal-gas-native-effects.md) |
+| Add Gameplay Effect components from C++: immunity, blocks, cancels, chance, requirements, granted abilities (GameplayAbilities) | [GE components](references/unreal-gas-effect-components.md) |
 | Bind player input and switch controls by situation (EnhancedInput; on) | [Enhanced Input](references/unreal-enhanced-input.md) |
 | Build NPC decisions, sensing, interaction slots or crowds (StateTree, Behavior Trees, Smart Objects, Mass) | [AI](references/unreal-ai-behavior.md) |
 | Follow the numbered steps for a StateTree, Behavior Tree, EQS, Perception or Smart Object setup | [AI workflow](references/unreal-ai-behavior-workflow.md) |

@@ -13,8 +13,9 @@ Unreal 5.8 on Windows. Pick the feature from the goal, then read that system's r
 | Build a large landscape with rivers and scattered content (World Partition, Landmass, Water, PCG) | [World Partition](references/unreal-world-partition.md), [Landmass](references/unreal-landmass.md), [Water](references/unreal-water.md), [PCG](references/unreal-pcg.md) |
 | Scatter world content by rules: foliage, props, biomes, in the editor or a running game (PCG; on) | [PCG](references/unreal-pcg.md), [PCG in a game](references/unreal-pcg-game-process.md) |
 | Convert a plain map to World Partition or run its builder commandlets and `wp.Runtime` console commands | [World Partition commandlets](references/unreal-world-partition-commandlets.md) |
-| Size the Landscape proxy grid of a partitioned map, or read Landscape heights back | [World Partition Landscape](references/unreal-world-partition-landscape.md) |
+| Size the Landscape proxy grid of a partitioned map, read Landscape heights back, load or unload proxies, or run PCG on a partitioned Landscape | [World Partition Landscape](references/unreal-world-partition-landscape.md) |
 | Pick a PCG generation mode (partitioned, hierarchical, runtime) or tune runtime generation (PCG; on) | [PCG generation modes](references/unreal-pcg-generation-modes.md) |
+| Generate PCG at runtime in a cooked game, or with a partitioned map that streams (PCG; on) | [PCG in a cooked game](references/unreal-pcg-cooked-game.md) |
 | Run PCG nodes on the GPU, or check what the GPU Static Mesh Spawner does not support (PCG; on) | [PCG GPU execution](references/unreal-pcg-gpu.md) |
 | Author terrain with helpers (Landmass; off, beta) | [Landmass](references/unreal-landmass.md) |
 | Add oceans, lakes or rivers (Water; off, experimental) | [Water](references/unreal-water.md) |
