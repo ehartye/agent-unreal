@@ -72,7 +72,7 @@ private:
 	void RefreshTracked(double T);
 	void BindEvents(int32 Index);
 	void Snapshot(const UPCGComponent& Component, FSnap& Out) const;
-	void CountInstances(const AActor& Owner, FSnap& Out) const;
+	void CountInstances(const AActor& Holder, FSnap& Out) const;
 	TSharedRef<FJsonObject> SnapJson(const FSnap& Snap) const;
 	TSharedRef<FJsonObject> WorldJson() const;
 	TSharedRef<FJsonObject> ComponentJson(const FTracked& Entry) const;

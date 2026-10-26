@@ -172,10 +172,10 @@ void APcgPackagedGameMode::BindEvents(int32 Index)
 	});
 }
 
-void APcgPackagedGameMode::CountInstances(const AActor& Owner, FSnap& Out) const
+void APcgPackagedGameMode::CountInstances(const AActor& Holder, FSnap& Out) const
 {
 	TArray<UInstancedStaticMeshComponent*> Isms;
-	Owner.GetComponents<UInstancedStaticMeshComponent>(Isms);
+	Holder.GetComponents<UInstancedStaticMeshComponent>(Isms);
 	for (UInstancedStaticMeshComponent* Ism : Isms)
 	{
 		if (!Ism) continue;
@@ -194,7 +194,7 @@ void APcgPackagedGameMode::CountInstances(const AActor& Owner, FSnap& Out) const
 	}
 	// The GPU-driven spawner makes procedural ISM components, which are not UInstancedStaticMeshComponent; they are counted through their blueprint-callable GetNumInstances.
 	TArray<UPrimitiveComponent*> Primitives;
-	Owner.GetComponents<UPrimitiveComponent>(Primitives);
+	Holder.GetComponents<UPrimitiveComponent>(Primitives);
 	for (UPrimitiveComponent* Primitive : Primitives)
 	{
 		if (!Primitive || !Primitive->GetClass()->GetName().Contains(TEXT("ProceduralISM"))) continue;
@@ -216,7 +216,7 @@ void APcgPackagedGameMode::Snapshot(const UPCGComponent& Component, FSnap& Out) 
 		++Out.OutputItems;
 		if (const UPCGBasePointData* Points = Cast<const UPCGBasePointData>(Tagged.Data.Get())) Out.OutputPoints += Points->GetNumPoints();
 	}
-	if (const AActor* Owner = Component.GetOwner()) CountInstances(*Owner, Out);
+	if (const AActor* Holder = Component.GetOwner()) CountInstances(*Holder, Out);
 }
 
 TSharedRef<FJsonObject> APcgPackagedGameMode::SnapJson(const FSnap& Snap) const
