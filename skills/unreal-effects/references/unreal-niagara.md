@@ -40,8 +40,7 @@ Epic's MCP server exposes the toolset registry through `list_toolsets`, `describ
 
 ## Bring generated assets into Niagara
 
-- A mesh renderer takes a static mesh from the system or a user parameter (`override_system_user_variable_static_mesh`); the Static Mesh data interface also binds an actor or component. The Audio Player data interface plays a `SoundBase` from particle data.
-- Turn a sprite atlas into a flipbook: import it, use a Sprite Renderer with the Sub UV Animation module, and set Sub Image Size to the atlas grid. Epic advises a power-of-two texture and a tile count that divides it evenly. The Niagara Baker, which bakes a simulation to a flipbook, is an editor UI workflow.
+A sprite atlas as a flipbook, an imported mesh in a mesh renderer, and the Static Mesh user parameter, with their 5.8.3 runs, are in [Niagara: generated assets](unreal-niagara-generated-assets.md).
 
 ## Drawn, ink and cel looks
 
@@ -53,7 +52,7 @@ Choose by what must stay drawn. [`stylized_validate.mjs`](../../../examples/unre
 - Stepped light on an unlit particle: quantize a light term, `floor(term x N) / (N - 1)`, into a Lerp. [tested] It drew flat bands next to a smooth control.
 - [tested] The Dynamic Material Parameters module's Index 0 Param 1 (3) reached the material's Dynamic Parameter node (default 4): three bands rendered.
 - Lit toon on a particle: [tested] Substrate Toon works on sprites ([Substrate](../../unreal-rendering/references/unreal-substrate.md)).
-- Not verified: linking Direct Frame Index to a user parameter; the frame stayed age-driven.
+- [tested] On 5.8.3, in one throwaway project and one scene with a float user parameter, Direct Frame Index linked to that parameter did not drive the frame: the link read back and the mode was Direct Index, but the frame stayed age-driven, and a constant written into Direct Frame Index did take effect. The link variants run are listed in the generated-assets reference, and the cause is not determined ([the runs and the control](unreal-niagara-generated-assets.md)).
 
 ## Fluids
 

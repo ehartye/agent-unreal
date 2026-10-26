@@ -1,6 +1,6 @@
 # Chaos destruction from C++: hulls, simulation data and spawn order
 
-Written for Unreal 5.8.2. A [tested] line ran in [`chaos_break.mjs`](../../../examples/unreal/chaos_break/README.md) on that engine. A [documented] line cites a file and line in the install as `Module/File`, found by name under `Engine/Source/Runtime` or `Engine/Plugins`. A [general] line is behaviour observed outside this repository and not re-run here. Building a collection and the material flag are in [Chaos destruction from C++](unreal-chaos-destruction-native.md); editor routes are in [Chaos destruction](unreal-chaos-destruction.md).
+Written for Unreal 5.8.2. A [tested] line ran in [`chaos_break.mjs`](../../../examples/unreal/chaos_break/README.md) on that engine. A `--material project --render` run on 5.8.3 passed the same 11 checks with the break-event counts the lines below name; its other numbers are in the example's README. A [documented] line cites a file and line in the install as `Module/File`, found by name under `Engine/Source/Runtime` or `Engine/Plugins`. A [general] line is behaviour observed outside this repository and not re-run here. Building a collection and the material flag are in [Chaos destruction from C++](unreal-chaos-destruction-native.md); editor routes are in [Chaos destruction](unreal-chaos-destruction.md).
 
 ## No convex hulls, nothing breaks
 

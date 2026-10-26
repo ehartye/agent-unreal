@@ -23,4 +23,8 @@ Written for Unreal 5.8.2. [`nts_validate.mjs`](../../../examples/unreal/niagara_
 - [tested] A second message covers a visible condition: `Refusing to set input 'Loop Duration': its VisibleCondition currently evaluates false. The input is not visible in the editor - flip the gating input first.` On `SingleLoopingParticle`, `Life Cycle Mode` is `System`; setting it to `Self` makes `Loop Duration` writable.
 - [documented] The three refusals (hidden, VisibleCondition, EditCondition) are in `SetStackInputData` of the same file, lines 2796-2820.
 
+## Gradient and curve inputs
+
+- [tested] On 5.8.3, `nts_probe.mjs --only gradient` passed 3 of 3: the System toolset registers, a data-interface input whose name mentions a curve or gradient exists, and a gradient or curve input written as a whole reads back changed.
+
 Local space, `SortOrderHint`, the ribbon material flag and adding a renderer are in [Local space, sort order, ribbon materials and added renderers](unreal-niagara-toolset-renderers.md).

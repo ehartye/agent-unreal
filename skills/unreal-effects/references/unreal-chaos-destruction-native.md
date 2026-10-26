@@ -1,6 +1,6 @@
 # Chaos destruction from C++: facts for a Geometry Collection built in code
 
-Written for Unreal 5.8.2. A [documented] line cites a file and line in the install as `Module/File`, found by name under `Engine/Source/Runtime` or `Engine/Plugins`. A [general] line is behaviour observed outside this repository and not re-run here. Only the material line below was exercised by a run, and it was not confirmed. Hulls, simulation data and spawn order are in [Chaos destruction from C++: hulls and spawn order](unreal-chaos-destruction-hulls.md). Editor routes are in [Chaos destruction](unreal-chaos-destruction.md).
+Written for Unreal 5.8.2; the material line also ran on 5.8.3. A [documented] line cites a file and line in the install as `Module/File`, found by name under `Engine/Source/Runtime` or `Engine/Plugins`. A [general] line is behaviour observed outside this repository and not re-run here. Only the material line below was exercised by a run, and it was not confirmed. Hulls, simulation data and spawn order are in [Chaos destruction from C++: hulls and spawn order](unreal-chaos-destruction-hulls.md). Editor routes are in [Chaos destruction](unreal-chaos-destruction.md).
 
 ## Build and shatter
 
@@ -16,6 +16,7 @@ Written for Unreal 5.8.2. A [documented] line cites a file and line in the insta
 - [general] The Python property is `used_with_geometry_collections`, named like the other usage flags; not run here.
 - [documented] A game or Play-In-Editor session logs a `LogMaterial` warning, `Material <path> missing usage flag GeometryCollections! Default Material will be used in game.` (`Engine/Material.cpp` line 1945; the name is at `MaterialInterface.cpp` line 2962). Outside play the editor sets the flag itself and marks the package dirty (lines 1882-1920), so the warning needs such a session and the saved asset is where to set it.
 - [tested] On 5.8.2, the `missing usage flag GeometryCollections` warning did not appear in either the null-RHI run or the `--render` run (a `-game -RenderOffScreen` run with the engine's basic shape material); the cause is not established, so the source reading above is not backed by a run.
+- [tested] On 5.8.3, `chaos_break.mjs --material project --render` passed the same 11 checks as on 5.8.2, and the verbose run printed no `missing usage flag GeometryCollections` warning again. That run used a project material carrying the Geometry Collections usage flag, rendered offscreen; the unflagged material was not re-run on 5.8.3.
 
 ## Give released cells velocity
 
