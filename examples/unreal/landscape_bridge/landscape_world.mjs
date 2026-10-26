@@ -1,5 +1,5 @@
 // node landscape_world.mjs --engine "C:/Program Files/Epic Games/UE_5.8" [--only landmass|pcg|unload] [--rendering] [--keep] [--compiler 14.44.35228] [--sdk 10.0.26100.0]
-// Ran on Unreal 5.8.3: rendering editor 18 of 18 checks, -nullrhi editor 16 of 18. Engine probes for three rows of the procedural-world references:
+// Ran on Unreal 5.8.4: rendering editor 18 of 18 checks, -nullrhi editor 16 of 18. Engine probes for three rows of the procedural-world references:
 //   landmass  Can Python put a Landmass brush manager on a Landscape edit layer? (landmass_probe.py: a ladder of rungs, a negative control
 //             and the bridge's attach_brush_to_layer; heights read in a rendering editor.)
 //   pcg       Does a PCG graph with a Landscape input and a Surface Sampler produce points across the proxies of a partitioned Landscape in

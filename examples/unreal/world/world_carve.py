@@ -9,7 +9,7 @@ It reads the final heightmap with Landscape.render_heightmap into an 8-bit rende
 the 32-bit float formats make render_heightmap return False), places a Water Zone and a River, writes the river's depth and width,
 forces an edit-layer update, and reads the same strip again. Then it captures an overhead image with a SceneCapture2D.
 Not covered: carving proxies that are not loaded. The editor loads every Landscape proxy of these maps at open, and
-this script's run unloaded none. The bridge runs on 5.8.3 (examples/unreal/landscape_bridge) loaded four proxies with
+this script's run unloaded none. The bridge runs on 5.8.4 (examples/unreal/landscape_bridge) loaded four proxies with
 load_actors and then unloaded them with unload_actors; unload_actors alone changed nothing.
 """
 import json

@@ -1,5 +1,5 @@
 // Judges the reports that statetree_bridge.mjs collects. Pure functions, no Unreal and no dependencies; the node test feeds them reports
-// shaped like the ones statetree_probe.py writes. The first 13 checks were written against Unreal 5.8.2 runs; all 21 passed on 5.8.3, including
+// shaped like the ones statetree_probe.py writes. The first 13 checks were written against Unreal 5.8.2 runs; all 21 passed on 5.8.4, including
 // "S1" (the component schema on a plain pawn) and "S2" (a tree parameter bound to a condition), whose expectations came from reading the engine source.
 //   build = report of the first editor session (mode build); run = report of the second session (mode run, Play-In-Editor).
 // A check with observe: true records a value and never fails on it; it passes when the value was recorded.
@@ -99,7 +99,7 @@ export function evaluate({ build, buildReport, runReport, buildLog = '', runLog 
   add('no StateTree errors at run time', 'the play session logs no LogStateTree warnings or errors',
     !!runLog && !/LogStateTree(Editor)?: (Warning|Error)/.test(runLog), 'run log scanned');
 
-  // ---- row S1: the component schema on a plain pawn (run on 5.8.3) ----------------------------------------
+  // ---- row S1: the component schema on a plain pawn (run on 5.8.4) ----------------------------------------
   const cp = s.comp_probe;
   const cg = s.comp_gated;
   const cst = s.structure_comp;
@@ -141,7 +141,7 @@ export function evaluate({ build, buildReport, runReport, buildLog = '', runLog 
     r?.classes?.StateTreeComponentSchema !== undefined && r?.classes?.StateTreeComponent !== undefined,
     `StateTreeComponentSchema ${r?.classes?.StateTreeComponentSchema}; StateTreeComponent ${r?.classes?.StateTreeComponent}`, true);
 
-  // ---- row S2: a root parameter bound to a condition property (run on 5.8.3) ------------------------------
+  // ---- row S2: a root parameter bound to a condition property (run on 5.8.4) ------------------------------
   const pr = s.param;
   const pst = s.structure_param;
   add('S2 tree parameter builds and compiles', 'a root parameter "Threshold" (integer, 5) added through the editor data compiles with a binding to a transition condition property; the parameter reads back from the editor data; no compiler messages',

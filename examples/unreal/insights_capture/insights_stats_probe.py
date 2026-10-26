@@ -1,4 +1,4 @@
-# Run on 5.8.2 (8 of 8 checks pass). Run inside a throwaway game process by insights_stats.mjs (-ExecCmds="py insights_stats_probe.py").
+# Run on 5.8.4 (8 of 8 checks pass). Run inside a throwaway game process by insights_stats.mjs (-ExecCmds="py insights_stats_probe.py").
 # Two modes, chosen by STATS_MODE:
 #   stats   runs the stat commands the unreal-quality references name and leaves their output in the log: "stat help" (lists the engine's stat
 #           commands), a bare "stat" (the stat help text), "stat unit", "stat fps", and "stat startfile" ... "stat stopfile" around a few ticks.

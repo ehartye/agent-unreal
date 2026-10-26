@@ -1,5 +1,5 @@
 """Probe, build half: systems that may or may not emit, authored through the Niagara toolsets, for the sim-cache count in nts_probe_sim.py.
-Run on 5.8.2 on 2026-10-26 (the checks in nts-probe-checks.mjs state what it showed).
+Run on 5.8.2 on 2026-10-26 and again on 5.8.4 with the same result (the checks in nts-probe-checks.mjs state what it showed).
 
 Run headless (assets and level only, no rendering), through nts_probe.mjs --only emit, or by hand:
   UnrealEditor-Cmd.exe Project.uproject -run=pythonscript -script=<this file> -unattended -nullrhi -nosplash -nopause -nosound -notraceserver

@@ -32,6 +32,7 @@ import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { readEngineVersion } from './engine-version.mjs';
 
 export const DEFAULT_ROOTS = ['Engine/Source/Runtime', 'Engine/Source/Editor', 'Engine/Plugins/FX', 'Engine/Plugins/Runtime', 'Engine/Plugins/Experimental'];
 // Generated copies (Intermediate), build output, vendored libraries and assets. Folders named Resources or Documentation are not on
@@ -545,11 +546,13 @@ function normaliseRoot(engineDir, root) {
   return rel;
 }
 
+/** The install's version for the summary line, plus warnings when the version files disagree with the editor executable. */
 function engineVersion(engineDir) {
-  try {
-    const v = JSON.parse(readFileSync(`${engineDir}/Engine/Build/Build.version`, 'utf8'));
-    return `${v.MajorVersion}.${v.MinorVersion}.${v.PatchVersion} (CL ${v.Changelist})`;
-  } catch { return null; }
+  const info = readEngineVersion(engineDir);
+  if (info.major === null && info.changelist === null) return { text: null, warnings: [] };
+  const numbers = info.major === null ? 'version unreadable' : `${info.major}.${info.minor}.${info.patch}`;
+  const stale = info.warnings.length > 0;
+  return { text: `${numbers}${stale ? ' (version file)' : ''} (CL ${info.changelist ?? 'unknown'}${stale ? ', editor executable' : ''})`, warnings: info.warnings };
 }
 
 function nearestUplugin(engineDir, buildRel) {
@@ -672,7 +675,9 @@ export async function run({ engine, query, kind = 'auto', roots = [], max, concu
   const miss = found ? null
     : `no ${chosen} "${query}" under the roots searched: ${listed}. Folders named ${skippedText} are skipped. `
       + 'Pass --root <folder under Engine> (for example --root Engine/Plugins/PCG) to search another folder, or one of the skipped folders itself.';
-  return { kind: chosen, query, found, results, more, notes, roots: { searched: walked.present, absent: walked.absent }, miss, stats, engineVersion: engineVersion(engineDir) };
+  const version = engineVersion(engineDir);
+  notes.push(...version.warnings.map((w) => `WARNING: ${w}`));
+  return { kind: chosen, query, found, results, more, notes, roots: { searched: walked.present, absent: walked.absent }, miss, stats, engineVersion: version.text };
 }
 
 // ---------------------------------------------------------------------------------------------------------------------------

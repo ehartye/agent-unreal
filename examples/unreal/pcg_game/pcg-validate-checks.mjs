@@ -131,7 +131,7 @@ export function evaluate(r) {
     `edge max ${c('small_edge').stats && c('small_edge').stats.max}, fixed ${c('small_edge_blend10m_multiply_filter').instances}/${c('small_edge_scale10_multiply_filter').instances}`);
 
   const cv = exp.cvars || {};
-  check('the runtime-generation and frame-time console variables have these 5.8.2 defaults',
+  check('the runtime-generation and frame-time console variables have these 5.8.4 defaults',
     'Runtime generation on, pooling on, pool 100, 16 generating components, debugging off, radius multiplier 1, pcg.FrameTime 5 ms, pcg.EditorFrameTime 15 ms',
     cv['pcg.RuntimeGeneration.Enable'] === 1 && cv['pcg.RuntimeGeneration.EnablePooling'] === 1 && cv['pcg.RuntimeGeneration.BasePoolSize'] === 100
       && cv['pcg.RuntimeGeneration.NumGeneratingComponents'] === 16 && cv['pcg.RuntimeGeneration.EnableDebugging'] === 0

@@ -1,6 +1,6 @@
 // node skeletal_materials.mjs --engine "C:/Program Files/Epic Games/UE_5.8" [--keep] [--rendering] [--compiler 14.44.35228] [--sdk 10.0.26100.0]
 // Prepared for skills/unreal-import/references/unreal-import-policy.md and skills/unreal-editor-scripting/references/unreal-python-cpp-bridge.md;
-// run on Unreal 5.8.2 (see the README status).
+// run on Unreal 5.8.4 (see the README status).
 // It writes a throwaway code project in the OS temp folder with one editor-only module (module/SkeletalMaterialsBridge: a Blueprint function
 // library whose SetSkeletalMeshMaterials writes a skeletal mesh's material slots), builds the Editor target with Unreal Build Tool, and runs
 // skel_probe.py in two separate editor processes: "author" (copies of an engine skeletal mesh, the Python routes, the C++ function, saves)

@@ -41,7 +41,7 @@ export function evaluate(r) {
   check('toolset functions are not Python members', 'dir(unreal.NiagaraToolset_System) is empty',
     Array.isArray(author.python_members_of_toolset_class) && author.python_members_of_toolset_class.length === 0,
     JSON.stringify(author.python_members_of_toolset_class));
-  check('the System toolset lists 46 tools', 'NiagaraToolset_System has 46 tools (Unreal 5.8.2)', author.system_tool_count === 46,
+  check('the System toolset lists 46 tools', 'NiagaraToolset_System has 46 tools (Unreal 5.8.4)', author.system_tool_count === 46,
     `${author.system_tool_count} on ${author.engine}`);
   const calls = author.calls || [];
   const before = author.emitters_before || [], after = author.emitters_after || [];

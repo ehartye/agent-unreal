@@ -1,6 +1,6 @@
 # Niagara: generated assets, a flipbook, a mesh and a frame parameter
 
-Written for Unreal 5.8. A [tested] line ran on 5.8.3 in [`nts_probe.mjs`](../../../examples/unreal/niagara_toolsets/README.md) (`--only wire` passed 7 of 8 checks with the built-in cube, 4 of 8 on the first run; `--only frame` passed 3 of 5) on a throwaway project: it shows one project and one scene, not a general rule. A [documented] line names Epic's documentation or a file under the engine's `Engine` folder. Call shapes are in [Author Niagara systems from Python](unreal-niagara-toolsets.md); the rest of the Niagara routes are in [Niagara](unreal-niagara.md).
+Written for Unreal 5.8. A [tested] line ran in [`nts_probe.mjs`](../../../examples/unreal/niagara_toolsets/README.md) (`--only wire` passed 7 of 8 checks with the built-in cube, 4 of 8 on the first run; `--only frame` passed 3 of 5) on a throwaway project: it shows one project and one scene, not a general rule. The probes were rerun on 5.8.4 with the same counts, the same two `frame` checks and the same `wire` check failing; the rerun used a generated stand-in atlas of the same grid, so the pixel counts and index readings below are from the first run. A [documented] line names Epic's documentation or a file under the engine's `Engine` folder. Call shapes are in [Author Niagara systems from Python](unreal-niagara-toolsets.md); the rest of the Niagara routes are in [Niagara](unreal-niagara.md).
 
 ## Sprite atlas to a flipbook
 
@@ -21,7 +21,7 @@ Written for Unreal 5.8. A [tested] line ran on 5.8.3 in [`nts_probe.mjs`](../../
 - [general] A mesh renderer takes a static mesh from the system or a user parameter (`override_system_user_variable_static_mesh`); the Static Mesh data interface also binds an actor or component. The Audio Player data interface plays a `SoundBase` from particle data.
 - [tested] A rigged GLB (a fox) imported through Interchange with the default pipeline gave 1 skeletal mesh and no static mesh (19 assets), so there was no static mesh for the renderer. The built-in cube imported as one static mesh, `.../StaticMeshes/cube.cube` (2 assets).
 - [tested] `GetRendererData` of a mesh renderer lists nested struct fields in lower camel case (`mesh`, `lODBias`, `lODMode`). A mesh written under the key `Mesh` returned no error and the read-back still had no mesh; written under `mesh` the read-back held the same asset path ([renderers](unreal-niagara-toolset-renderers.md)).
-- [tested] On 5.8.3, a mesh emitter added to a template-made system started dead and emitted after a write of the system's `Loop Duration`: see [Emitters added to a template-made system start dead](unreal-niagara-toolsets.md).
+- [tested] On 5.8.4, a mesh emitter added to a template-made system started dead and emitted after a write of the system's `Loop Duration`: see [Emitters added to a template-made system start dead](unreal-niagara-toolsets.md).
 
 ## Static Mesh user parameter
 

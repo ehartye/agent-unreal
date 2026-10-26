@@ -1,6 +1,6 @@
 # Niagara toolsets: delete and recreate a system, and the start-up log
 
-Written for Unreal 5.8.2. [`nts_validate.mjs`](../../../examples/unreal/niagara_toolsets/README.md) runs each [tested] line on a throwaway project; [documented] lines name a file under the engine's `Engine` folder. Call shapes and the worked example are in [Author Niagara systems from Python](unreal-niagara-toolsets.md).
+Written for Unreal 5.8.2 and rerun on 5.8.4 with the same result. [`nts_validate.mjs`](../../../examples/unreal/niagara_toolsets/README.md) runs each [tested] line on a throwaway project; [documented] lines name a file under the engine's `Engine` folder. Call shapes and the worked example are in [Author Niagara systems from Python](unreal-niagara-toolsets.md).
 
 ## Delete and recreate a system
 

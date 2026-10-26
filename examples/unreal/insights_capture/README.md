@@ -52,7 +52,7 @@ A rendered frame (`-nullrhi` throws render data away), the `gpu` and `rendercomm
 
 ## Measurement commands (opt-in)
 
-**Status:** Run on 5.8.2 (an installed Launcher build): 8 of 8 counted checks pass. The first run passed 5 of 8: one check asserted a claim the build contradicts (below), and two failed because of the probe's timing (below).
+**Status:** Run on 5.8.2 (an installed Launcher build): 8 of 8 counted checks pass, and again on 5.8.4 with the same result. The first run passed 5 of 8: one check asserted a claim the build contradicts (below), and two failed because of the probe's timing (below).
 
 Backs [Measurement conditions and budgets](../../../skills/unreal-quality/references/unreal-quality-measurement.md) and [Profiling tools: what each answers](../../../skills/unreal-quality/references/unreal-quality-profiling-tools.md). The run above captures one trace with the default channels; this phase runs the commands those pages name. It is a separate runner, so the run above is unchanged:
 
@@ -66,7 +66,7 @@ node examples/unreal/insights_capture/insights_stats.mjs --engine "<UE_5.8 folde
 
 What it checks (counted): the stats run finished; `stat help` lists the Unit and FPS commands with their descriptions; a bare `stat` prints the stat help; `stat startfile` and `stat stopfile` are compiled out of the installed build, so no `.uestats` file is written; the memory trace answers Active Alloc; Memory Leaks returns the held array and not the freed one; Limited Lifetime returns the freed one; a trace without the memory channel answers nothing. The two leak checks look for the exact allocation sizes (4 bytes per element), because other engine allocations of several megabytes also start and stay alive inside the window.
 
-Observed on 5.8.2:
+Observed on 5.8.4:
 
 - `stat startfile` and `stat stopfile` do nothing. The stat help and a bare `stat` do not list them, the log has no line for them and no `.uestats` file is written. `Engine/Source/Runtime/Core/Private/Stats/StatsCommand.cpp` compiles the `startfile`, `stopfile`, `startfileraw` and `testfile` commands only when `UE_ENABLE_STATS_FILE_DEPRECATED_IN_5_8` is 1, and `Engine/Source/Runtime/Core/Public/Stats/StatsFile.h` defaults it to 0. The check asserts this (they are compiled out), not that a file appears.
 - A memory trace gives each allocation the time of the last memory marker, and the engine writes a marker once per 4096 memory events (`Engine/Source/Runtime/Core/Private/ProfilingDebugging/MemoryTrace.cpp`, `MarkerSamplePeriod`). In the first run the held array was stamped 2.6 ms before the `LeakA` bookmark although it was allocated after it, so Memory Leaks and Limited Lifetime returned 0 rows while Active Alloc returned 3.5 million. The probe now separates every bookmark and allocation by thousands of small allocations; the queries then returned the held array (1200000 bytes) from Memory Leaks and the freed array (6000000 bytes) from Limited Lifetime.

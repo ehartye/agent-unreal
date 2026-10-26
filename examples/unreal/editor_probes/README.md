@@ -29,7 +29,7 @@ It also takes `--timeout <ms>` (default 600000). The pure logic (arguments, repo
 
 ## Opt-in: the launcher under a time limit
 
-**Status:** Prepared and first run 2026-10-26 on Unreal 5.8.2: `probe_timeout.mjs` passed 7 of 7 checks in 108 s with no change to the probe. Not run on 5.8.3. The three probes above and their launcher runs are unchanged.
+**Status:** Prepared and first run 2026-10-26 on Unreal 5.8.2: `probe_timeout.mjs` passed 7 of 7 checks in 108 s with no change to the probe. Rerun on 5.8.4 with the same result (7 of 7). The three probes above and their launcher runs are unchanged.
 
 ```text
 node examples/unreal/editor_probes/probe_timeout.mjs --engine "C:/Program Files/Epic Games/UE_5.8" [--timeout-ms 60000] [--keep]

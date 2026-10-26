@@ -14,10 +14,10 @@ repository is marked as tested.
 
 ## Status
 
-Early (0.17.0). Eleven skills.
+Early (0.17.1). Eleven skills.
 
 The skills moved here from agent-engine 0.14.0, where their history up to that tag lives; `unreal-import` and its importer scripts followed in 0.2.0. The scripts in `examples/`
-were run on Windows against Unreal 5.7.3, 5.8.2 and 5.8.3 as each README states; other platforms were not run.
+were run on Windows against Unreal 5.7.3, 5.8.2 and 5.8.3, and the engine probes reran on 5.8.4 with the same counts, as each README states; other platforms were not run.
 
 [`docs/sample-scene.md`](docs/sample-scene.md) records what Unreal 5.7, Unreal 5.8 and UEFN passed of the cross-engine
 sample scene. Its spec stays in agent-engine, which also holds the Godot, Unity and web builds.
@@ -64,7 +64,7 @@ The [Windows packaging reference](skills/unreal-native/references/unreal-native-
 records an actual staged Game EXE separately from Editor-game evidence, including the UAT Application Control failure.
 The [content pipeline](skills/unreal-native/references/unreal-native-content-pipeline.md)
 records the tested content-only bake/native Game split, short-path cook fix and recipe/hash validation.
-The [World Partition reference](skills/unreal-procedural/references/unreal-world-partition.md) covers making a partitioned map and large Water setups; its [Landscape](skills/unreal-procedural/references/unreal-world-partition-landscape.md) and [commandlet](skills/unreal-procedural/references/unreal-world-partition-commandlets.md) companions cover the Landscape proxy grid, converting a map and the builder commandlets, with scenes run on 5.8.2. [PCG in a running game](skills/unreal-procedural/references/unreal-pcg-game-process.md) lists what a game process needs that the editor supplies. The [Python to C++ bridge](skills/unreal-editor-scripting/references/unreal-python-cpp-bridge.md) shows an editor module that creates a Landscape from a height array, and [automation tests](skills/unreal-native/references/unreal-native-automation-tests.md) shows how to write, run and read a 5.8 C++ test.
+The [World Partition reference](skills/unreal-procedural/references/unreal-world-partition.md) covers making a partitioned map and large Water setups; its [Landscape](skills/unreal-procedural/references/unreal-world-partition-landscape.md) and [commandlet](skills/unreal-procedural/references/unreal-world-partition-commandlets.md) companions cover the Landscape proxy grid, converting a map and the builder commandlets, with scenes run on 5.8.4. [PCG in a running game](skills/unreal-procedural/references/unreal-pcg-game-process.md) lists what a game process needs that the editor supplies. The [Python to C++ bridge](skills/unreal-editor-scripting/references/unreal-python-cpp-bridge.md) shows an editor module that creates a Landscape from a height array, and [automation tests](skills/unreal-native/references/unreal-native-automation-tests.md) shows how to write, run and read a 5.8 C++ test.
 The [comparison scene reference](skills/unreal-native/references/unreal-native-compare-scene.md) and its [example](examples/unreal/compare-scene/README.md)
 set several implementations of one visible thing side by side in a native game, film them and time each alone.
 

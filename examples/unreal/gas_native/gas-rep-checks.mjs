@@ -1,6 +1,6 @@
 // Judges what gas_rep.mjs collects for the replicated-play scenario (module/GasNative/GasNativeRep.cpp): the build, the two receipts (one
 // per process) and the two logs. Pure functions, no Unreal, no dependencies; the node test feeds them receipts shaped like the ones the
-// scenario writes. Run on Unreal 5.8.3: the asserted checks held on that run. The expectations come from engine source (cited per check) and a check
+// scenario writes. Run on Unreal 5.8.4: the asserted checks held on that run. The expectations come from engine source (cited per check) and a check
 // whose outcome the source does not pin is `observe` (recorded and printed, never asserted).
 //
 //   server receipt: { role: "server", net_mode, client_joined, player_count, phases: { joined, after } }

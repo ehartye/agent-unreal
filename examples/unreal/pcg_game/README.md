@@ -10,7 +10,7 @@ node examples/unreal/pcg_game/pcg_validate.mjs --engine "C:/Program Files/Epic G
 
 It makes the project in the OS temp folder, runs the editor many times (about ten minutes, and a GPU for the offscreen runs), prints PASS or FAIL per claim with the measured values, and exits 0 when all pass. `--keep` leaves the project and its logs; `--shot` copies the game-process screenshot. `node --test examples/unreal/pcg_game/pcg-validate.test.mjs` tests the check logic without Unreal and is part of `node scripts/check.mjs`.
 
-A game process here is the editor binary with `-game`. PCG in a packaged (cooked) game, `GENERATE_AT_RUNTIME` and streaming with a partitioned map were run on 5.8.3 in [pcg_packaged](../pcg_packaged/README.md).
+A game process here is the editor binary with `-game`. PCG in a packaged (cooked) game, `GENERATE_AT_RUNTIME` and streaming with a partitioned map were run on 5.8.4 in [pcg_packaged](../pcg_packaged/README.md).
 
 ## What each script does
 
@@ -24,14 +24,14 @@ A game process here is the editor binary with `-game`. PCG in a packaged (cooked
 | `pcg_flag_editor.py` | editor, offscreen | Shows that the rendering editor sets the material flag itself on first use. |
 | `pcg_common.py` | shared | Report writer, generator stage runner, soft property setter, graph variant builder, volume spawner, instance counter, point reader. |
 
-## What it showed on 5.8.2
+## What it showed on 5.8.4
 
 - Without a PCG World Actor the game process logs the "unable to access the landscape cache" error and spawns nothing. With one and the default cache mode it logs the "not set to be serialized" error and spawns nothing. With `ALWAYS_SERIALIZE` both volumes spawn (17 instances each). With the mode alone the editor-binary game process generated too; the cache build adds 12.6 MB to the map (1.2 MB to 13.8 MB).
 - Cubes whose material lacks the instanced-meshes flag render with the default material in the game process (a red material on one side, grey cubes on the other); the rendering editor sets the flag itself.
 - Spatial Noise: one noise cell is 100 m divided by the transform scale; 5e-5 gives one value. Perlin values sit in 0.29 to 0.64 (10th to 90th percentile) until contrast is applied. Attribute Noise defaults to `Set`: 1,140 of 2,401 points survive a 0.5 filter with `Set`, 155 with `Multiply`.
 - Edge Mask, Attribute Noise `MULTIPLY`, Density Filter spawns instances on a Landscape-wide volume and none on a 40 m volume, because the default blend distance is 100 m; the filter alone after the Edge Mask is empty there too. Blend distance 0.1 or transform scale 10 fixes it.
 - Saving in the same tick as `generate()` saves a map with no instances; saving after the generated event saves them.
-- In the editor, `pcg.BuildLandscapeCache` after a Python-spawned PCG World Actor leaves two actors in the world; the maps use the actor an editor generation creates. The console variable defaults on 5.8.2 are `pcg.FrameTime` 5.0 ms and `pcg.EditorFrameTime` 15.0 ms, not the 16.667 and 50 ms on Epic's generation-modes page.
+- In the editor, `pcg.BuildLandscapeCache` after a Python-spawned PCG World Actor leaves two actors in the world; the maps use the actor an editor generation creates. The console variable defaults on 5.8.4 are `pcg.FrameTime` 5.0 ms and `pcg.EditorFrameTime` 15.0 ms, not the 16.667 and 50 ms on Epic's generation-modes page.
 
 ## Run one script by hand
 

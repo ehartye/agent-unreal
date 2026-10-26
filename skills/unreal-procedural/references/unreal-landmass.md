@@ -60,15 +60,15 @@ Tuning `CustomBrush_Landmass`:
 
 ## Attach a brush from a script
 
-Run on 5.8.3 in one throwaway project, on a Landscape made by the repo's bridge module (505 by 505 vertices, 4 by 4 components, one default edit layer named `Layer`), in a `-nullrhi` editor and in a rendering editor (`-RenderOffScreen`): [`examples/unreal/landscape_bridge`](../../../examples/unreal/landscape_bridge/README.md), `landscape_world.mjs`. The bridge functions: [Landscape bridge brushes](../../unreal-editor-scripting/references/unreal-landscape-bridge-brushes.md).
+Run on 5.8.4 in one throwaway project, on a Landscape made by the repo's bridge module (505 by 505 vertices, 4 by 4 components, one default edit layer named `Layer`), in a `-nullrhi` editor and in a rendering editor (`-RenderOffScreen`): [`examples/unreal/landscape_bridge`](../../../examples/unreal/landscape_bridge/README.md), `landscape_world.mjs`. The bridge functions: [Landscape bridge brushes](../../unreal-editor-scripting/references/unreal-landscape-bridge-brushes.md).
 
 - [tested] Both modes: spawning the Landmass brush manager and a brush from Python, calling `set_target_landscape` and writing `detail_panel_landscape` each left the manager on no edit layer (bridge `get_brush_layer_index` -1, layer brush counts `[0]`, `get_brush_owning_landscape` None). The brush found its manager already in the map (class `LandmassBrushManager_C` from the plugin content). No name on `unreal.Landscape` or `unreal.LandscapeProxy` adds a brush to a layer (the list was empty).
 - [documented] `ALandmassManagerBase::SetTargetLandscape` only removes the previous Landscape and never adds the manager to a layer (`Engine/Plugins/Experimental/Landmass/Source/Editor/Private/LandmassManagerBase.cpp`). `ALandscape::AddBrushToLayer` is C++ only and `check()`s that the brush is on no layer yet (`Engine/Source/Runtime/Landscape/Private/LandscapeEditLayers.cpp`), hence the guard in the bridge.
 - [tested] The bridge function `attach_brush_to_layer(landscape, 0, manager)` returned True; layer 0 then held 1 brush, and the brush owner and `get_landscape()` were the Landscape. `detach_brush` returned True and put the manager back on no layer (counts `[0]`, `get_landscape()` None).
 - [tested] False positive: after writing `detail_panel_landscape`, `get_landscape()` printed the written Landscape while the manager was still on no layer.
 - [general] Read attachment through `get_brush_layer_index` or the layer's brush count, not `get_landscape()` alone.
-- [tested] Heights, rendering editor only: with `CustomBrush_Landmass` attached the heightmap read back unchanged (peak delta 0 cm, original restored after the detach); with `LandmassBrush_ProceduralNoise` attached the peak delta was 1569.55 cm after 43 s, and the original returned after the detach. No nudge was needed. In the `-nullrhi` run the collision heightfield peak delta was 0 and was not judged.
-- [tested] The rendering run's Landmass step took 486 s.
+- [tested] Heights, rendering editor only: with `CustomBrush_Landmass` attached the heightmap read back unchanged (peak delta 0 cm, original restored after the detach); with `LandmassBrush_ProceduralNoise` attached the peak delta was 1569.55 cm, and the original returned after the detach. The change appeared 1 s after attach on the 5.8.4 rerun (43 s in the first run, when the first merge compiled shaders); the peak was the same. No nudge was needed. In the `-nullrhi` run the collision heightfield peak delta was 0 and was not judged.
+- [tested] The rendering run's Landmass step took 486 s in the first run.
 - [general] Expect a long first edit-layer merge; the run did not isolate why.
 - Not covered by these runs: brushes with a spline, Water brushes, a brush other than the two classes named.
 

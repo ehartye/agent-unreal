@@ -1,5 +1,5 @@
 // Pure checks and options of the opt-in Niagara probes (nts_probe.mjs). Prepared 2026-10-26; not yet run on an engine, except the emit group,
-// which ran on 5.8.2 on 2026-10-26. A first run tests a probe before it tests the engine. No Unreal, no files: nts-probe.test.mjs feeds it
+// which ran on 5.8.2 on 2026-10-26 and again on 5.8.4 with the same result. A first run tests a probe before it tests the engine. No Unreal, no files: nts-probe.test.mjs feeds it
 // canned reports, and nts_probe.mjs feeds it real ones. None of this changes what nts_validate.mjs does. The report shapes below are the ones
 // the nts_probe_*.py scripts write; they follow the shapes of nts_author.py. Only the emit shapes have been confirmed by a run.
 import { changedPixels } from './nts-probe-assets.mjs';
@@ -135,7 +135,7 @@ const EMIT_IDS = ['CtlTemplate', 'FactoryFountain', 'FactoryBurst', 'KeepUntouch
   'SwapRateTouched', 'SwapDurationTouched', 'SwapBurstTouched', 'LateAdded', 'LateTouched', 'TouchedThenRemoved'];
 
 /**
- * Which authoring step leaves an emitter that does not emit (5.8.2). A cache that holds frames but reads 0 particles for the Probe emitter is
+ * Which authoring step leaves an emitter that does not emit (5.8.4). A cache that holds frames but reads 0 particles for the Probe emitter is
  * "dead"; a cache the engine refuses to capture (the system had completed: "System already completed its simulation") is "completed at once".
  */
 function emitChecks({ build, sim }, check) {

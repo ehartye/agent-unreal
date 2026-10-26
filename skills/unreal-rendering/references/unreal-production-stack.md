@@ -1,7 +1,7 @@
 # Unreal production stack for visual polish
 
 Public Epic pages below were read as UE 5.8 documentation on 2026-10-16/17.
-Installed 5.8.2 was the research context; only the "Materials tested on Unreal 5.8.2" bullet below was run.
+Installed 5.8.2 was the research context; only the "Materials tested on Unreal 5.8.4" bullet below was run (first on 5.8.2, rerun on 5.8.4 with the same result).
 Check the consuming project's installed APIs, renderer and active runtime settings;
 public version labels and older experimental wording do not establish local support.
 
@@ -16,7 +16,7 @@ public version labels and older experimental wording do not establish local supp
 
 See [Niagara families and stock content](../../unreal-effects/references/unreal-niagara-stock-content.md).
 
-## Materials tested on Unreal 5.8.2
+## Materials tested on Unreal 5.8.4
 
 - [tested] A Custom material node body is one function body: a `#define` macro compiles; a helper function logs `function definition is not allowed here` and the material falls back to the default. Instanced static meshes need `used_with_instanced_static_meshes`: `False` on a Python-made material and in a commandlet, set when a rendering editor draws instances or for a list by `allow_instancing` ([editor Python maps](../../unreal-editor-scripting/references/unreal-editor-python-maps.md)).
 

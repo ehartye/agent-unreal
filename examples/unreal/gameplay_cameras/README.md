@@ -2,7 +2,7 @@
 
 Prepared for [Gameplay Cameras in Unreal 5.8](../../../skills/unreal-gameplay/references/unreal-gameplay-cameras.md). Unreal Engine 5.8, Windows, Visual Studio 2022 Build Tools.
 
-**Status:** Run on Unreal 5.8.2 on 2026-10-26: 34 of 34 checks pass. The first run (21 of 27) found three probe faults and the engine behaviours listed under Findings; the checks now assert what the engine does. Not yet run on 5.8.3.
+**Status:** Run on Unreal 5.8.2 on 2026-10-26: 34 of 34 checks pass; rerun on 5.8.4 with the same result. The first run (21 of 27) found three probe faults and the engine behaviours listed under Findings; the checks now assert what the engine does.
 
 The questions: does a third-person rig built in code with the Gameplay Cameras assemblers put the player camera manager's eye and field of view where the rig's numbers say; do a modifier rig's start and stop blend the view in and out; and what does a view blend do in a world held at 0.0001 of real time?
 
@@ -39,7 +39,7 @@ node examples/unreal/gameplay_cameras/gameplay_cameras.mjs --engine "C:/Program 
 - Per rig session (12 checks): the process ran with the fixed time step and the log has no `LogCameraSystem` error and no warning other than the hitch warning below; the host is the one the session names; the modifier start logs the hitch warning on the manager and not on the component; the assembler-built rigs report a clean build status and the pawn was possessed before activation; the eye at rest is within 5 cm of the pawn plus the control rotation applied to the boom offset and the field of view is 78; a plain 1000 cm move shows the boom lag in the first frames and settles within 10 cm of the boom length after ten seconds; the same move as a teleport shows no lag; the modifier rig starts (valid instance id), is halfway at 0.2 s and complete at 2 s (95 degrees, eye out by the modifier's offset); it stops with the exit blend; the same start at dilation 0.0001 progresses less than 10 percent in two seconds of real time; an immediate stop in the held world returns the base view; the time dilation is back at 1.
 - Stock session (9 checks): the cached view starts on the base camera; a 0.35 s blend finishes in normal time; the same blend does not finish in the held world (the photo camera stays pending, `BlendTimeToGo` stays near 0.35, the view keeps 78 degrees); in that state the photo camera's own lens says 30 and the view says 78, with the view's eye more than 1000 cm from the photo camera; a blend started in the frame that sets the dilation gets one frame of time; a cut to the camera the stalled blend is heading for does nothing; a cut to the base camera aborts the blend; a cut to the photo camera then works.
 
-## Findings (Unreal 5.8.2)
+## Findings (Unreal 5.8.4)
 
 - Both hosts blend a modifier rig on world time: at dilation 0.0001 the enter blend progressed 0.000 in two seconds of real time. The Gameplay Cameras evaluator stalls in a held world as the stock view-target blend does.
 - Order matters: a blend started in the same frame that sets the dilation gets one undilated frame. In the first run the view-target blend lost 0.0335 s (`BlendTimeToGo` 0.3165, field of view 73.4) and the modifier blend showed 2 percent progress. The probe sets the dilation two frames before it starts the blend, and one stock check keeps the same-frame case.

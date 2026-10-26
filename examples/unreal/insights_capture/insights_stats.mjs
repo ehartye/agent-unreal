@@ -1,5 +1,5 @@
 // node insights_stats.mjs --engine "<UE_5.8 folder>" [--held 300000] [--freed 1500000] [--keep]
-// Run on 5.8.2 (8 of 8 checks pass). The opt-in measurement-commands phase of the Insights example: it does not change what insights_capture.mjs does.
+// Run on 5.8.4 (8 of 8 checks pass). The opt-in measurement-commands phase of the Insights example: it does not change what insights_capture.mjs does.
 // Runs the measurement commands that skills/unreal-quality/references/unreal-quality-measurement.md and unreal-quality-profiling-tools.md name:
 //   stats run   a game process (UnrealEditor-Cmd.exe -game -nullrhi) that runs stat help, a bare stat, stat unit, stat fps and stat startfile / stopfile;
 //               the log and the files under Saved/Profiling/UnrealStats are judged.

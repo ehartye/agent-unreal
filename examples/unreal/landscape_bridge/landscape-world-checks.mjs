@@ -1,5 +1,5 @@
 // Judges the reports that landscape_world.mjs collects. Pure functions, no Unreal and no dependencies; landscape-world.test.mjs feeds them
-// canned reports in the shape landmass_probe.py, pcg_partition_probe.py and wp_unload_probe.py write. The probes ran on Unreal 5.8.3
+// canned reports in the shape landmass_probe.py, pcg_partition_probe.py and wp_unload_probe.py write. The probes ran on Unreal 5.8.4
 // (rendering editor 18 of 18 checks, -nullrhi editor 16 of 18). The expectations below were written from the install's sources before
 // the first run, and the canned reports are what a run that agrees with those sources would write, not recorded results.
 //
@@ -67,7 +67,7 @@ function landmassChecks(landmass, add, observe) {
 function pcgChecks(pcg, add, observe) {
   const fixture = pcg?.fixture, control = pcg?.control, part = pcg?.partitioned;
   add('pcg: no script errors', 'every step of pcg_partition_probe.py ran', noErrors(pcg), errorText(pcg));
-  add('pcg fixture: one Landscape, four loaded proxies, sixteen components', 'the grid size 2 map the bridge makes holds the Landscape actor and four streaming proxies of four components (landscape_bridge.mjs, tested on 5.8.2)',
+  add('pcg fixture: one Landscape, four loaded proxies, sixteen components', 'the grid size 2 map the bridge makes holds the Landscape actor and four streaming proxies of four components (landscape_bridge.mjs, tested on 5.8.4)',
     fixture?.landscape_actors === 1 && fixture?.streaming_proxies === 4 && fixture?.components === 16, show(fixture));
   add('pcg control: the non-partitioned volume generates points', 'a volume with is_component_partitioned False over the whole Landscape completes and holds sampler points on the Landscape (the generated event, as in pcg_game)',
     control?.partitioned_readback === false && control?.event_fired === true && control?.points > 0, control ? show({ partitioned: control.partitioned_readback, event: control.event_fired, points: control.points }) : 'no control');

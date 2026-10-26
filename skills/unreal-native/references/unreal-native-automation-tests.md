@@ -1,6 +1,6 @@
 # Writing and running a C++ automation test in Unreal 5.8
 
-Target: Unreal Engine 5.8.2, Windows. This page covers writing a test, running it headless, reading the report and why the process exit code is not the verdict; the build and capture loop is in [native build and capture](unreal-native-game.md). Evidence comes from `examples/unreal/automation_test/` (`node automation_test.mjs --engine <UE_5.8 folder>`), which builds the module below in a throwaway code project and ran 9 of 9 checks on 5.8.2.
+Target: Unreal Engine 5.8.4, Windows. This page covers writing a test, running it headless, reading the report and why the process exit code is not the verdict; the build and capture loop is in [native build and capture](unreal-native-game.md). Evidence comes from `examples/unreal/automation_test/` (`node automation_test.mjs --engine <UE_5.8 folder>`), which builds the module below in a throwaway code project and ran 9 of 9 checks on 5.8.4.
 
 ## Write the test
 
