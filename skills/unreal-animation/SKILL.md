@@ -17,6 +17,7 @@ Unreal 5.8 on Windows. Pick the feature from the goal, then read that system's r
 | Author character animation logic or drive it by data search (Animation Blueprints; Pose Search) | [Animation Blueprints](references/unreal-animation-blueprints.md), [Motion Matching](references/unreal-motion-matching.md) |
 | Add AnimDynamics, Two Bone IK foot planting, states or any other AnimGraph node from code | [AnimGraph from C++](references/unreal-animgraph-from-cpp.md) |
 | Author, record or play cinematics; render them offline or from a command line (Sequencer; Movie Render Pipeline off) | [Sequencer](references/unreal-sequencer.md), [Movie Render Queue](references/unreal-movie-render-queue.md) |
+| Pick a Movie Render Queue pass, set samples and anti-aliasing, or fix a Deferred render that loses the GPU on a Lumen scene | [Render passes and quality](references/unreal-movie-render-queue-quality.md) |
 
 ## Rules of thumb
 
