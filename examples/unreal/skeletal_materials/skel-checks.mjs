@@ -2,7 +2,7 @@
 // Pure functions, no Unreal and no dependencies.
 //   author = report of the first process: bridge {class_found, members}, steps.materials.{red,blue}, steps.SK_* (see skel_probe.py)
 //   read   = report of a fresh process: meshes.SK_*.{class, slots, registry:{route, raw, value}}, steps.materials
-// Report shape: assumed until a first run (no run of this probe exists yet); see the README.
+// Report shape: confirmed by an engine run on 5.8.2 (the test reports below follow it).
 // A slot row is { name, material, imported_name }, material being the object path ('' for an empty slot).
 
 export const MESH_NAMES = ['SK_Element', 'SK_Assign', 'SK_AssignForced', 'SK_Single', 'SK_Two'];
@@ -25,7 +25,7 @@ export function evaluate({ build, author, read }) {
   const red = s.materials?.red?.path, blue = s.materials?.blue?.path;
   const meshes = r?.meshes ?? {};
   const checks = [];
-  checks.push({ name: 'module compiles', claim: 'UBT builds the editor target with the SkeletalMaterialsBridge module (the first run is also the first compile of this module)',
+  checks.push({ name: 'module compiles', claim: 'UBT builds the editor target with the SkeletalMaterialsBridge module',
     pass: build?.exit === 0 && /Result: Succeeded/.test(build?.log ?? ''), detail: `exit ${build?.exit}` });
   checks.push({ name: 'author process ran', claim: 'the first process wrote a report with no script error, the bridge class is visible to Python with set_skeletal_mesh_materials, and the log has no fatal error',
     pass: !!a && (a.errors ?? []).length === 0 && a.bridge?.class_found === true && (a.bridge?.members ?? []).includes('set_skeletal_mesh_materials') && !/Fatal error/.test(author?.log ?? ''),
@@ -49,9 +49,13 @@ export function evaluate({ build, author, read }) {
   checks.push({ name: 'assign-back sets the slots in memory', claim: 'set_editor_property("materials", new SkeletalMaterial structs) raises nothing and the mesh reads the new material at once',
     pass: !!as && as.raised === null && as.after?.length === as.slots_before?.length && as.after?.[0]?.material === red && as.in_memory_changed === true,
     detail: as ? `raised ${JSON.stringify(as.raised)}; slot 0 reads ${as.after?.[0]?.material}` : 'no step' });
-  checks.push({ name: 'assign-back leaves the package clean', claim: 'after the assign-back set, and after an identical second set, a default save (only if dirty) writes nothing, and a fresh load reads the original material',
-    pass: !!as && as.file_changed_after_save_1 === false && as.file_changed_after_save_2 === false && sameSlots(meshes.SK_Assign?.slots, as.slots_before),
-    detail: as ? `file changed after save 1: ${as.file_changed_after_save_1}; after save 2: ${as.file_changed_after_save_2}; reload ${key(meshes.SK_Assign?.slots)}` : 'no step' });
+  // Engine finding of the first fixed run (5.8.2): set_editor_property("materials", ...) dirties the package, so a default save writes the file,
+  // for the identical second set too. SK_Control (nothing done to the mesh) writes nothing, which separates "the set dirtied it" from "a default save always writes".
+  const ctl = s.SK_Control;
+  checks.push({ name: 'assign-back dirties the package', claim: 'after the assign-back set, and again after an identical second set, the package is dirty and a default save (only if dirty) writes the file, while a default save on an untouched copy writes nothing; a fresh load reads the new material',
+    pass: !!as && as.dirty_after_set_1 === true && as.file_changed_after_save_1 === true && as.dirty_after_save_1 === false && as.dirty_after_set_2 === true && as.file_changed_by_save_2 === true
+      && !!ctl && ctl.file_changed_after_default_save === false && meshes.SK_Assign?.slots?.[0]?.material === red,
+    detail: as ? `dirty after set 1: ${as.dirty_after_set_1}; file changed by save 1: ${as.file_changed_after_save_1}; dirty after save 1: ${as.dirty_after_save_1}; dirty after set 2: ${as.dirty_after_set_2}; file changed by save 2: ${as.file_changed_by_save_2}; control file changed: ${ctl?.file_changed_after_default_save}; reload ${key(meshes.SK_Assign?.slots)}` : 'no step' });
   const af = s.SK_AssignForced;
   checks.push({ name: 'a forced save persists the assign-back', claim: 'the same assign-back followed by a save with only_if_is_dirty False writes the file and a fresh load reads the new material',
     pass: !!af && af.raised === null && af.forced_save_file_changed === true && meshes.SK_AssignForced?.slots?.[0]?.material === red,
