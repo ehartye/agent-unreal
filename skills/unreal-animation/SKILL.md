@@ -15,8 +15,10 @@ Unreal 5.8 on Windows. Pick the feature from the goal, then read that system's r
 | Add hair or fur (Hair Strands; off) | [Hair Strands](references/unreal-hair-strands.md) |
 | Rig, animate procedurally or retarget with IK (Control Rig and IK Rig on; Full Body IK off) | [Control Rig](references/unreal-control-rig.md) |
 | Author character animation logic or drive it by data search (Animation Blueprints; Pose Search) | [Animation Blueprints](references/unreal-animation-blueprints.md), [Motion Matching](references/unreal-motion-matching.md) |
+| Work through an Animation Blueprint: Property Access, Fast Path, state machines, linked layers, montages, notifies, blend spaces | [Animation Blueprint workflow](references/unreal-animation-blueprint-workflow.md) |
 | Add AnimDynamics, Two Bone IK foot planting, states or any other AnimGraph node from code | [AnimGraph from C++](references/unreal-animgraph-from-cpp.md) |
 | Author, record or play cinematics; render them offline or from a command line (Sequencer; Movie Render Pipeline off) | [Sequencer](references/unreal-sequencer.md), [Movie Render Queue](references/unreal-movie-render-queue.md) |
+| Work through a Level Sequence: bindings, camera cuts, gameplay playback, multiplayer, Take Recorder | [Sequencer workflow](references/unreal-sequencer-workflow.md) |
 | Pick a Movie Render Queue pass, set samples and anti-aliasing, or fix a Deferred render that loses the GPU on a Lumen scene | [Render passes and quality](references/unreal-movie-render-queue-quality.md) |
 
 ## Rules of thumb
