@@ -13,7 +13,9 @@ class FJsonObject;
  *
  * Run it with compare.ps1 (next to the Source folder); it starts the game on this game mode (the `game=` URL option) with -AECompareSet=<name> -AECaptureDir=<dir> (and optionally -AECompareCount,
  * -AECompareWarmup, -AECompareStress). It writes <dir>/compare.png and compare-b.png (two frames, a moment apart, so motion differs), compare-stress-<id>.png per candidate and
- * compare.json, then exits. The frame times in the receipt are wall-clock frame times of the whole process (game thread, render thread and GPU together), not isolated costs. */
+ * compare.json, then exits. The frame times in the receipt are wall-clock frame times of the whole process (game thread, render thread and GPU together), not isolated costs. Each candidate's stress
+ * entry also has a perf block: the wall frame time beside the game thread time, the render thread time and the GPU's own frame time (RHIGetGPUFrameCycles), each as mean, p50, p95 and max. With
+ * -AECompareNoShots (a headless run) no screenshot is taken and the perf block still fills; the GPU value then reads 0. */
 namespace AECompare {
 struct FCandidate {
     /** A short identifier used in file names and the receipt, and the text shown under the candidate in the scene. */
@@ -68,6 +70,7 @@ private:
     void ClearPhase();
     void RequestShot(const FString& FileName);
     void BeginStress(int32 Index);
+    void AdvanceStress(double Now);
     void WriteReceipt();
     void TickLive(float DeltaSeconds,float FrameMs);
     void PlaceCamera();
@@ -87,9 +90,10 @@ private:
     // Live mode (-AECompareLive): the showcase runs until Esc, with Up and Down doubling and halving the copies of every candidate, Left and Right orbiting the camera, and the frame time on screen. A gamepad does the same: D-pad up and down for the copies, the left stick or D-pad left and right to orbit,
     // the right stick to move the camera in and out, B or Back to quit.
     bool bLive=false;
+    bool bNoShots=false;          // -AECompareNoShots: skip every screenshot (a headless run)
     int32 LiveCount=3;
     float CameraDistance=1600.f,BaseCameraDistance=1600.f,CameraYawDegrees=0.f,SmoothedFrameMs=0.f;
-    struct FStressResult { FString Id,Shot; int32 Count=0; TArray<float> FrameMs; TSharedPtr<FJsonObject> Described; };
+    struct FStressResult { FString Id,Shot; int32 Count=0; TArray<float> FrameMs,GameMs,RenderMs,GpuMs; TSharedPtr<FJsonObject> Described; };
     TArray<FStressResult> StressResults;
     FString ShowcaseShotA,ShowcaseShotB,RenderAdapter;
 };

@@ -21,7 +21,10 @@
 #include "Misc/FileHelper.h"
 #include "Misc/Parse.h"
 #include "Misc/Paths.h"
+#include "DynamicRHI.h"      // RHIGetGPUFrameCycles (RHI module)
 #include "RHI.h"
+#include "RHIGlobals.h"      // GUsingNullRHI
+#include "RenderTimer.h"     // GGameThreadTime, GRenderThreadTime (RenderCore module)
 #include "Serialization/JsonSerializer.h"
 #include "Serialization/JsonWriter.h"
 #include "UnrealClient.h"
@@ -89,6 +92,30 @@ TSharedPtr<FJsonObject> FrameStats(const TArray<float>& Ms) {
     J->SetNumberField(TEXT("frame_ms_max"),Percentile(Ms,1.f));
     return J;
 }
+
+TSharedRef<FJsonObject> Summary(const TArray<float>& Ms) {
+    TSharedRef<FJsonObject> J=MakeShared<FJsonObject>();
+    double Sum=0.; for(const float V:Ms) Sum+=V;
+    J->SetNumberField(TEXT("mean"),Ms.IsEmpty()?0.:Sum/Ms.Num());
+    J->SetNumberField(TEXT("p50"),Percentile(Ms,.5f));
+    J->SetNumberField(TEXT("p95"),Percentile(Ms,.95f));
+    J->SetNumberField(TEXT("max"),Percentile(Ms,1.f));
+    return J;
+}
+
+/** The perf block of one stress window: the wall frame time beside the game thread, the render thread and the GPU's own frame time, each as mean, p50, p95 and max in milliseconds.
+ * The three engine values are those of the previous frame. The GPU value is 0 when no rendering RHI runs (-nullrhi), so gpu_time_available says whether it can be read at all. */
+TSharedRef<FJsonObject> PerfBlock(const TArray<float>& Wall,const TArray<float>& Game,const TArray<float>& Render,const TArray<float>& Gpu) {
+    TSharedRef<FJsonObject> J=MakeShared<FJsonObject>();
+    bool bAnyGpu=false; for(const float V:Gpu) bAnyGpu|=(V>0.f);
+    J->SetNumberField(TEXT("frames"),Wall.Num());
+    J->SetBoolField(TEXT("gpu_time_available"),!GUsingNullRHI&&bAnyGpu);
+    J->SetObjectField(TEXT("wall_ms"),Summary(Wall));
+    J->SetObjectField(TEXT("game_thread_ms"),Summary(Game));
+    J->SetObjectField(TEXT("render_thread_ms"),Summary(Render));
+    J->SetObjectField(TEXT("gpu_ms"),Summary(Gpu));
+    return J;
+}
 }
 
 TArray<FVector2D> AECompare::GridPoints(int32 Count,float Spacing) {
@@ -117,6 +144,7 @@ void AAECompareGameMode::BeginPlay() {
     FParse::Value(FCommandLine::Get(),TEXT("AECompareWarmup="),WarmupSeconds);
     FParse::Value(FCommandLine::Get(),TEXT("AECompareStress="),StressSeconds);
     bLive=FParse::Param(FCommandLine::Get(),TEXT("AECompareLive"));
+    bNoShots=FParse::Param(FCommandLine::Get(),TEXT("AECompareNoShots"));   // headless runs: no screenshots, the perf block still fills
     FParse::Value(FCommandLine::Get(),TEXT("AECompareShowcase="),ShowcaseCount);
     if(CaptureDir.IsEmpty()) CaptureDir=FPaths::ProjectSavedDir()/TEXT("Compare");
     CaptureDir=FPaths::ConvertRelativePathToFull(CaptureDir);
@@ -258,6 +286,11 @@ void AAECompareGameMode::BeginStress(int32 Index) {
     PhaseStartSeconds=FPlatformTime::Seconds();
 }
 
+void AAECompareGameMode::AdvanceStress(double Now) {
+    if(StressIndex+1<Set.Candidates.Num()) BeginStress(StressIndex+1);
+    else { ClearPhase(); WriteReceipt(); Phase=EPhase::Finishing; PhaseStartSeconds=Now; }
+}
+
 void AAECompareGameMode::Tick(float DeltaSeconds) {
     Super::Tick(DeltaSeconds);
     const double Now=FPlatformTime::Seconds();
@@ -273,7 +306,10 @@ void AAECompareGameMode::Tick(float DeltaSeconds) {
     }
     switch(Phase) {
     case EPhase::Showcase:
-        if(Elapsed>=WarmupSeconds) { ShowcaseShotA=CaptureDir/TEXT("compare.png"); RequestShot(TEXT("compare.png")); Phase=EPhase::ShotA; }
+        if(Elapsed>=WarmupSeconds) {
+            if(bNoShots) BeginStress(0);
+            else { ShowcaseShotA=CaptureDir/TEXT("compare.png"); RequestShot(TEXT("compare.png")); Phase=EPhase::ShotA; }
+        }
         break;
     case EPhase::ShotA:
         if(!FScreenshotRequest::IsScreenshotRequested()) { Phase=EPhase::Gap; PhaseStartSeconds=Now; }
@@ -288,21 +324,28 @@ void AAECompareGameMode::Tick(float DeltaSeconds) {
         if(Elapsed>=StressWarmSeconds) { Phase=EPhase::StressMeasure; PhaseStartSeconds=Now; }
         break;
     case EPhase::StressMeasure:
-        if(FrameMs>0.f) StressResults.Last().FrameMs.Add(FrameMs);
+        if(FrameMs>0.f) {
+            FStressResult& Result=StressResults.Last();
+            Result.FrameMs.Add(FrameMs);
+            // The game and render thread times and the GPU's frame time are those of the previous frame; the GPU value is 0 without a rendering RHI.
+            Result.GameMs.Add(FPlatformTime::ToMilliseconds(GGameThreadTime));
+            Result.RenderMs.Add(FPlatformTime::ToMilliseconds(GRenderThreadTime));
+            Result.GpuMs.Add(FPlatformTime::ToMilliseconds(RHIGetGPUFrameCycles()));
+        }
         if(Elapsed>=StressSeconds) {
             // What the candidate says about itself is read now, while it is still spawned: the clear that follows the screenshot would leave it describing nothing.
             StressResults.Last().Described=MakeShared<FJsonObject>();
             if(Set.Candidates[StressIndex].Describe) Set.Candidates[StressIndex].Describe(*StressResults.Last().Described);
-            StressResults.Last().Shot=FString::Printf(TEXT("compare-stress-%s.png"),*StressResults.Last().Id);
-            RequestShot(StressResults.Last().Shot);
-            Phase=EPhase::StressShot;
+            if(bNoShots) AdvanceStress(Now);
+            else {
+                StressResults.Last().Shot=FString::Printf(TEXT("compare-stress-%s.png"),*StressResults.Last().Id);
+                RequestShot(StressResults.Last().Shot);
+                Phase=EPhase::StressShot;
+            }
         }
         break;
     case EPhase::StressShot:
-        if(!FScreenshotRequest::IsScreenshotRequested()) {
-            if(StressIndex+1<Set.Candidates.Num()) BeginStress(StressIndex+1);
-            else { ClearPhase(); WriteReceipt(); Phase=EPhase::Finishing; PhaseStartSeconds=Now; }
-        }
+        if(!FScreenshotRequest::IsScreenshotRequested()) AdvanceStress(Now);
         break;
     case EPhase::Live:
         TickLive(DeltaSeconds,FrameMs);
@@ -330,6 +373,8 @@ void AAECompareGameMode::WriteReceipt() {
     J->SetNumberField(TEXT("stress_warmup_seconds"),StressWarmSeconds);
     J->SetNumberField(TEXT("stress_measure_seconds"),StressSeconds);
     J->SetStringField(TEXT("frame_time_meaning"),TEXT("wall-clock time between game ticks of the whole process (game thread, render thread and GPU together), not an isolated cost"));
+    J->SetBoolField(TEXT("null_rhi"),GUsingNullRHI);
+    J->SetStringField(TEXT("perf_meaning"),TEXT("each candidate's stress.perf holds the wall frame time beside the game thread time, the render thread time and the GPU's own frame time (RHIGetGPUFrameCycles); the three engine values are those of the previous frame, and the GPU value is 0 without a rendering RHI"));
     TArray<TSharedPtr<FJsonValue>> Entries;
     for(int32 I=0;I<Set.Candidates.Num();++I) {
         const AECompare::FCandidate& C=Set.Candidates[I];
@@ -338,7 +383,8 @@ void AAECompareGameMode::WriteReceipt() {
         if(StressResults.IsValidIndex(I)) {
             TSharedPtr<FJsonObject> S=FrameStats(StressResults[I].FrameMs);
             S->SetNumberField(TEXT("copies"),StressResults[I].Count);
-            S->SetStringField(TEXT("screenshot"),CaptureDir/StressResults[I].Shot);
+            S->SetStringField(TEXT("screenshot"),StressResults[I].Shot.IsEmpty()?FString():CaptureDir/StressResults[I].Shot);
+            S->SetObjectField(TEXT("perf"),PerfBlock(StressResults[I].FrameMs,StressResults[I].GameMs,StressResults[I].RenderMs,StressResults[I].GpuMs));
             E->SetObjectField(TEXT("stress"),S);
         }
         if(StressResults.IsValidIndex(I)&&StressResults[I].Described.IsValid()) { for(const auto& Field:StressResults[I].Described->Values) E->SetField(Field.Key,Field.Value); }

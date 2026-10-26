@@ -8,6 +8,8 @@
   Live (-Live): opens the same scene in a window with no time limit and no capture, until you quit it.
 
   The frame times are wall-clock times between game ticks of the whole process (game thread, render thread and GPU together), on whatever machine ran this. They are not isolated costs.
+  Each candidate's stress result also carries a perf block: the wall frame time beside the game thread time, the render thread time and the GPU's own frame time (RHIGetGPUFrameCycles), each as
+  mean, p50, p95 and max. The runner checks the block's shape and prints it in a second table. -Headless runs without a rendering RHI or screenshots, where the GPU time reads 0.
 
 .PARAMETER Exe
   The game to run: a packaged game's executable, or UnrealEditor.exe (then also pass -ExtraArguments with the project path and -game).
@@ -31,6 +33,10 @@
   Arguments placed before the map, for example the .uproject path and -game when -Exe is UnrealEditor.exe.
 .PARAMETER TimeoutSeconds
   Non-live only: kill the game and fail after this long.
+.PARAMETER Headless
+  Non-live only: start the game with -nullrhi and -AECompareNoShots instead of rendering off-screen, take no screenshots and skip the PNG checks. The perf block is still written; its GPU time is expected to read 0.
+.PARAMETER RequirePerf
+  Fail when a candidate's stress result has no perf block. Without it a receipt from a build that predates the block still passes.
 
 .EXAMPLE
   ./compare.ps1 -Exe D:\Builds\MyGame\Windows\MyGame.exe -Set example -OutputDirectory D:\out\compare-1 -GameMode /Script/MyGame.AECompareGameMode -Map /Game/Maps/Main
@@ -46,7 +52,9 @@ param(
     [string]$GameMode = '/Script/YourModule.AECompareGameMode',
     [string]$Map = '/Game/Maps/Main',
     [string[]]$ExtraArguments = @(),
-    [ValidateRange(10, 3600)][int]$TimeoutSeconds = 300
+    [ValidateRange(10, 3600)][int]$TimeoutSeconds = 300,
+    [switch]$Headless,
+    [switch]$RequirePerf
 )
 $ErrorActionPreference = 'Stop'
 $invariant = [Globalization.CultureInfo]::InvariantCulture
@@ -79,7 +87,8 @@ $OutputDirectory = [IO.Path]::GetFullPath($OutputDirectory)
 if (Test-Path -LiteralPath $OutputDirectory) { throw "Output directory already exists; choose a fresh one: $OutputDirectory" }
 [IO.Directory]::CreateDirectory($OutputDirectory) | Out-Null
 
-$arguments = @($ExtraArguments) + @($levelUrl, '-RenderOffScreen', '-unattended', '-nosplash', '-notraceserver', '-NoGamepad', '-ResX=1920', '-ResY=1080', '-ForceRes',
+$displayArguments = if ($Headless) { @('-nullrhi', '-AECompareNoShots') } else { @('-RenderOffScreen') }
+$arguments = @($ExtraArguments) + @($levelUrl) + $displayArguments + @('-unattended', '-nosplash', '-notraceserver', '-NoGamepad', '-ResX=1920', '-ResY=1080', '-ForceRes',
     "-AECompareSet=$Set", "-AECaptureDir=$OutputDirectory", "-AECompareCount=$Count",
     "-AECompareWarmup=$($Warmup.ToString('R', $invariant))", "-AECompareStress=$($StressSeconds.ToString('R', $invariant))")
 
@@ -113,18 +122,41 @@ function Assert-Png([string]$Path, [int]$Width, [int]$Height) {
 $shotA = Join-Path $OutputDirectory 'compare.png'
 $shotB = Join-Path $OutputDirectory 'compare-b.png'
 $receiptPath = Join-Path $OutputDirectory 'compare.json'
-Assert-Png $shotA 1920 1080
-Assert-Png $shotB 1920 1080
+if (-not $Headless) {
+    Assert-Png $shotA 1920 1080
+    Assert-Png $shotB 1920 1080
+}
 if (-not (Test-Path -LiteralPath $receiptPath -PathType Leaf)) { throw "Missing receipt: $receiptPath" }
 try { $receipt = Get-Content -LiteralPath $receiptPath -Raw | ConvertFrom-Json } catch { throw "compare.json does not parse: $($_.Exception.Message)" }
 if ($receipt.scenario -ne 'compare') { throw "Receipt scenario is '$($receipt.scenario)', not 'compare'" }
-if ([IO.Path]::GetFullPath([string]$receipt.screenshot) -ne [IO.Path]::GetFullPath($shotA)) { throw "Receipt screenshot '$($receipt.screenshot)' is not $shotA" }
+if (-not $Headless -and [IO.Path]::GetFullPath([string]$receipt.screenshot) -ne [IO.Path]::GetFullPath($shotA)) { throw "Receipt screenshot '$($receipt.screenshot)' is not $shotA" }
 if ($receipt.set -ne $Set) { throw "Receipt is for set '$($receipt.set)', not '$Set'" }
 if (@($receipt.candidates).Count -lt 1) { throw 'Receipt lists no candidates' }
 foreach ($candidate in $receipt.candidates) {
     if (-not $candidate.PSObject.Properties['stress']) { throw "Candidate '$($candidate.id)' has no stress result" }
     if ($candidate.stress.frames -lt 10) { throw "Candidate '$($candidate.id)' was timed over only $($candidate.stress.frames) frames" }
-    Assert-Png ([string]$candidate.stress.screenshot) 1920 1080
+    if (-not $Headless) { Assert-Png ([string]$candidate.stress.screenshot) 1920 1080 }
+}
+
+# The perf block: four series (wall, game thread, render thread, GPU), each with mean, p50, p95 and max in milliseconds.
+$perfSeries = 'wall_ms', 'game_thread_ms', 'render_thread_ms', 'gpu_ms'
+$perfStats = 'mean', 'p50', 'p95', 'max'
+$perfCount = 0
+foreach ($candidate in $receipt.candidates) {
+    $perf = if ($candidate.stress.PSObject.Properties['perf']) { $candidate.stress.perf } else { $null }
+    if (-not $perf) {
+        if ($RequirePerf) { throw "Candidate '$($candidate.id)' has no perf block (-RequirePerf)" }
+        continue
+    }
+    $perfCount++
+    foreach ($series in $perfSeries) {
+        if (-not $perf.PSObject.Properties[$series]) { throw "Candidate '$($candidate.id)': perf block has no $series" }
+        foreach ($stat in $perfStats) {
+            $value = $perf.$series.$stat
+            if ($null -eq $value -or -not ($value -is [double] -or $value -is [int] -or $value -is [long])) { throw "Candidate '$($candidate.id)': perf.$series.$stat is not a number" }
+        }
+    }
+    if (-not $perf.PSObject.Properties['gpu_time_available']) { throw "Candidate '$($candidate.id)': perf block has no gpu_time_available" }
 }
 
 Write-Host ''
@@ -134,8 +166,19 @@ foreach ($candidate in $receipt.candidates) {
     $note = if ($candidate.PSObject.Properties['available'] -and -not $candidate.available) { '  (NOT AVAILABLE: ' + $candidate.problem + ')' } else { '' }
     Write-Host (('{0,-24} {1,8} {2,8} {3,10:N2} {4,10:N2} {5,10:N2} {6,10:N2}' -f $candidate.id, $s.copies, $s.frames, $s.frame_ms_mean, $s.frame_ms_p50, $s.frame_ms_p95, $s.frame_ms_max) + $note)
 }
+if ($perfCount -gt 0) {
+    Write-Host ''
+    Write-Host 'perf (mean ms; the thread times and the GPU time are those of the previous frame; the GPU column reads 0 without a rendering RHI):'
+    Write-Host ('{0,-24} {1,10} {2,10} {3,10} {4,10} {5,10} {6,10}' -f 'candidate', 'wall', 'game', 'render', 'gpu', 'gpu p95', 'gpu time')
+    foreach ($candidate in $receipt.candidates) {
+        if (-not $candidate.stress.PSObject.Properties['perf']) { continue }
+        $p = $candidate.stress.perf
+        Write-Host ('{0,-24} {1,10:N2} {2,10:N2} {3,10:N2} {4,10:N2} {5,10:N2} {6,10}' -f $candidate.id, $p.wall_ms.mean, $p.game_thread_ms.mean, $p.render_thread_ms.mean, $p.gpu_ms.mean, $p.gpu_ms.p95, $(if ($p.gpu_time_available) { 'read' } else { 'not read' }))
+    }
+    Write-Host 'To judge a perf-set receipt, run: node compare_perf.mjs <output directory>/compare.json'
+}
 Write-Host ''
 Write-Host "engine: $($receipt.engine_version)   adapter: $($receipt.rhi_adapter)"
-Write-Host "side by side: $shotA (and $shotB)"
+if (-not $Headless) { Write-Host "side by side: $shotA (and $shotB)" }
 Write-Host "receipt: $receiptPath"
 Write-Host 'One run proves little: repeat it, and treat differences within the spread between runs as noise.'
