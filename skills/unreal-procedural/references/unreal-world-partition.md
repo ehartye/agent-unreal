@@ -27,7 +27,7 @@ Workflow: create or convert, confirm `get_actor_descs()` returns descriptors, sh
 - [tested] `new_level` on an existing path returns False and logs `An asset already exists at this location.`; a commandlet that logs it exits 1.
 - [tested] Python creates no Landscape: `Landscape` and `LandscapeProxy` expose only heightmap and weightmap render-target import and export. Use the template ([documented] a 2 km by 2 km Landscape) or convert a Landscape map.
 
-The template Landscape, its proxy grid and grid size, reading heights back and Landmass brushes: [World Partition Landscape](unreal-world-partition-landscape.md).
+The template Landscape, its proxy grid and grid size, reading heights back, Landmass brushes, unloaded proxies and PCG on a partitioned Landscape: [World Partition Landscape](unreal-world-partition-landscape.md).
 
 Converting a plain map, the builder commandlets and the `wp.Runtime` console commands: [World Partition commandlets](unreal-world-partition-commandlets.md).
 
@@ -44,7 +44,7 @@ Converting a plain map, the builder commandlets and the `wp.Runtime` console com
 
 ## Not verified
 
-Carving of proxies that are not loaded (the editor loaded every proxy and `unload_actors` did not unload them); attaching a Landmass brush from Python; a PCG graph on a partitioned Landscape. Streaming in play was run only for the PCG case in the bullet above.
+Carving of proxies that are not loaded was not covered by these runs. In the template map the editor loaded every proxy and `unload_actors` unloaded none; in a bridge-made map `load_actors` then `unload_actors` left four proxies unloaded (see [World Partition Landscape](unreal-world-partition-landscape.md)). Streaming in play was run only for the PCG case in the bullet above. On 5.8.3, attaching a Landmass brush from Python (it needs the bridge function) and a PCG graph on a partitioned Landscape (1209 points over 4 cells in a rendering editor, 0 in `-nullrhi` editors) are in the same reference and [Landmass](unreal-landmass.md); the Open World template Landscape, brushes with a spline and Water were not covered there.
 
 ## Sources
 

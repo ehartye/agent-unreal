@@ -32,6 +32,7 @@ Target: Unreal Engine 5.8, Windows. Landmass is the plugin that supplies the Lan
 | Task | Route | What to call |
 |---|---|---|
 | Add a brush to a Landscape | Editor UI | Landscape mode > Sculpt tab > Blueprint; pick a type from the Blueprint Brush dropdown; click the Landscape |
+| Add a brush to a Landscape from a script | Editor C++ bridge | `unreal.LandscapeBridgeLibrary.attach_brush_to_layer(landscape, 0, manager)`; Python alone does not attach ([below](#attach-a-brush-from-a-script)) |
 | Choose a brush | Editor UI | `CustomBrush_Landmass` (spline shape plus effects), `CustomBrush_LandmassRiver` (static mesh extruded along a spline; roads and rivers), `CustomBrush_MaterialOnly` (material noise base) |
 | Reshape a brush's spline | Editor UI | Edit the brush actor's spline in the viewport |
 | Set blend mode, falloff and effects | Python / editor UI | `unreal.LandmassTerrainCarvingSettings` (`blend_mode`, `priority`, `invert_shape`, `falloff_settings`, `effects`); `unreal.LandmassFalloffSettings` (`falloff_mode`, `falloff_angle`, `falloff_width`, `edge_offset`, `z_offset`); `unreal.LandmassBrushEffectsList` (`blurring`, `curl_noise`, `displacement`, `smooth_blending`, `terracing`) |
@@ -39,7 +40,7 @@ Target: Unreal Engine 5.8, Windows. Landmass is the plugin that supplies the Lan
 | Landscape sizing data | Python | `unreal.LandmassLandscapeInfo` (`landscape_quads`, `landscape_transform`, `render_target_resolution`), `unreal.LandmassBlueprintFunctionLibrary` (`combine_world_extents`, `world_extents_to_canvas_coordinates`) |
 | Create the Landscape with edit layers | Editor UI | the Enable Edit Layers option when creating the Landscape |
 
-Brush authoring happens through the editor; Python reaches the settings structs and brush actor classes, and the brush Blueprints ship as plugin content (`CustomBrush_Landmass`, `CustomBrush_Landmass_River`, `CustomBrush_MaterialOnly`, `LandmassBrushManager`, an erosion brush folder).
+Brush authoring happens through the editor or the bridge function below; Python reaches the settings structs and brush actor classes, and the brush Blueprints ship as plugin content (`CustomBrush_Landmass`, `CustomBrush_Landmass_River`, `CustomBrush_MaterialOnly`, `LandmassBrushManager`, an erosion brush folder).
 
 ## Workflow
 
@@ -57,9 +58,22 @@ Tuning `CustomBrush_Landmass`:
 - Noise: up to two octaves of curl noise, set with Curl Strength (amplitude) and Curl Tiling (frequency).
 - Order brushes in the stack so lower brushes form the base and upper brushes refine it.
 
+## Attach a brush from a script
+
+Run on 5.8.3 in one throwaway project, on a Landscape made by the repo's bridge module (505 by 505 vertices, 4 by 4 components, one default edit layer named `Layer`), in a `-nullrhi` editor and in a rendering editor (`-RenderOffScreen`): [`examples/unreal/landscape_bridge`](../../../examples/unreal/landscape_bridge/README.md), `landscape_world.mjs`. The bridge functions: [Landscape bridge brushes](../../unreal-editor-scripting/references/unreal-landscape-bridge-brushes.md).
+
+- [tested] Both modes: spawning the Landmass brush manager and a brush from Python, calling `set_target_landscape` and writing `detail_panel_landscape` each left the manager on no edit layer (bridge `get_brush_layer_index` -1, layer brush counts `[0]`, `get_brush_owning_landscape` None). The brush found its manager already in the map (class `LandmassBrushManager_C` from the plugin content). No name on `unreal.Landscape` or `unreal.LandscapeProxy` adds a brush to a layer (the list was empty).
+- [documented] `ALandmassManagerBase::SetTargetLandscape` only removes the previous Landscape and never adds the manager to a layer (`Engine/Plugins/Experimental/Landmass/Source/Editor/Private/LandmassManagerBase.cpp`). `ALandscape::AddBrushToLayer` is C++ only and `check()`s that the brush is on no layer yet (`Engine/Source/Runtime/Landscape/Private/LandscapeEditLayers.cpp`), hence the guard in the bridge.
+- [tested] The bridge function `attach_brush_to_layer(landscape, 0, manager)` returned True; layer 0 then held 1 brush, and the brush owner and `get_landscape()` were the Landscape. `detach_brush` returned True and put the manager back on no layer (counts `[0]`, `get_landscape()` None).
+- [tested] False positive: after writing `detail_panel_landscape`, `get_landscape()` printed the written Landscape while the manager was still on no layer.
+- [general] Read attachment through `get_brush_layer_index` or the layer's brush count, not `get_landscape()` alone.
+- [tested] Heights, rendering editor only: with `CustomBrush_Landmass` attached the heightmap read back unchanged (peak delta 0 cm, original restored after the detach); with `LandmassBrush_ProceduralNoise` attached the peak delta was 1569.55 cm after 43 s, and the original returned after the detach. No nudge was needed. In the `-nullrhi` run the collision heightfield peak delta was 0 and was not judged.
+- [tested] The rendering run's Landmass step took 486 s; the first edit-layer merge compiles brush materials.
+- Not covered by these runs: brushes with a spline, Water brushes, a brush other than the two classes named.
+
 ## Large landscapes in World Partition
 
-The partitioned map is in [World Partition](unreal-world-partition.md); the Landscape proxy layout, reading heights back and what Python cannot attach are in [World Partition Landscape](unreal-world-partition-landscape.md).
+The partitioned map is in [World Partition](unreal-world-partition.md); the Landscape proxy layout, reading heights back, unloaded proxies and PCG on the partitioned Landscape are in [World Partition Landscape](unreal-world-partition-landscape.md).
 
 ## Sources
 
