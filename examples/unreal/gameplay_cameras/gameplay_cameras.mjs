@@ -1,6 +1,6 @@
 // node gameplay_cameras.mjs --engine "C:/Program Files/Epic Games/UE_5.8" [--keep] [--compiler 14.44.35228] [--sdk 10.0.26100.0]
 //                           [--map /Engine/Maps/Entry] [--sessions manager,component,stock]
-// Prepared for skills/unreal-gameplay/references/unreal-gameplay-cameras.md; run on 5.8.2 (see the README status and findings).
+// Prepared for skills/unreal-gameplay/references/unreal-gameplay-cameras.md; run on 5.8.4 (see the README status and findings).
 // It writes a throwaway code project in the OS temp folder with one runtime module (module/CameraProbe): a pawn with a Gameplay
 // Cameras component whose rigs are built in code with the plugin's assemblers, a controller that picks the camera manager class, and a
 // game mode that runs a scripted scenario from Tick. It builds the Editor target with Unreal Build Tool, then starts the game

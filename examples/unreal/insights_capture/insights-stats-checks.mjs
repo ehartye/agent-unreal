@@ -1,11 +1,11 @@
 // Judges what insights_stats.mjs collects. Pure functions, no Unreal and no dependencies.
 // The stat help lines copy the registration text in Engine/Source/Runtime/Engine/Private/UnrealEngine.cpp (EngineStats); the Memory Insights export is
-// a CSV whose header names the requested columns (MemoryExporter.cpp). A 5.8.2 run confirmed both shapes; the node test builds them by hand
+// a CSV whose header names the requested columns (MemoryExporter.cpp). A 5.8.4 run confirmed both shapes; the node test builds them by hand
 //   stats   = { exit, report, log, uestats: [file names under Saved/Profiling/UnrealStats] }
 //   memory  = { exit, report, insightsLog, exports: { active, leaks, limited } (CSV text or ''), traceBytes }  a trace started with -trace=default,memory
 //   control = the same shape for a trace started with -trace=default only
 
-/** Why `stat startfile` writes nothing in the installed 5.8.2 build (observed), from the install's source. */
+/** Why `stat startfile` writes nothing in the installed 5.8.4 build (observed), from the install's source. */
 export const STARTFILE_SOURCE_NOTE = 'Engine/Source/Runtime/Core/Private/Stats/StatsCommand.cpp compiles the startfile and stopfile commands only when UE_ENABLE_STATS_FILE_DEPRECATED_IN_5_8 is 1, and Engine/Source/Runtime/Core/Public/Stats/StatsFile.h defaults it to 0';
 
 /** Parse CSV text (a byte order mark is tolerated; quoted fields may hold commas). Returns { header, rows } or undefined for empty text. */
@@ -39,7 +39,7 @@ export function evaluate({ stats, memory, control, options = {} }) {
   const fps = hasLine(log, /\bFPS\b.*Display average FPS/i);
   add('stat help lists stat unit and stat fps', '"stat help" names the Unit and FPS stat commands with their descriptions, so both are registered in this build', unit && fps, `unit ${unit}, fps ${fps}`);
   add('a bare stat prints the stat help', 'an empty stat command prints "Empty stat command!" and the brief list of stat commands', hasLine(log, /Empty stat command!/) && hasLine(log, /stat dumpframe/), `header ${hasLine(log, /Empty stat command!/)}, list ${hasLine(log, /stat dumpframe/)}`);
-  // Observed on 5.8.2 (an installed Launcher build): the commands are compiled out, so neither the help nor the log mentions them and no file is written.
+  // Observed on 5.8.4 (an installed Launcher build): the commands are compiled out, so neither the help nor the log mentions them and no file is written.
   const listsFile = hasLine(log, /stat startfile\b/i) || hasLine(log, /stat stopfile\b/i);
   const files = stats?.uestats ?? [];
   const wroteFile = files.length > 0 || hasLine(log, /Wrote stats file/);

@@ -1,6 +1,6 @@
 # World Partition Landscape in Unreal 5.8: proxy grid, grid size, reading heights back, unloaded proxies and PCG
 
-Target: Unreal Engine 5.8, Windows. Companion to [World Partition](unreal-world-partition.md), which covers the partitioned map, converting and rebuilding from scripts, console commands and Water. These are the facts about the Landscape inside a partitioned map. `examples/unreal/world/world_validate.mjs` re-checks the first set; the last two sections ran on 5.8.3 in [`examples/unreal/landscape_bridge`](../../../examples/unreal/landscape_bridge/README.md) (`landscape_world.mjs`). Paths are under `Engine/Source/`, or `Engine/` when they start with `Plugins/`.
+Target: Unreal Engine 5.8, Windows. Companion to [World Partition](unreal-world-partition.md), which covers the partitioned map, converting and rebuilding from scripts, console commands and Water. These are the facts about the Landscape inside a partitioned map. `examples/unreal/world/world_validate.mjs` re-checks the first set; the last two sections ran on 5.8.4 in [`examples/unreal/landscape_bridge`](../../../examples/unreal/landscape_bridge/README.md) (`landscape_world.mjs`). Paths are under `Engine/Source/`, or `Engine/` when they start with `Plugins/`.
 
 ## Landscape in a partitioned map
 
@@ -12,11 +12,11 @@ Target: Unreal Engine 5.8, Windows. Companion to [World Partition](unreal-world-
 - [documented] Valid sizes ([Landscape technical guide](https://dev.epicgames.com/documentation/en-us/unreal-engine/landscape-technical-guide-in-unreal-engine)): vertices per side = quads per component times components plus 1; sections a power of two vertices up to 256; at most 1024 components. [tested] All 11 recommended rows satisfy it (pure Node check).
 - [tested] In a commandlet no proxy is in the world until `WorldPartitionBlueprintLibrary.load_actors` gets their guids; the rendering editor loaded all 64 at open.
 - [tested] In a rendering editor (`-RenderOffScreen`), `landscape.render_heightmap(Transform(), Box2D, target)` into an `RTF_RGBA8` target (float formats return False) gives final heights after `force_layers_full_update()` and 25 s of ticks; height = R*256 + G; Z = Landscape Z + (height - 32768) / 128 * scale Z.
-- [tested] Python spawns `LandmassBrushManager` and `CustomBrush_Landmass`, but neither attaches (`get_landscape()` is None). On 5.8.3 the bridge function `attach_brush_to_layer` attached a manager to edit layer 0; the run, the cause and the heights are in [Landmass](unreal-landmass.md). Otherwise add brushes in Landscape mode.
+- [tested] Python spawns `LandmassBrushManager` and `CustomBrush_Landmass`, but neither attaches (`get_landscape()` is None). On 5.8.4 the bridge function `attach_brush_to_layer` attached a manager to edit layer 0; the run, the cause and the heights are in [Landmass](unreal-landmass.md). Otherwise add brushes in Landscape mode.
 
 ## Proxies that are not loaded
 
-Run on 5.8.3 in a `-nullrhi` and a rendering editor, one throwaway project: a Landscape from the bridge module (505 by 505 vertices, 4 by 4 components, grid size 2: 4 proxies), saved as a partitioned map.
+Run on 5.8.4 in a `-nullrhi` and a rendering editor, one throwaway project: a Landscape from the bridge module (505 by 505 vertices, 4 by 4 components, grid size 2: 4 proxies), saved as a partitioned map.
 
 - [tested] After `load_map` of that saved map: loaded proxies 0, loaded Landscape actors 1, proxy descriptors 4, unloaded proxies 4, in both editors. The template map above was loaded in full by a rendering editor at open; these runs did not isolate why the two maps differ.
 - [tested] `WorldPartitionBlueprintLibrary.unload_actors` on guids that `load_actors` had not loaded changed nothing (0 loaded before and after). `load_actors` on the four proxies, then `unload_actors`: loaded proxies 4, then 0 (unloaded 4). From Python a proxy can be left unloaded.

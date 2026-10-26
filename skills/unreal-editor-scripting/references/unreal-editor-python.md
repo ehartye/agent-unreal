@@ -48,7 +48,7 @@ Recreating a map, property-name errors, the stage runner and ground traces: [Edi
 - Quote each argument that has a space: `-ExecCmds="py C:/path/x.py"` ([Start-Process](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.management/start-process)).
 - `UnrealEditor-Cmd.exe` needs a project and a command.
 - After a timed run, stop only editors whose command line names your project (`Get-CimInstance Win32_Process` filtered by `.uproject`).
-- [tested] On 5.8.2, [`probe.mjs`](../../../examples/unreal/editor_probes/README.md) with `--timeout 60000` and a script holding 600 s exited 1 after 60.3 s. Its message named the limit, the missing report path and the editor log; no report was left, the editor log showed the script was running, and no editor process naming the project remained. A hold shorter than the limit exited 0 and wrote its report (`probe_timeout.mjs`, 7 of 7).
+- [tested] On 5.8.4, [`probe.mjs`](../../../examples/unreal/editor_probes/README.md) with `--timeout 60000` and a script holding 600 s exited 1 after 60.3 s. Its message named the limit, the missing report path and the editor log; no report was left, the editor log showed the script was running, and no editor process naming the project remained. A hold shorter than the limit exited 0 and wrote its report (`probe_timeout.mjs`, 7 of 7).
 - Check a window with the engine's screenshot, not a full-screen capture.
 
 ## A rendering editor in a session with no desktop (SSH, a service)

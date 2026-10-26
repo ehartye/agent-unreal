@@ -69,7 +69,7 @@ export function evaluatePerf(receipt, t = THRESHOLDS) {
       'a -nullrhi run records 0 for every GPU frame time and says gpu_time_available is false',
       [base, gpu, cpu].every((p) => p.gpu_time_available === false && p.gpu_ms.max === 0),
       `gpu_time_available ${[base, gpu, cpu].map((p) => p.gpu_time_available).join('/')}; gpu max ${[base, gpu, cpu].map((p) => f(p.gpu_ms.max)).join('/')} ms`);
-    // Observed on 5.8.3: the game thread and render thread series read 0 in this run (cause not traced; GGameThreadTime is assigned only in FViewport::Draw, per the source),
+    // Observed on 5.8.4: the game thread and render thread series read 0 in this run (cause not traced; GGameThreadTime is assigned only in FViewport::Draw, per the source),
     // and the wall frame time is what still shows the busy-wait.
     const baseWall = mean(base, 'wall_ms'), cpuWall = mean(cpu, 'wall_ms');
     check('without a rendering RHI the wall frame time still moves with CPU work',

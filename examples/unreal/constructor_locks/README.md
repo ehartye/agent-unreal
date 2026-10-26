@@ -1,6 +1,6 @@
 # Asset files locked by constructor-time loads
 
-Backs [Separate native gameplay from content-only asset construction](../../../skills/unreal-native/references/unreal-native-content-pipeline.md). Unreal Engine 5.8.2, Windows, Visual Studio 2022 Build Tools, plain Python 3 on `PATH`.
+Backs [Separate native gameplay from content-only asset construction](../../../skills/unreal-native/references/unreal-native-content-pipeline.md). Unreal Engine 5.8.4, Windows, Visual Studio 2022 Build Tools, plain Python 3 on `PATH`.
 
 A content stage that deletes or rewrites a folder of assets fails when another process holds the files. This example measures which loading styles hold them while an editor is open.
 
@@ -28,7 +28,7 @@ node examples/unreal/constructor_locks/constructor_locks.mjs --engine "C:/Progra
 
 The build takes about 40 to 60 s and each editor run 20 to 110 s (a Play-In-Editor run is the longest). The editors start hidden with `-nullrhi`.
 
-## What it checks (11 checks, all passed on 5.8.2)
+## What it checks (11 checks, all passed on 5.8.4)
 
 - With no editor open, all 24 tries (6 files, 4 operations) succeed.
 - With the editor open and only the classes loaded, all 8 tries on the two `ConstructorHelpers` assets are refused and all 16 on the other four succeed. Python's text for a delete or rename is `PermissionError: [WinError 32] The process cannot access the file because it is being used by another process`; for an open-for-write or an overwrite it is `[Errno 13] Permission denied`.

@@ -1,6 +1,6 @@
 # Side-by-side comparison scene for a native Unreal game
 
-A reusable C++ game mode that sets several ways of doing one thing in a row on an empty stage under one camera, films them, times each alone at N copies, and writes a receipt. Source, an engine-only example set, a standalone runner and a longer README: [`examples/unreal/compare-scene`](../../../examples/unreal/compare-scene/README.md). Built, cooked, packaged and run on Unreal 5.8.2, Windows, as a packaged game in a throwaway C++ project with the `example` set: the runner's checks passed and the filmed images were looked at. Not run: live mode, gamepad input, a non-Windows platform, the editor-launched route. The `perf` block (GPU, game thread and render thread time next to wall time) was run later on 5.8.3: [GPU time in the comparison scene](unreal-native-compare-gpu-time.md).
+A reusable C++ game mode that sets several ways of doing one thing in a row on an empty stage under one camera, films them, times each alone at N copies, and writes a receipt. Source, an engine-only example set, a standalone runner and a longer README: [`examples/unreal/compare-scene`](../../../examples/unreal/compare-scene/README.md). Built, cooked, packaged and run on Unreal 5.8.2, Windows, as a packaged game in a throwaway C++ project with the `example` set: the runner's checks passed and the filmed images were looked at. Not run: live mode, gamepad input, a non-Windows platform, the editor-launched route. The `perf` block (GPU, game thread and render thread time next to wall time) was run later on 5.8.4: [GPU time in the comparison scene](unreal-native-compare-gpu-time.md).
 
 ## When to use it
 
@@ -39,7 +39,7 @@ static AECompare::FRegistrar MineRegistrar(TEXT("mine"),&MakeMine);
 
 - [tested] `compare.json` holds `scenario` (`compare`), `screenshot` and `screenshot_b` (full paths), `set`, `title`, `engine_version`, `rhi_adapter`, the showcase and stress settings, `frame_time_meaning`, and `candidates[]`: id, label, note, whatever `Describe` added, and `stress` with `copies`, `frames`, `frame_ms_mean`, `frame_ms_p50`, `frame_ms_p95`, `frame_ms_max` and its screenshot.
 - [tested] The runner fails unless both showcase PNGs are valid 1920x1080 PNGs (signature and IHDR), the receipt parses and names this scenario and screenshot, and every candidate has at least 10 timed frames and a stress screenshot. Passing proves the artifacts exist and are well formed; look at the images.
-- [tested] `rhi_adapter` carried the GPU adapter name in a 5.8.3 receipt.
+- [tested] `rhi_adapter` carried the GPU adapter name in a 5.8.4 receipt.
 - [general] Strip `rhi_adapter` from receipts you publish.
 
 ## What the frame times mean

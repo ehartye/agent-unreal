@@ -1,6 +1,6 @@
 // node pcg_packaged.mjs --engine "C:/Program Files/Epic Games/UE_5.8" [--keep] [--rows p1,p2] [--modes headless,rendered] [--stop-after author|package]
 //                        [--project <folder this runner wrote earlier> [--skip-package]] [--rejudge <project folder>] [--seconds 20] [--compiler 14.44.35228] [--sdk 10.0.26100.0]
-// Runs the packaged PCG probe end to end on one Windows machine. Run on Unreal 5.8.3: see README.md for what it showed.
+// Runs the packaged PCG probe end to end on one Windows machine. Run on Unreal 5.8.4: see README.md for what it showed.
 //   1. writes a throwaway code project in the OS temp folder: one game module (module/PcgPackaged), the PCG plugin listed, maps listed in MapsToCook and no
 //      other cook rule (the cook of the PCG graph, the mesh and the material is what row P1 asks about);
 //   2. builds the Editor target and starts the editor once (-nullrhi) on pcg_packaged_author.py, which makes the assets, the graphs and the maps and records an
@@ -23,6 +23,7 @@ import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, existsSync, rmSync
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { discoverToolchain, writeCodeProject, buildEditor, buildGame, packageGame } from '../native-build.mjs';
+import { readEngineVersion, describeEngine } from '../engine-version.mjs';
 import { evaluate, summarize, PATHS } from './pcg-packaged-checks.mjs';
 
 const args = process.argv.slice(2);
@@ -83,10 +84,7 @@ if (rejudge) {
   process.exit(judgeAndReport(newestRuns(join(root, 'out')), author) ? 0 : 1);
 }
 
-try {
-  const version = JSON.parse(readText(join(engine, 'Engine', 'Build', 'Build.version')));
-  note(`engine ${version.MajorVersion}.${version.MinorVersion}.${version.PatchVersion} (changelist ${version.Changelist}), ${engine}`);
-} catch { note('engine version: Build.version unreadable'); }
+for (const line of describeEngine(readEngineVersion(engine), engine)) note(line);
 note(`project folder ${root}; rows ${rows.join(',')}; modes ${modes.join(',')}`);
 const toolchain = discoverToolchain({ compiler: flag('--compiler'), sdk: flag('--sdk') });
 note(`toolchain: compiler ${toolchain.compiler}, SDK ${toolchain.sdk}`);

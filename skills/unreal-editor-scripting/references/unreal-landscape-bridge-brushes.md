@@ -1,6 +1,6 @@
 # Landscape bridge brushes: attach a Landmass brush from Python
 
-Target: Unreal Engine 5.8.3, Windows. Five more statics on the `LandscapeBridge` module of [Python to C++ bridge](unreal-python-cpp-bridge.md). `[tested]` marks a result of [`examples/unreal/landscape_bridge`](../../../examples/unreal/landscape_bridge/README.md) (`landscape_world.mjs`): one throwaway project, one Landscape from the bridge (505 by 505 vertices, 4 by 4 components, one default edit layer named `Layer`), a `-nullrhi` editor run and a `-RenderOffScreen` run. `[documented]` marks the engine install. What attaching showed for Landmass, including heights: [Landmass](../../unreal-procedural/references/unreal-landmass.md).
+Target: Unreal Engine 5.8.4, Windows. Five more statics on the `LandscapeBridge` module of [Python to C++ bridge](unreal-python-cpp-bridge.md). `[tested]` marks a result of [`examples/unreal/landscape_bridge`](../../../examples/unreal/landscape_bridge/README.md) (`landscape_world.mjs`): one throwaway project, one Landscape from the bridge (505 by 505 vertices, 4 by 4 components, one default edit layer named `Layer`), a `-nullrhi` editor run and a `-RenderOffScreen` run. `[documented]` marks the engine install. What attaching showed for Landmass, including heights: [Landmass](../../unreal-procedural/references/unreal-landmass.md).
 
 ## Why a bridge function
 

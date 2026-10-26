@@ -25,7 +25,7 @@ It builds a throwaway project in the OS temp folder, runs every script below in 
 
 The validator also drives the conversion commandlet (`-ReportOnly`, `-GenerateIni`, `-ConversionSuffix`, in place) and the builder commandlets (Resave Actors, Foliage, MiniMap) on a four-cube level made by `new_level`.
 
-## What it showed on 5.8.2
+## What it showed on 5.8.4
 
 All 30 checks passed (the 17 from release 0.3.0 and 13 new).
 
@@ -42,14 +42,14 @@ All 30 checks passed (the 17 from release 0.3.0 and 13 new).
 
 ## Results from release 0.3.0
 
-The first 17 checks showed on 5.8.2:
+The first 17 checks showed on 5.8.4:
 - The Open World template copy is partitioned: 138 descriptors, one Landscape actor (not spatially loaded, no components) and 64 spatially loaded proxies in an 8 by 8 grid, 2 by 2 components of 126 quads each, edit layers Base Landscape and Flat Middle. The default template and the Water sample map have no descriptors.
 - Converting the Water sample map (2 by 2 components of 255 quads) gave one proxy at the default `LandscapeGridSize=4` and four proxies at 1. The commandlet refuses to run without `-AllowCommandletRendering`. Converted water actors: lake and river spatially loaded; zone and brush manager not.
 - Python has no function that creates a Landscape (only render-target import and export).
 - A river in the commandlet stops the engine (Slate assertion); in the editor it works. The first river adds the Water brush manager and a Water edit layer. `unreal.WaterMeshActor` is the Water Zone class.
-- A Landmass manager and brush placed from Python are not attached to the Landscape (`get_landscape()` is None, the brush logs `Accessed None` for `BrushManager`). A later run on 5.8.3 attached one with an editor-module function: [Landscape bridge](../landscape_bridge/README.md).
+- A Landmass manager and brush placed from Python are not attached to the Landscape (`get_landscape()` is None, the brush logs `Accessed None` for `BrushManager`). A later run on 5.8.4 attached one with an editor-module function: [Landscape bridge](../landscape_bridge/README.md).
 - The river carved the flat terrain from 0 to exactly river Z minus depth (-1000) in the partitioned map, read with `render_heightmap` into an 8-bit target.
 - A PCG volume set to partitioned adds the PCG World Actor (25,600 cm grid) and four spatially loaded grid actors.
 - The overhead image shows the carved trench along the river. The water surface drew only in part in the offscreen capture; the carve is confirmed by the numbers, not by the image.
 
-Not covered here: carving of proxies that are not loaded (the editor loads every proxy of the template, and `unload_actors` unloaded none). The Landmass attach, PCG on a partitioned Landscape (a Landscape from the bridge module) and `load_actors` then `unload_actors` leaving proxies unloaded were run on 5.8.3 in [`../landscape_bridge`](../landscape_bridge/README.md); carving through unloaded proxies, brushes with a spline and Water brushes were not covered there either.
+Not covered here: carving of proxies that are not loaded (the editor loads every proxy of the template, and `unload_actors` unloaded none). The Landmass attach, PCG on a partitioned Landscape (a Landscape from the bridge module) and `load_actors` then `unload_actors` leaving proxies unloaded were run on 5.8.4 in [`../landscape_bridge`](../landscape_bridge/README.md); carving through unloaded proxies, brushes with a spline and Water brushes were not covered there either.

@@ -32,7 +32,7 @@ Every template system carries a one-line `template_asset_description`, the text 
 
 ## Template emitters: which one covers which effect
 
-The 14 emitters in `/Niagara/DefaultAssets/Templates/Emitters/` go into a system with `AddEmitter` ([Niagara toolsets](unreal-niagara-toolsets.md)). [`nts_author.py`](../../../examples/unreal/niagara_toolsets/nts_author.py) adds all 14 and reads each one's description, renderer, modules, spawn rate or burst count and loop behaviour; [`nts_validate.mjs`](../../../examples/unreal/niagara_toolsets/README.md) checks the [tested] lines below on 5.8.2.
+The 14 emitters in `/Niagara/DefaultAssets/Templates/Emitters/` go into a system with `AddEmitter` ([Niagara toolsets](unreal-niagara-toolsets.md)). [`nts_author.py`](../../../examples/unreal/niagara_toolsets/nts_author.py) adds all 14 and reads each one's description, renderer, modules, spawn rate or burst count and loop behaviour; [`nts_validate.mjs`](../../../examples/unreal/niagara_toolsets/README.md) checks the [tested] lines below on 5.8.4.
 
 | Emitter | Shipped description | Renderer, spawn |
 |---|---|---|

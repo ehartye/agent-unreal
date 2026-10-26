@@ -1,6 +1,6 @@
 // node gas_rep.mjs --engine "C:/Program Files/Epic Games/UE_5.8" [--keep] [--reuse <kept project folder>] [--render] [--pie-readback] [--timeout 150]
 //                  [--compiler 14.44.35228] [--sdk 10.0.26100.0]
-// Run on Unreal 5.8.3 (10 of 10 asserted checks; `--render` was not run). Asks of a dedicated server and one client on this machine: does an actor with an Ability System
+// Run on Unreal 5.8.4 (10 of 10 asserted checks; `--render` was not run). Asks of a dedicated server and one client on this machine: does an actor with an Ability System
 // Component in Mixed replication mode (owner = a player state) replicate a granted ability, an active Gameplay Effect and an attribute
 // value to the client, and what does a client-side activation do? The scenario is module/GasNative/GasNativeRep.cpp, in the same module
 // that gas_native.mjs builds; the judge is gas-rep-checks.mjs.

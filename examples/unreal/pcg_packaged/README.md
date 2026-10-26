@@ -1,6 +1,6 @@
-# PCG in a cooked game: runtime generation and streaming (run on Unreal 5.8.3)
+# PCG in a cooked game: runtime generation and streaming (run on Unreal 5.8.4)
 
-Backs [PCG in a cooked game](../../../skills/unreal-procedural/references/unreal-pcg-cooked-game.md) and the streaming line of the World Partition reference. **Run on Unreal Engine 5.8.3, Windows: one throwaway project, one Development package, one machine class; 63 of 63 checks passed and 36 observations were recorded** (headless and rendered, three maps). The runner, game module, editor script and judge were written from reading the PCG plugin source; the run is what the references cite. Claims outside this run are listed under Not covered.
+Backs [PCG in a cooked game](../../../skills/unreal-procedural/references/unreal-pcg-cooked-game.md) and the streaming line of the World Partition reference. **Run on Unreal Engine 5.8.4, Windows: one throwaway project, one Development package, one machine class; 63 of 63 checks passed and 36 observations were recorded** (headless and rendered, three maps). The runner, game module, editor script and judge were written from reading the PCG plugin source; the run is what the references cite. Claims outside this run are listed under Not covered.
 
 ## The questions
 
@@ -32,9 +32,9 @@ The pawn path (P2): hold 12 s at A, travel 20 s to B (50 m/s), hold 15 s at B. T
 | Item | Value |
 |---|---|
 | Modes | The headless mode used `-nullrhi`; the rendered mode used `-RenderOffScreen` (the session had no desktop). |
-| Stage times, 5.8.3 | Editor build 39 s; author session (editor, `-nullrhi`) 19 s; Game build 35 s; package (`RunUAT BuildCookRun`, Development, Windows) 81 s; each game run 30 to 49 s (six runs: headless and rendered, each of three maps). |
+| Stage times | First run: Editor build 39 s; author session (editor, `-nullrhi`) 19 s; Game build 35 s; package (`RunUAT BuildCookRun`, Development, Windows) 81 s; each game run 30 to 49 s (six runs: headless and rendered, each of three maps). Rerun on 5.8.4: Editor build 40 s, Game build 35 s, package 106 s. |
 | Disk after the run | Archive 0.88 GB, Saved 0.93 GB, Intermediate 4.52 GB, Binaries 0.74 GB, total 7.08 GB. |
-| Cook warm-up | The cache state of the first cook was not recorded, so the 81 s package time is one observation, not a warm or cold figure. |
+| Cook warm-up | The cache state of the first cook was not recorded, so the package times (81 s, then 106 s) are single observations, not a warm or cold figure. |
 | First run | Use `--keep` and `--stop-after author` first, then without it. The runner keeps the project on any failure; with `--keep` it keeps it on success too. The staged folder holds `Saved/build-*.log`, `Saved/package.log` and, per run, `out/<stamp>/<map>-<mode>/{receipt.json,game.log}`. `--rejudge <project folder>` judges them again without starting anything. |
 
 ## What the receipt holds
@@ -43,7 +43,7 @@ The pawn path (P2): hold 12 s at A, travel 20 s to B (50 m/s), hold 15 s at B. T
 
 ## Expectations, and what the run showed
 
-Asserted, written from reading the PCG plugin source (`Engine/Plugins/PCG/Source/PCG`); every one held on 5.8.3, headless and rendered:
+Asserted, written from reading the PCG plugin source (`Engine/Plugins/PCG/Source/PCG`); every one held on 5.8.4, headless and rendered:
 
 - `UPCGSubsystem::Tick` ticks the runtime generation scheduler only when a PCG World Actor is registered (`Private/Subsystems/PCGSubsystem.cpp`), the actor registers itself in `BeginPlay` (`Private/PCGWorldActor.cpp`), and the editor creates one only outside play (`UPCGSubsystem::GetPCGWorldActor`). The run: `PcgRuntime` generated (instances 0 at the first sample, then 64) and `PcgNoWorld`, where the actor was removed and the editor added none before save, did not, with no LogPCG line about the world actor or the scheduler.
 - Player controllers are generation sources by default (`bTreatPlayerControllersAsGenerationSources`, `Private/RuntimeGen/PCGGenSourceManager.cpp`). The run: the receipt named the player controller and its pawn (a `DefaultPawn`) as the source.
@@ -52,7 +52,7 @@ Asserted, written from reading the PCG plugin source (`Engine/Plugins/PCG/Source
 - A volume 1,000 m from the player with its generation radius set to 10 m stayed empty (0 instances, 0 generated events). Python applied the override through the `PCGRuntimeGenerationRadii` struct, member `generation_radius` (1000 cm). The author step also set the PCG World Actor partition grid to 3200 cm (32 m) from Python (25600 before).
 - P2: a partitioned runtime volume generates per grid cell within a few cells of the source and cleans up cells that fall out of range (`TickCleanup`); the marker at the pawn is loaded and the one 1,000 m away is not (from reading, the default runtime grid's loading range is 256 m). The run: markers loaded and unloaded as expected, generated cells stayed near the source, followed it and were cleaned up behind it.
 
-Observed (recorded, never judged), 5.8.3:
+Observed (recorded, never judged), 5.8.4:
 
 | Observation | Headless | Rendered |
 |---|---|---|

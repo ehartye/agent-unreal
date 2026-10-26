@@ -10,7 +10,7 @@ Graph: Get Landscape Data -> Surface Sampler -> Transform Points -> Static Mesh 
 output, and so does the Landscape data, so the output of each generated component shows the Landscape data it was given.
 Order: a control volume with is_component_partitioned False over the whole Landscape, generated and measured; then a second volume with
 it set True, which makes the editor add the PCG World Actor and the partition (grid) actors, generated and measured per grid actor.
-The probe ran on Unreal 5.8.3 (rendering editor 18 of 18 checks, -nullrhi editor 16 of 18 across the three probes). Expectations written
+The probe ran on Unreal 5.8.4 (rendering editor 18 of 18 checks, -nullrhi editor 16 of 18 across the three probes). Expectations written
 from the install's sources before the first run:
   - Get Landscape Data builds one PCGLandscapeData over every loaded ALandscapeProxy it finds and prepares it for the executing
     component's bounds (PCG/Private/Elements/PCGTypedGetter.cpp, FPCGGetLandscapeDataElement::ProcessActors). A local component's bounds

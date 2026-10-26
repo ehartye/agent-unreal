@@ -12,6 +12,7 @@ import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, existsSync, rmSync
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { discoverToolchain, writeCodeProject, buildEditor, buildGame, packageGame } from '../native-build.mjs';
+import { readEngineVersion, describeEngine } from '../engine-version.mjs';
 
 const args = process.argv.slice(2);
 const flag = (name) => { const i = args.indexOf(name); return i >= 0 ? args[i + 1] : undefined; };
@@ -41,10 +42,7 @@ const summary = [];
 const note = (line) => { summary.push(line); console.log(line); };
 const failed = (step, detail) => { note(`STOPPED at ${step}: ${detail}`); note(`project kept at ${root}`); process.exit(1); };
 
-try {
-  const version = JSON.parse(readText(join(engine, 'Engine', 'Build', 'Build.version')));
-  note(`engine ${version.MajorVersion}.${version.MinorVersion}.${version.PatchVersion} (changelist ${version.Changelist}), ${engine}`);
-} catch { note('engine version: Build.version unreadable'); }
+for (const line of describeEngine(readEngineVersion(engine), engine)) note(line);
 note(`project folder ${root}`);
 
 const toolchain = discoverToolchain({ compiler: flag('--compiler'), sdk: flag('--sdk') });

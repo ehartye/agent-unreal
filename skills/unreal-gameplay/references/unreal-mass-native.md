@@ -26,7 +26,7 @@ Target: Unreal Engine 5.8, Windows. Paths are install-relative under `Engine/Sou
 
 ## A cost data point, with its limits
 
-[general] Observed once on 5.8.3: one desktop with a high-end GPU and an 8-core CPU at 1920 x 1080, entities with one body fragment and one mind fragment, six processors of which two run with `ParallelForEachEntityChunk`, drawn as one instanced mesh with three custom floats each. Each row is a 3 s mean.
+[general] Observed once on 5.8.3: one machine with a high-end GPU and an 8-core CPU at 1920 x 1080, entities with one body fragment and one mind fragment, six processors of which two run with `ParallelForEachEntityChunk`, drawn as one instanced mesh with three custom floats each. Each row is a 3 s mean.
 
 | Entities | Processors, ms | Frame, ms | GPU, ms |
 |---|---|---|---|

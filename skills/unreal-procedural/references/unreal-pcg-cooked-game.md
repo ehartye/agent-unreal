@@ -1,6 +1,6 @@
 # PCG in a cooked game: runtime generation and streaming
 
-Target: Unreal Engine 5.8.3, Windows. `[tested]` marks a result of [`examples/unreal/pcg_packaged`](../../../examples/unreal/pcg_packaged/README.md): one throwaway code project, one Development Windows package, each map run headless (`-nullrhi`) and rendered (`-RenderOffScreen`), one machine class. `[documented]` marks the engine install (paths under `Engine/Plugins/PCG/Source/PCG/`). What an editor-binary game process needs: [PCG in a running game](unreal-pcg-game-process.md). Modes and radii: [generation modes](unreal-pcg-generation-modes.md).
+Target: Unreal Engine 5.8.4, Windows. `[tested]` marks a result of [`examples/unreal/pcg_packaged`](../../../examples/unreal/pcg_packaged/README.md): one throwaway code project, one Development Windows package, each map run headless (`-nullrhi`) and rendered (`-RenderOffScreen`), one machine class. `[documented]` marks the engine install (paths under `Engine/Plugins/PCG/Source/PCG/`). What an editor-binary game process needs: [PCG in a running game](unreal-pcg-game-process.md). Modes and radii: [generation modes](unreal-pcg-generation-modes.md).
 
 ## Non-partitioned runtime generation
 

@@ -25,7 +25,7 @@ Use the cheapest route that covers the need. [`niagara_build.py`](../../../examp
 
 ## Author the stack from Python (NiagaraToolsets)
 
-Epic's Experimental NiagaraToolsets plugin adds emitters, renderers and modules and sets stack inputs through `unreal.ToolsetRegistry.execute_tool`. The call shapes, a worked create, edit-input and set-material example are in [Niagara toolsets from Python](unreal-niagara-toolsets.md); the delete-and-recreate rule and the start-up log are in [Niagara toolsets lifecycle](unreal-niagara-toolsets-lifecycle.md). [`niagara_toolset_author.py`](../../../examples/unreal/niagara_toolset_author.py) shows the add-emitter flow; the showcase adds modules to an emitter of a system that already emits ([README](../../../examples/unreal/niagara-showcase/README.md)). Simulation stages, event handlers and local modules are C++ work. [tested] On 5.8.2, an emitter added to a system made from a template system emits nothing until a Float or Int stack input is written afterwards; count particles in a simulation cache, because the compile state reads `UpToDate` either way (rule and cases in the toolsets reference).
+Epic's Experimental NiagaraToolsets plugin adds emitters, renderers and modules and sets stack inputs through `unreal.ToolsetRegistry.execute_tool`. The call shapes, a worked create, edit-input and set-material example are in [Niagara toolsets from Python](unreal-niagara-toolsets.md); the delete-and-recreate rule and the start-up log are in [Niagara toolsets lifecycle](unreal-niagara-toolsets-lifecycle.md). [`niagara_toolset_author.py`](../../../examples/unreal/niagara_toolset_author.py) shows the add-emitter flow; the showcase adds modules to an emitter of a system that already emits ([README](../../../examples/unreal/niagara-showcase/README.md)). Simulation stages, event handlers and local modules are C++ work. [tested] On 5.8.4, an emitter added to a system made from a template system emits nothing until a Float or Int stack input is written afterwards; count particles in a simulation cache, because the compile state reads `UpToDate` either way (rule and cases in the toolsets reference).
 
 ## C++
 
@@ -40,7 +40,7 @@ Epic's MCP server exposes the toolset registry through `list_toolsets`, `describ
 
 ## Bring generated assets into Niagara
 
-A sprite atlas as a flipbook, an imported mesh in a mesh renderer, and the Static Mesh user parameter, with their 5.8.3 runs, are in [Niagara: generated assets](unreal-niagara-generated-assets.md).
+A sprite atlas as a flipbook, an imported mesh in a mesh renderer, and the Static Mesh user parameter, with their 5.8.4 runs, are in [Niagara: generated assets](unreal-niagara-generated-assets.md).
 
 ## Drawn, ink and cel looks
 
@@ -52,7 +52,7 @@ Choose by what must stay drawn. [`stylized_validate.mjs`](../../../examples/unre
 - Stepped light on an unlit particle: quantize a light term, `floor(term x N) / (N - 1)`, into a Lerp. [tested] It drew flat bands next to a smooth control.
 - [tested] The Dynamic Material Parameters module's Index 0 Param 1 (3) reached the material's Dynamic Parameter node (default 4): three bands rendered.
 - Lit toon on a particle: [tested] Substrate Toon works on sprites ([Substrate](../../unreal-rendering/references/unreal-substrate.md)).
-- [tested] On 5.8.3, in one throwaway project and one scene with a float user parameter, Direct Frame Index linked to that parameter did not drive the frame: the link read back and the mode was Direct Index, but the frame stayed age-driven, and a constant written into Direct Frame Index did take effect. The link variants run are listed in the generated-assets reference, and the cause is not determined ([the runs and the control](unreal-niagara-generated-assets.md)).
+- [tested] On 5.8.4, in one throwaway project and one scene with a float user parameter, Direct Frame Index linked to that parameter did not drive the frame (reran on 5.8.4: 3 of 5 `frame` checks, the sprite sub-image index did not follow the parameter). In the first runs (on 5.8.3, before the engine was updated; separate diagnostic runs) the link read back and the mode was Direct Index, but the frame stayed age-driven, and a constant written into Direct Frame Index did take effect. The link variants run are listed in the generated-assets reference, and the cause is not determined ([the runs and the control](unreal-niagara-generated-assets.md)).
 
 ## Fluids
 

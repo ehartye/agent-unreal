@@ -1,6 +1,6 @@
 # C++ automation test, run headless
 
-Backs [Writing and running a C++ automation test](../../../skills/unreal-native/references/unreal-native-automation-tests.md). Unreal Engine 5.8.2, Windows, Visual Studio 2022 Build Tools.
+Backs [Writing and running a C++ automation test](../../../skills/unreal-native/references/unreal-native-automation-tests.md). Unreal Engine 5.8.4, Windows, Visual Studio 2022 Build Tools.
 
 ## Files
 
@@ -18,7 +18,7 @@ node examples/unreal/automation_test/automation_report.mjs <report folder>/index
 
 The runner takes about three to five minutes. Both engine binaries start hidden with `-nullrhi`.
 
-## What it checks (9 checks, all passed on 5.8.2)
+## What it checks (9 checks, all passed on 5.8.4)
 
 - The test module compiles; the removed `EAutomationTestFlags::Type` style, a missing filter flag and a missing context flag are rejected with the messages quoted in the reference.
 - `UnrealEditor-Cmd.exe -ExecCmds="Automation RunTests AgentUnrealProbe.Passing; Quit"` writes a report with `succeeded: 1`; the process exits 0.
@@ -28,7 +28,7 @@ The runner takes about three to five minutes. Both engine binaries start hidden 
 
 ## Reference commands (opt-in)
 
-**Status:** Prepared and first run 2026-10-26 on Unreal 5.8.2: `automation_reference.mjs` passed 7 of 7 checks in 152 s with no change to the probe; `headless_routes.mjs` reads the install and ran without an engine. Not run on 5.8.3.
+**Status:** Prepared and first run 2026-10-26 on Unreal 5.8.2: `automation_reference.mjs` passed 7 of 7 checks in 152 s with no change to the probe; `headless_routes.mjs` reads the install and ran without an engine. Rerun on 5.8.4 with the same result (7 of 7); `headless_routes.mjs` also ran there.
 
 Backs [Headless runs, reports and lanes](../../../skills/unreal-quality/references/unreal-quality-lanes.md). The run above uses `Automation RunTests` with a space after the semicolon; this phase uses the command shape the lanes reference gives, so a reader can paste it:
 
