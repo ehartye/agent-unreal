@@ -1,6 +1,6 @@
 # Author Niagara systems from Python with the Niagara toolsets
 
-Written for Unreal 5.8.2. [`nts_validate.mjs`](../../../examples/unreal/niagara_toolsets/README.md) runs each [tested] line on a throwaway project; [documented] lines name a file under the engine's `Engine` folder. The route table and the other Niagara routes are in [Niagara in Unreal](unreal-niagara.md); run modes for editor Python are in [Editor Python](../../unreal-editor-scripting/references/unreal-editor-python.md).
+Written for Unreal 5.8.2; [`nts_validate.mjs`](../../../examples/unreal/niagara_toolsets/README.md) also passed 25 of 25 on 5.8.3. It runs each [tested] line on a throwaway project; [documented] lines name a file under the engine's `Engine` folder. The route table and the other Niagara routes are in [Niagara in Unreal](unreal-niagara.md); run modes for editor Python are in [Editor Python](../../unreal-editor-scripting/references/unreal-editor-python.md).
 
 ## The plugin
 
@@ -54,6 +54,7 @@ unreal.EditorAssetLibrary.save_asset("/Game/FX/NS_Worked")
 
 - [tested] On 5.8.2, an emitter added with `AddEmitter` to a system made by `CreateNiagaraSystem` from a template system counts 0 particles in a valid simulation cache, or the system completes at once and every capture is refused (`System already completed its simulation`). A system made with `NiagaraSystemFactoryNew` is not affected.
 - [tested] Rule: after the last `AddEmitter`, write a Float or Int stack input to a different value (the emitter's `SpawnRate`, a burst `Spawn Count` of 5, or the system's `SystemState` `Loop Duration` of 5), then verify with a simulation-cache count before saving. 90 is the Fountain's default `SpawnRate`, so writing 90 changes nothing; 91, 60, 30 or 15 revives it and the count tracks the rate (60, 30, 15 and 0 read 97, 49, 24 and 0). Removing emitters after the write is fine; a second emitter added after a write kills the whole system again, so write again after the last add.
+- [tested] On 5.8.3, a mesh emitter (`UpwardMeshBurst`) added to a template-made system was dead too: 30 refused captures, and its `Lifetime` was refused (`input is hidden by static-switch / conditional logic ... Adjust the parent switch first.`). After a write of the system's `SystemState` `Loop Duration` to 5.0 the mesh emitter counted 88 particles and the screenshot changed 116,434 of 921,600 pixels.
 - [tested] These do not revive it: a write before the add, a write of the value already held, an enum edit (`Loop Behavior` to Infinite), a bool, toggling the `SpawnRate` module off and on, adding three modules.
 - [tested] `GetSystemCompileState` reads `UpToDate` for every one of these systems, so it does not show whether a system emits.
 - [documented] The cause is not determined. The source shows Float and Int inputs are rapid iteration parameters and bool and enum inputs are not (`FNiagaraStackGraphUtilities::IsRapidIterationType`, `NiagaraStackGraphUtilities.cpp`), and `SetLocalValue` writes them into the affected scripts; a missing refresh as the cause is untested.

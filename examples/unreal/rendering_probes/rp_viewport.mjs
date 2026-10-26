@@ -1,5 +1,5 @@
 // node rp_viewport.mjs --engine "<UE_5.8 folder>" [--keep]                                  headless extras (about a minute, no GPU needed)
-// node rp_viewport.mjs --engine "<UE_5.8 folder>" --interactive [--phase-seconds 30]         INTERACTIVE: a rendering editor and a person watching its viewport
+// node rp_viewport.mjs --engine "<UE_5.8 folder>" --interactive [--phase-seconds 30] [--offscreen]         INTERACTIVE: a rendering editor and a person watching its viewport
 // node rp_viewport.mjs --judge --report <viewport report.json> --observed <observations.json>   judge a finished interactive run
 // The opt-in directional-light probes behind unreal-directional-lights.md. Prepared 2026-10-26, not yet run on an engine: a first run tests these probes before it tests the engine.
 // rp_validate.mjs (the headless run that backs the [tested] lines) is untouched, and this file adds no check that the headless run cannot judge: the checks that need a viewport are
@@ -47,7 +47,8 @@ if (args.includes('--judge')) {
 
 const engine = flag('--engine') || process.env.UE_ROOT;
 if (!engine) { complain(usage); process.exit(2); }
-const interactive = args.includes('--interactive');
+const offscreen = args.includes('--offscreen');   // implies --interactive: -RenderOffScreen, a Play-In-Editor viewport and a screenshot per phase, for a session with no desktop
+const interactive = args.includes('--interactive') || offscreen;
 const exe = join(engine, 'Engine', 'Binaries', 'Win64', interactive ? 'UnrealEditor.exe' : 'UnrealEditor-Cmd.exe');
 if (!existsSync(exe)) { complain(`not found: ${exe}`); process.exit(2); }
 
@@ -93,8 +94,9 @@ const phaseSeconds = flag('--phase-seconds') || '30';
 say('INTERACTIVE RUN. A rendering editor opens with a visible window. Keep it in front and watch its viewport.');
 say(`Each of ${PHASES.length} phases lasts ${phaseSeconds} s after a 20 s settle. For every phase, note whether the orange renderer message is on screen, and screenshot the window if you can.`);
 say(`Project: ${root}`);
-const child = spawn(exe, [uproject, `-ExecutePythonScript=${script}`, `-abslog=${logPath}`, '-unattended', '-nosplash', '-nosound', '-notraceserver'],
-  { env: { ...process.env, RP_MODE: 'interactive', RP_REPORT: reportPath, RP_MAP: '/Game/Maps/RpViewportInteractive', RP_PHASE_SECONDS: phaseSeconds }, stdio: 'ignore' });
+if (offscreen) say('OFFSCREEN: no window is shown; each phase saves Saved/Screenshots/WindowsEditor/rpv_<phase>00000.png, and the observations are read from those images.');
+const child = spawn(exe, [uproject, `-ExecutePythonScript=${script}`, `-abslog=${logPath}`, '-unattended', '-nosplash', '-nosound', '-notraceserver', ...(offscreen ? ['-RenderOffScreen'] : [])],
+  { env: { ...process.env, RP_MODE: 'interactive', RP_OFFSCREEN: offscreen ? '1' : '0', RP_REPORT: reportPath, RP_MAP: '/Game/Maps/RpViewportInteractive', RP_PHASE_SECONDS: phaseSeconds }, stdio: 'ignore' });
 let announced = 0;
 const poll = setInterval(() => {
   let report;

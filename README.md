@@ -14,7 +14,7 @@ repository is marked as tested.
 
 ## Status
 
-Early (0.15.0). Eleven skills.
+Early (0.16.0). Eleven skills.
 
 The skills moved here from agent-engine 0.14.0, where their history up to that tag lives; `unreal-import` and its importer scripts followed in 0.2.0. The scripts in `examples/`
 were run on Windows against Unreal 5.7.3, 5.8.2 and 5.8.3 as each README states; other platforms were not run.

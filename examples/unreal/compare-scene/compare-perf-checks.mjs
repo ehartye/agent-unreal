@@ -69,9 +69,12 @@ export function evaluatePerf(receipt, t = THRESHOLDS) {
       'a -nullrhi run records 0 for every GPU frame time and says gpu_time_available is false',
       [base, gpu, cpu].every((p) => p.gpu_time_available === false && p.gpu_ms.max === 0),
       `gpu_time_available ${[base, gpu, cpu].map((p) => p.gpu_time_available).join('/')}; gpu max ${[base, gpu, cpu].map((p) => f(p.gpu_ms.max)).join('/')} ms`);
-    check('without a rendering RHI the game thread time still moves with CPU work',
-      `the busy-wait row's mean game thread time is at least ${t.gameRiseMs} ms over the baseline's`,
-      cpuGame - baseGame >= t.gameRiseMs, `baseline ${f(baseGame)} ms, cpu spin ${f(cpuGame)} ms`);
+    // Observed on 5.8.3: the game thread and render thread series read 0 in this run (cause not traced; GGameThreadTime is assigned only in FViewport::Draw, per the source),
+    // and the wall frame time is what still shows the busy-wait.
+    const baseWall = mean(base, 'wall_ms'), cpuWall = mean(cpu, 'wall_ms');
+    check('without a rendering RHI the wall frame time still moves with CPU work',
+      `the busy-wait row's mean wall frame time is at least ${t.gameRiseMs} ms over the baseline's`,
+      cpuWall - baseWall >= t.gameRiseMs, `baseline ${f(baseWall)} ms, cpu spin ${f(cpuWall)} ms`);
     return out;
   }
 
@@ -90,6 +93,18 @@ export function evaluatePerf(receipt, t = THRESHOLDS) {
   check('a CPU-side change leaves the GPU time alone',
     `the busy-wait row's mean GPU time is within ${Math.round(t.gpuDriftRatio * 100)}% (at least ${t.gpuDriftMinMs} ms) of the baseline's`,
     Math.abs(cpuGpu - baseGpu) <= Math.max(t.gpuDriftMinMs, baseGpu * t.gpuDriftRatio), `baseline ${f(baseGpu)} ms, cpu spin ${f(cpuGpu)} ms`);
+  return out;
+}
+
+/** Informational lines about a receipt that are not checks and never fail the judge: in a headless run the game thread and render thread series read 0. */
+export function notes(receipt) {
+  const out = [];
+  if (receipt?.null_rhi === true) {
+    const zero = (series) => entries(receipt).length > 0 && entries(receipt).every((c) => c?.stress?.perf?.[series]?.max === 0);
+    for (const series of ['game_thread_ms', 'render_thread_ms']) {
+      out.push(`${series} ${zero(series) ? 'reads 0 in every candidate of this headless run' : 'did not read 0 in every candidate of this headless run'} (informational, not a check)`);
+    }
+  }
   return out;
 }
 

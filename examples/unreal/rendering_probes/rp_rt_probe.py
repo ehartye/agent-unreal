@@ -38,7 +38,7 @@ CVARS = [
     "r.ForwardShading",                          # RenderCore/Private/RenderUtils.cpp
 ]
 
-state = {"seconds": 0.0, "phase": "warmup", "handle": None, "errors": []}
+state = {"seconds": 0.0, "phase": "build", "handle": None, "errors": []}
 report = {"engine": unreal.SystemLibrary.get_engine_version(), "cvars": {}, "errors": state["errors"]}
 les = unreal.get_editor_subsystem(unreal.LevelEditorSubsystem)
 eas = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)
@@ -77,6 +77,7 @@ def finish():
     if state["handle"] is not None:
         unreal.unregister_slate_post_tick_callback(state["handle"])
         state["handle"] = None
+    les.editor_request_end_play()
     # source: Plugins/Experimental/PythonScriptPlugin/.../EditorPythonScriptingLibrary.h SetKeepPythonScriptAlive; false lets the executer quit the editor on its next tick
     unreal.EditorPythonScripting.set_keep_python_script_alive(False)
 
@@ -84,7 +85,11 @@ def finish():
 def tick(delta_seconds):
     try:
         state["seconds"] += delta_seconds
-        if state["phase"] == "warmup" and state["seconds"] >= WARMUP:
+        if state["phase"] == "build" and state["seconds"] >= 5.0:
+            # a rendering editor with no visible window draws no level viewport (a 5.8.3 run showed only Slate frames in ProfileGPU), so the scene is drawn by a Play-In-Editor viewport, as nts_probe_sim.py does
+            les.editor_request_begin_play()
+            state["phase"], state["seconds"] = "warmup", 0.0
+        elif state["phase"] == "warmup" and state["seconds"] >= WARMUP:
             unreal.log("[rp_rt] ProfileGPU requested")
             # source: RHI/Private/GPUProfiler.cpp FAutoConsoleCommand "ProfileGPU" (prints a frame's GPU statistics to the log)
             unreal.SystemLibrary.execute_console_command(None, "ProfileGPU")

@@ -1,12 +1,17 @@
 # Niagara toolsets: local space, sort order, ribbon materials and added renderers
 
-Written for Unreal 5.8.2. [`nts_validate.mjs`](../../../examples/unreal/niagara_toolsets/README.md) runs each [tested] line on a throwaway project; [documented] lines name a file under the engine's `Engine` folder. Argument shapes and refs are in [Author Niagara systems from Python](unreal-niagara-toolsets.md); inputs are in [Linked, dynamic and hidden inputs](unreal-niagara-toolset-inputs.md).
+Written for Unreal 5.8.2; a line marked 5.8.3 ran on that version. [`nts_validate.mjs`](../../../examples/unreal/niagara_toolsets/README.md) runs each [tested] line on a throwaway project; [documented] lines name a file under the engine's `Engine` folder. Argument shapes and refs are in [Author Niagara systems from Python](unreal-niagara-toolsets.md); inputs are in [Linked, dynamic and hidden inputs](unreal-niagara-toolset-inputs.md).
 
 ## Switch an emitter to local space
 
 - [tested] All 14 template emitters read `bLocalSpace` false, so their particles stay where they spawn when the emitter moves. `GetEmitterData` (`emitterRef`) returns `propertyValues` as a JSON string.
 - [tested] `SetEmitterData` takes `emitter` (the emitter ref) and `emitterData`, not `emitterRef`: `{"emitter": {"system": ..., "emitterName": "Orb"}, "emitterData": {"propertyValues": "{\"bLocalSpace\": true}"}}`. A wrong name returns an error that starts `Function "SetEmitterData", input param "emitter" is required` and then prints the schema. As with renderers, `propertyValues` as an object returns no error and changes nothing.
 - [general] Attachment decides where particles spawn and the space setting decides what they do afterwards (Epic's fundamentals skill, `NiagaraToolsets/Content/Python/skills/fundamentals.py`); use local space for an effect that must move rigidly with its owner.
+
+## A mesh renderer's `Meshes` slot used the key `mesh`
+
+- [tested] On 5.8.3, `GetRendererData` of a mesh renderer listed nested struct fields in lower camel case (`mesh`, `lODBias`, `lODMode`). `SetRendererData` with a mesh written in the `Meshes` slot under the key `Mesh` returned no error and the read-back still had no mesh; written under `mesh` the read-back held the same asset path ([generated assets](unreal-niagara-generated-assets.md)).
+- [general] Read the property back after a write, and copy nested key names from `GetRendererData` instead of from the property's C++ name.
 
 ## Order translucent renderers with SortOrderHint
 

@@ -109,13 +109,18 @@ def mesh_chain(source):
     fields["meshes_before"] = json.dumps(props.get("Meshes"), sort_keys=True)[:600]
     slot = (props.get("Meshes") or [{}])[0]
     slot = dict(slot) if isinstance(slot, dict) else {}
-    slot["Mesh"] = {"refPath": mesh_path if "." in mesh_path.rsplit("/", 1)[-1] else "%s.%s" % (mesh_path, mesh_path.rsplit("/", 1)[-1])}
+    # SetRendererData reads nested struct fields in lower camel case: the read-back names the field "mesh", and a "Mesh" key is accepted without an error and stores nothing (a 5.8.3 run)
+    key = next((k for k in slot if k.lower() == "mesh"), "mesh")
+    slot[key] = {"refPath": mesh_path if "." in mesh_path.rsplit("/", 1)[-1] else "%s.%s" % (mesh_path, mesh_path.rsplit("/", 1)[-1])}
     written = c.call("SetRendererData", {"renderer": renderer, "rendererData": {"propertyValues": json.dumps({"Meshes": [slot]})}})
     after = json.loads(c.tool("GetRendererData", {"rendererRef": renderer})["propertyValues"])
     first = (after.get("Meshes") or [{}])[0]
-    fields.update({"mesh_path": mesh_path, "set_error": written["error"], "mesh_after": (first.get("Mesh") or {}).get("refPath") if isinstance(first, dict) else None})
+    fields.update({"mesh_path": mesh_path, "set_error": written["error"], "mesh_after": (first.get(key) or {}).get("refPath") if isinstance(first, dict) else None})
     life = c.call("SetStackInputData", {"stackInputRef": c.at(system, "Mesh", "ParticleSpawnScript", "InitializeParticle", ["Lifetime"]), "inputData": {"struct": {"refPath": c.FLOAT}, "value": {"value": 8.0}}})
     fields["lifetime_error"] = life["error"]
+    # an emitter added to a template-made system starts dead until a numeric stack input is written after the last AddEmitter (unreal-niagara-toolsets.md; Lifetime is hidden on this emitter, so the system's Loop Duration is written)
+    revive = c.call("SetStackInputData", {"stackInputRef": c.at(system, None, "SystemUpdateScript", "SystemState", ["Loop Duration"]), "inputData": {"struct": {"refPath": c.FLOAT}, "value": {"value": 5.0}}})
+    fields["revive_error"] = revive["error"]
     eal.save_asset(system)
     placed.append(("Mesh_" + sid, system, mesh_path))
     return fields
@@ -214,6 +219,6 @@ if user_system:
             "description": "Mesh chosen from Python"}]})
         listed = c.call("GetUserVariables", {"system": c.ref(user_system)})
         saved = eal.save_asset(user_system)
-        return {"add_error": added["error"], "names": [v.get("name") for v in ((listed["value"] or {}).get("userVariables") or [])], "saved": bool(saved)}
+        return {"add_error": added["error"], "add_value": str(added["value"])[:300], "list_error": listed["error"], "names": [v.get("name") for v in ((listed["value"] or {}).get("userVariables") or [])], "saved": bool(saved)}
     probe.guarded("user_variable", add_user_variable)
     probe.write()

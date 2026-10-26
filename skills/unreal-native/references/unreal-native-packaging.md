@@ -5,6 +5,7 @@ Observed in one consuming Unreal 5.8.2 CL56702186 project on Windows; not reprod
 ## The exact UAT failure
 
 - [general] Installed `RunUAT.bat BuildCookRun -noP4` parsed the project, compiler and staging arguments, then failed **before build/cook** with `System.IO.FileLoadException`, **0x800711C7**: Windows Application Control blocked its dynamically generated `Temp/UAT/.../Rules/UATRules-*.dll`. A subsequently rebuilt Editor module was also denied loading under the same policy family (GetLastError 4551). This is a host trust boundary, not a C++ syntax failure.
+- [tested] `RunUAT BuildCookRun` was not blocked in the 5.8.3 comparison-scene GPU run (a throwaway C++ project, Development build, exit 0 in 91 s). That run says nothing about the host above or what its policy covers. See [GPU time in the comparison scene](unreal-native-compare-gpu-time.md).
 - [documented] Installed `AutomationUtils/ProjectUtils.cs` chooses Temp/UAT for installed-engine target discovery and dynamically compiles/loads target scripts. Supplying a client target does not skip the initial project-detection call. Repeatedly changing the blocked file's name/location is not a packaging solution.
 - [general] No security policy was changed or disabled; the blocked DLL was not moved/reloaded to evade the decision. The successful alternative used separate supported native engine tools and never loaded that UAT-generated assembly.
 

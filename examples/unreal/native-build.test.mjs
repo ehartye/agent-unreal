@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { mkdtempSync, readFileSync, rmSync, mkdirSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { highestVersion, compilerFlagVersion, buildArguments, writeCodeProject, runIfBuilt, buildSucceeded } from './native-build.mjs';
+import { highestVersion, compilerFlagVersion, buildArguments, packageArguments, writeCodeProject, runIfBuilt, buildSucceeded } from './native-build.mjs';
 
 test('highestVersion compares numerically, not as text, and ignores other entries', () => {
   assert.equal(highestVersion(['14.9.1', '14.44.35207', 'Hostx64', '14.44.9']), '14.44.35207');
@@ -70,4 +70,12 @@ test('buildSucceeded needs exit 0 and no timeout', () => {
   assert.equal(buildSucceeded({ exit: 0 }), true);
   assert.equal(buildSucceeded({ exit: 2 }), false);
   assert.equal(buildSucceeded({ exit: 0, timedOut: true }), false);
+});
+
+test('packageArguments builds, cooks, stages, paks and archives, and passes only the versions it was given', () => {
+  const a = packageArguments({ uproject: 'C:\p\Demo.uproject', archiveDirectory: 'C:\p\Archive', compiler: '14.1.2', sdk: '10.0.1.0' });
+  assert.equal(a[0], 'BuildCookRun');
+  for (const want of ['-project=C:\p\Demo.uproject', '-platform=Win64', '-clientconfig=Development', '-build', '-cook', '-stage', '-pak', '-archive',
+    '-archivedirectory=C:\p\Archive', '-noP4', '-utf8output', '-CompilerVersion=14.1.2', '-WindowsSDKVersion=10.0.1.0']) assert.ok(a.includes(want), want);
+  assert.ok(!packageArguments({ uproject: 'x', archiveDirectory: 'y' }).some((x) => x.startsWith('-CompilerVersion') || x.startsWith('-WindowsSDKVersion')));
 });

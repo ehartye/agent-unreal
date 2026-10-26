@@ -27,6 +27,7 @@ REPORT = os.environ.get("RP_REPORT", "rp-viewport.json").replace("\\", "/")
 MAP = os.environ.get("RP_MAP", "/Game/Maps/RpViewport")
 MODE = os.environ.get("RP_MODE", "extras")
 PHASE_SECONDS = float(os.environ.get("RP_PHASE_SECONDS", "30"))
+OFFSCREEN = os.environ.get("RP_OFFSCREEN") == "1"   # a session with no desktop: the phases run in a Play-In-Editor viewport and each phase takes a screenshot for someone to read
 SETTLE_SECONDS = float(os.environ.get("RP_SETTLE_SECONDS", "20"))
 PROJECT = unreal.SystemLibrary.get_project_directory().replace("\\", "/")
 les = unreal.get_editor_subsystem(unreal.LevelEditorSubsystem)
@@ -132,7 +133,18 @@ def run_interactive():
         ("moon_zero_intensity", "both at 0, the moon visible again with intensity 0", lambda: (moon.set_visibility(True), moon.set_intensity(0.0))),
         ("moon_actor_hidden_in_editor", "both at 0, the moon at intensity 1 with its actor hidden in the editor", lambda: (moon.set_intensity(1.0), hide_moon_actor())),
     ]
-    clock = {"seconds": 0.0, "index": -1, "phase_start": 0.0, "handle": None, "moon_hidden": False}
+    clock = {"seconds": 0.0, "index": -1, "phase_start": 0.0, "handle": None, "moon_hidden": False, "pie": False, "pie_at": 0.0, "pie_ready": not OFFSCREEN, "shot_at": None}
+
+    def game_world():
+        return unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem).get_game_world()
+
+    def adopt_game_lights(world):
+        """The Play-In-Editor world holds copies of the two lights; the phases must change those."""
+        nonlocal sun, moon, moon_actor
+        lights = {a.get_actor_label(): a for a in unreal.GameplayStatics.get_all_actors_of_class(world, unreal.DirectionalLight)}
+        moon_actor = lights["RpMoon"]
+        sun = lights["RpSun"].get_component_by_class(unreal.DirectionalLightComponent)
+        moon = moon_actor.get_component_by_class(unreal.DirectionalLightComponent)
     report["renderer"] = {"forward_shading": forward_shading()}
     report["phases"] = []
     report["done"] = False
@@ -145,6 +157,8 @@ def run_interactive():
             pass
         report["done"] = True
         write_report()
+        if OFFSCREEN:
+            les.editor_request_end_play()
         if clock["handle"] is not None:
             unreal.unregister_slate_post_tick_callback(clock["handle"])
             clock["handle"] = None
@@ -155,6 +169,22 @@ def run_interactive():
     def tick(delta_seconds):
         try:
             clock["seconds"] += delta_seconds
+            if not clock["pie_ready"]:
+                if not clock["pie"] and clock["seconds"] >= 5.0:
+                    les.editor_request_begin_play()
+                    clock["pie"], clock["pie_at"] = True, clock["seconds"]
+                elif clock["pie"] and game_world() is not None and clock["seconds"] >= clock["pie_at"] + 5.0:
+                    adopt_game_lights(game_world())
+                    clock["pie_ready"], clock["seconds"] = True, 0.0
+                return
+            if clock["shot_at"] is not None and clock["seconds"] >= clock["shot_at"]:
+                shot = "rpv_%s" % report["phases"][-1]["name"]
+                report["phases"][-1]["screenshot"] = shot + "00000.png"   # the engine adds a 00000 suffix to the Shot file name (a 5.8.3 run), even with the nosuffix flag
+                write_report()   # recorded first: take_high_res_screenshot can run the Slate tick again from inside the call
+                clock["shot_at"] = None
+                # take_high_res_screenshot asks for a shot without UI, and FScreenshotRequest::RequestScreenshot then turns the renderer's on-screen messages off for it (UnrealClient.cpp);
+                # the Shot console command with showui keeps them (GameViewportClient.cpp HandleScreenshotCommand)
+                unreal.SystemLibrary.execute_console_command(game_world(), "Shot showui filename=" + shot)
             due = SETTLE_SECONDS if clock["index"] < 0 else clock["phase_start"] + PHASE_SECONDS
             if clock["seconds"] < due:
                 return
@@ -167,6 +197,8 @@ def run_interactive():
             clock["phase_start"] = clock["seconds"]
             report["phases"].append(state(name, action))
             write_report()
+            if OFFSCREEN:
+                clock["shot_at"] = clock["seconds"] + PHASE_SECONDS / 2
             unreal.log("[rp_viewport] PHASE %d %s: %s" % (clock["index"] + 1, name, action))
         except Exception:
             report["errors"].append(clean(traceback.format_exc()[-900:]))

@@ -4,7 +4,7 @@ A game mode that sets several ways of doing the same thing in a row on an empty 
 
 Use it to choose between implementations of one visible thing (mesh components moved by code, a Niagara system, instanced meshes, a material trick) before committing a real scene to one. It is a measuring stage, not a benchmark of a shipped game. The guidance behind it, with the traps found while building it, is in [the reference](../../../skills/unreal-native/references/unreal-native-compare-scene.md).
 
-**Status of the GPU time addition:** Prepared 2026-10-26; not yet run on an engine. A first run tests the probe before it tests the engine. The `perf` block, the `perf` set, `-Headless` and `compare_perf.mjs` below are new and unbuilt; the `example` set and the receipt fields that existed before are unchanged.
+**Status of the GPU time addition:** run on Unreal Engine 5.8.3 (a packaged Windows Development build of a throwaway project, built, packaged and run by `compare_gpu_run.mjs`): the rendered `perf` run passes 7 of 7 and the headless run 4 of 4 (the headless judge was changed after a first run, see Headless below). The `example` set and the receipt fields that existed before are unchanged. To reproduce, `node compare_gpu_run.mjs --engine <UE_5.8 folder> [--keep] [--skip-package] [--project <folder>] [--modes rendered,headless] [--compiler <x.y.z>] [--sdk <10.0.n.n>]`.
 
 ## Files
 
@@ -18,15 +18,15 @@ Use it to choose between implementations of one visible thing (mesh components m
 
 ## Verified
 
-Built as part of a C++ project, cooked and packaged, and run with `compare.ps1` on Unreal Engine 5.8.2, Windows, with the `example` set (before the perf block was added). The runner's checks passed (valid 1920x1080 PNGs, receipt parses and names its scenario and screenshot, every candidate timed over its window), and the filmed frames were looked at: a lit stage with a label under each candidate, a dark panel behind each, the cubes turning and the fountain's particles showing against the dark panel. Not run: live mode and the gamepad bindings, the editor-launched route (`-Exe UnrealEditor.exe`), an output path containing spaces, any non-Windows platform, and everything in the GPU time section above (the perf block, the `perf` set, `-Headless`, `compare_perf.mjs` on a real receipt).
+Built as part of a C++ project, cooked and packaged, and run with `compare.ps1` on Unreal Engine 5.8.2, Windows, with the `example` set (before the perf block was added). The runner's checks passed (valid 1920x1080 PNGs, receipt parses and names its scenario and screenshot, every candidate timed over its window), and the filmed frames were looked at: a lit stage with a label under each candidate, a dark panel behind each, the cubes turning and the fountain's particles showing against the dark panel. Not run: live mode and the gamepad bindings, the editor-launched route (`-Exe UnrealEditor.exe`), an output path containing spaces, any non-Windows platform, and, for the GPU time section, any engine version other than 5.8.3, a Shipping build, a scene other than the `perf` set, and a second machine.
 
 ## Adopt it in a native C++ game
 
 1. Copy `AECompare.h` and `AECompare.cpp` into your game module, and `ExampleSets.cpp` too if you want the example.
-2. Module dependencies in your `*.Build.cs`: `Core`, `CoreUObject`, `Engine` (as any game module has), plus `Json`, `RHI` and `RenderCore` for the harness (`RenderCore` for the game and render thread times, `RHI` for the GPU's frame time), and `Niagara` for the example set:
+2. Module dependencies in your `*.Build.cs`: `Core`, `CoreUObject`, `Engine` (as any game module has), plus `InputCore` (the live mode's key bindings), `Json`, `RHI` and `RenderCore` for the harness (`RenderCore` for the game and render thread times, `RHI` for the GPU's frame time), and `Niagara` for the example set:
 
    ```csharp
-   PrivateDependencyModuleNames.AddRange(new[] { "Json", "RHI", "RenderCore", "Niagara" });
+   PrivateDependencyModuleNames.AddRange(new[] { "InputCore", "Json", "RHI", "RenderCore", "Niagara" });
    ```
 
 3. `.uproject` plugins: Niagara is enabled by default. A set that uses another plugin's content lists that plugin as well.
@@ -93,11 +93,11 @@ Each candidate's `stress.perf` holds four series, each with `mean`, `p50`, `p95`
 | `render_thread_ms` | `GRenderThreadTime` (same header) |
 | `gpu_ms` | `FPlatformTime::ToMilliseconds(RHIGetGPUFrameCycles())`; `RHIGetGPUFrameCycles` is declared in `Engine/Source/Runtime/RHI/Public/DynamicRHI.h` (module RHI), not in `RHI.h` |
 
-Read this way: the three engine values are those of the previous frame, so compare runs, not machines. A frame bound by the game thread reports the CPU's cost in `wall_ms` whatever the GPU does, so a GPU-side comparison read from `wall_ms` alone can be wrong in either direction; `gpu_ms` says what the GPU spent, and the pair says where the frame went. `gpu_time_available` is false when no rendering RHI runs or no GPU sample was non-zero, and the top-level `null_rhi` says which. The thread values are cycle counts converted with `FPlatformTime::ToMilliseconds`; whether `GGameThreadTime` and `GRenderThreadTime` are updated in a headless run is one of the things the first run shows.
+Read this way: the three engine values are those of the previous frame, so compare runs, not machines. A frame bound by the game thread reports the CPU's cost in `wall_ms` whatever the GPU does, so a GPU-side comparison read from `wall_ms` alone can be wrong in either direction; `gpu_ms` says what the GPU spent, and the pair says where the frame went. `gpu_time_available` is false when no rendering RHI runs or no GPU sample was non-zero, and the top-level `null_rhi` says which. The thread values are cycle counts converted with `FPlatformTime::ToMilliseconds`; in a headless run on 5.8.3 both read 0 (see Headless below).
 
 The `perf` set checks the block on an engine: `-Set perf` times `perf-baseline`, `perf-gpu-supersample` (`r.ScreenPercentage` 200) and `perf-cpu-spin` (a 4 ms busy-wait). Judge the receipt with `node compare_perf.mjs <output directory>/compare.json`. A rendered run expects the supersample row's `gpu_ms` to rise over the baseline and its `game_thread_ms` not to, and the spin row's `game_thread_ms` to rise and its `gpu_ms` not to; the margins are first guesses in `compare-perf-checks.mjs` (`THRESHOLDS`). `node compare_perf.mjs <receipt> --shape-only` holds any other set's receipt to the shape alone.
 
-Headless: `compare.ps1 -Headless` starts the game with `-nullrhi` and `-AECompareNoShots`, takes no screenshots and skips the PNG checks. The same `compare_perf.mjs` then expects `gpu_ms` to read 0 and the spin row's `game_thread_ms` to still rise. Expected, not observed: the GPU value without a rendering RHI.
+Headless: `compare.ps1 -Headless` starts the game with `-nullrhi` and `-AECompareNoShots`, takes no screenshots and skips the PNG checks. The same `compare_perf.mjs` then expects `gpu_ms` to read 0 and the spin row's `wall_ms` to still rise by at least 2 ms. Observed on Unreal Engine 5.8.3, packaged Windows Development build: `gpu_ms` reads 0 and `gpu_time_available` is false; `game_thread_ms` and `render_thread_ms` also read 0 (documented: `GGameThreadTime` is assigned only in `FViewport::Draw`, `UnrealClient.cpp`; why the two series read 0 headless was not traced), so they showed no CPU work there; `wall_ms` still moves, 0.11 to 0.12 ms for the baseline against 4.22 ms for the spin row. The judge prints the two zero series as an informational `NOTE`, not a check.
 
 ## Add your own set
 

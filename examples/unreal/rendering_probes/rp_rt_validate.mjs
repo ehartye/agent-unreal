@@ -1,4 +1,4 @@
-// node rp_rt_validate.mjs --engine "<UE_5.8 folder>" [--phase rt | toggle-prepare | toggle-judge] [--project <folder>] [--keep] [--warmup-seconds 120]
+// node rp_rt_validate.mjs --engine "<UE_5.8 folder>" [--phase rt | toggle-prepare | toggle-judge] [--project <folder>] [--keep] [--offscreen] [--warmup-seconds 120]
 // The opt-in MegaLights tracing-route probes. Prepared 2026-10-26, not yet run on an engine: a first run tests these probes before it tests the engine. rp_validate.mjs (the
 // headless run that backs unreal-directional-lights.md) is untouched. Each phase starts a RENDERING editor (no -nullrhi, a visible window), so it needs a GPU window and a
 // DirectX 12 GPU with ray tracing for the hardware phases; keep the editor window in front and do not run another Unreal process meanwhile.
@@ -23,6 +23,7 @@ const say = (text) => flushLine(text), complain = (text) => flushLine(text, { fd
 const args = process.argv.slice(2);
 const flag = (name) => { const i = args.indexOf(name); return i >= 0 ? args[i + 1] : undefined; };
 const keep = args.includes('--keep');
+const offscreen = args.includes('--offscreen');   // adds -RenderOffScreen: a session with no desktop (SSH, a service) cannot create the editor window's swap chain
 const phase = flag('--phase') || 'rt';
 const engine = flag('--engine') || process.env.UE_ROOT;
 const usage = 'usage: node rp_rt_validate.mjs --engine <UE_5.8 folder> [--phase rt | toggle-prepare | toggle-judge] [--project <folder>] [--keep] [--warmup-seconds 120]';
@@ -92,7 +93,7 @@ function launch(name, timeout) {
   rmSync(report, { force: true });
   say(`  ${name}: started (rendering editor; keep its window in front)`);
   const started = Date.now();
-  const result = spawnSync(editor, [uproject, `-ExecutePythonScript=${resolve(here, 'rp_rt_probe.py')}`, `-abslog=${log}`, '-unattended', '-nosplash', '-nosound', '-notraceserver'],
+  const result = spawnSync(editor, [uproject, `-ExecutePythonScript=${resolve(here, 'rp_rt_probe.py')}`, `-abslog=${log}`, '-unattended', '-nosplash', '-nosound', '-notraceserver', ...(offscreen ? ['-RenderOffScreen'] : [])],
     { env: { ...process.env, RP_REPORT: report, RP_MAP: `/Game/Maps/RpRt_${name}`, RP_WARMUP_SECONDS: warmup }, stdio: 'ignore', timeout });
   const timedOut = result.error?.code === 'ETIMEDOUT';
   say(`  ${name}: exit ${result.status}${timedOut ? ' (timed out)' : ''}${result.error && !timedOut ? ` (${result.error.message})` : ''}, ${Math.round((Date.now() - started) / 1000)} s`);
