@@ -2,7 +2,9 @@
 
 #include "Engine/World.h"
 #include "Landscape.h"
+#include "LandscapeBlueprintBrushBase.h"
 #include "LandscapeDataAccess.h"
+#include "LandscapeEditLayer.h"
 #include "LandscapeInfo.h"
 #include "LandscapeProxy.h"
 #include "LandscapeSubsystem.h"
@@ -64,4 +66,54 @@ bool ULandscapeBridgeLibrary::GetLandscapeHeightAt(ALandscapeProxy* Landscape, F
 	const TOptional<float> Height = Landscape ? Landscape->GetHeightAtLocation(WorldLocation) : TOptional<float>();
 	OutHeight = Height.Get(0.0f);
 	return Height.IsSet();
+}
+
+// The brush functions below call ALandscape's edit layer API, which is C++ only (Runtime/Landscape/Classes/Landscape.h, inside WITH_EDITOR).
+bool ULandscapeBridgeLibrary::AttachBrushToLayer(ALandscape* Landscape, int32 LayerIndex, ALandscapeBlueprintBrushBase* Brush)
+{
+	if (!Landscape || !Brush || Landscape->IsTemplate())
+	{
+		return false;
+	}
+	// ALandscape::AddBrushToLayer begins with check(GetBrushLayer(Brush) == INDEX_NONE), which stops the editor for a brush that is attached already.
+	if (Landscape->GetBrushLayer(Brush) != INDEX_NONE)
+	{
+		return false;
+	}
+	const ULandscapeEditLayerBase* Layer = Landscape->GetEditLayerConst(LayerIndex);
+	if (!Layer || !Layer->SupportsBlueprintBrushes())
+	{
+		return false;
+	}
+	Landscape->AddBrushToLayer(LayerIndex, Brush);
+	return Landscape->GetBrushLayer(Brush) == LayerIndex;
+}
+
+bool ULandscapeBridgeLibrary::DetachBrush(ALandscape* Landscape, ALandscapeBlueprintBrushBase* Brush)
+{
+	if (!Landscape || !Brush || Landscape->GetBrushLayer(Brush) == INDEX_NONE)
+	{
+		return false;
+	}
+	Landscape->RemoveBrush(Brush);
+	return Landscape->GetBrushLayer(Brush) == INDEX_NONE;
+}
+
+int32 ULandscapeBridgeLibrary::GetBrushLayerIndex(ALandscape* Landscape, ALandscapeBlueprintBrushBase* Brush)
+{
+	return (Landscape && Brush) ? Landscape->GetBrushLayer(Brush) : INDEX_NONE;
+}
+
+int32 ULandscapeBridgeLibrary::GetBrushCountForLayer(ALandscape* Landscape, int32 LayerIndex)
+{
+	if (!Landscape || !Landscape->GetEditLayerConst(LayerIndex))
+	{
+		return -1;
+	}
+	return Landscape->GetBrushesForLayer(LayerIndex).Num();
+}
+
+ALandscape* ULandscapeBridgeLibrary::GetBrushOwningLandscape(ALandscapeBlueprintBrushBase* Brush)
+{
+	return Brush ? Brush->GetOwningLandscape() : nullptr;
 }

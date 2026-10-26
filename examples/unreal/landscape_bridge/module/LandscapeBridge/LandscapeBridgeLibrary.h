@@ -5,6 +5,7 @@
 #include "LandscapeBridgeLibrary.generated.h"
 
 class ALandscape;
+class ALandscapeBlueprintBrushBase;
 class ALandscapeProxy;
 class UWorld;
 
@@ -33,4 +34,30 @@ public:
 	/** Height in centimetres (world Z) of the loaded landscape at a world X/Y, read through the engine's own height query. */
 	UFUNCTION(BlueprintCallable, Category = "LandscapeBridge")
 	static bool GetLandscapeHeightAt(ALandscapeProxy* Landscape, FVector WorldLocation, float& OutHeight);
+
+	/**
+	 * Put a Blueprint brush (for example the Landmass brush manager) on an edit layer of the Landscape, the call the Landscape mode makes
+	 * when a brush is assigned to a layer. ALandscape::AddBrushToLayer is C++ only and stops the editor when the brush is already on a layer,
+	 * so this checks first.
+	 * @param LayerIndex Position in the Landscape's edit layer list (the order Python's get_edit_layers returns).
+	 * @return True when the brush is on that layer afterwards. False for a null argument, a brush that is already on a layer, or a layer that does not take brushes.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "LandscapeBridge")
+	static bool AttachBrushToLayer(ALandscape* Landscape, int32 LayerIndex, ALandscapeBlueprintBrushBase* Brush);
+
+	/** Take the brush off whichever edit layer holds it. True when the brush was on a layer and is no longer. */
+	UFUNCTION(BlueprintCallable, Category = "LandscapeBridge")
+	static bool DetachBrush(ALandscape* Landscape, ALandscapeBlueprintBrushBase* Brush);
+
+	/** Index of the edit layer that holds the brush, or -1 when it is on none. */
+	UFUNCTION(BlueprintCallable, Category = "LandscapeBridge")
+	static int32 GetBrushLayerIndex(ALandscape* Landscape, ALandscapeBlueprintBrushBase* Brush);
+
+	/** Number of brushes on the edit layer, or -1 for an invalid layer index. */
+	UFUNCTION(BlueprintCallable, Category = "LandscapeBridge")
+	static int32 GetBrushCountForLayer(ALandscape* Landscape, int32 LayerIndex);
+
+	/** The Landscape the brush believes it belongs to (set by the Landscape when the brush is added to a layer), or null. */
+	UFUNCTION(BlueprintCallable, Category = "LandscapeBridge")
+	static ALandscape* GetBrushOwningLandscape(ALandscapeBlueprintBrushBase* Brush);
 };
