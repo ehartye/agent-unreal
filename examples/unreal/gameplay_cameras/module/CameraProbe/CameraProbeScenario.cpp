@@ -102,12 +102,14 @@ void ACameraProbeGameMode::BuildRigScenario(bool bManagerHost)
 		Report->SetObjectField(TEXT("rest"), S);
 	});
 
-	// 3. Teleport the pawn 1000 cm and read the boom for the next twelve frames, then every second for ten seconds.
+	// 3. Move the pawn 1000 cm in one frame (a plain move, ETeleportType::None: UGameplayCameraComponentBase::OnUpdateTransform marks
+	//    a camera cut for any other teleport type, and the boom arm skips its lag on a cut) and read the boom for the next twelve
+	//    frames, then every second for ten seconds.
 	AddStep(0, [this]()
 	{
 		if (ACameraProbePawn* Pawn = ProbePawn())
 		{
-			Pawn->SetActorLocation(Pawn->GetActorLocation() + FVector(1000.0, 0.0, 0.0), false, nullptr, ETeleportType::TeleportPhysics);
+			Pawn->SetActorLocation(Pawn->GetActorLocation() + FVector(1000.0, 0.0, 0.0), false, nullptr, ETeleportType::None);
 		}
 	});
 	for (int32 i = 0; i < 12; ++i)
@@ -126,6 +128,25 @@ void ACameraProbeGameMode::BuildRigScenario(bool bManagerHost)
 			FollowTrace.Add(MakeShared<FJsonValueObject>(S));
 		});
 	}
+
+	// 3b. The same distance as a teleport (ETeleportType::TeleportPhysics), back to where the pawn was: the camera cuts, so the eye
+	//     should be at its rest distance in the first frames. Read the next three frames.
+	AddStep(0, [this]()
+	{
+		if (ACameraProbePawn* Pawn = ProbePawn())
+		{
+			Pawn->SetActorLocation(Pawn->GetActorLocation() - FVector(1000.0, 0.0, 0.0), false, nullptr, ETeleportType::TeleportPhysics);
+		}
+	});
+	for (int32 i = 0; i < 3; ++i)
+	{
+		AddStep(0, [this, i]()
+		{
+			TSharedRef<FJsonObject> S = Snapshot(FString::Printf(TEXT("teleport_frame_%d"), i));
+			TeleportFrames.Add(MakeShared<FJsonValueObject>(S));
+		});
+	}
+	AddStep(30, []() {});
 
 	// 4. Start the modifier rig; read mid-blend (0.2 s of a 0.4 s blend) and after the blend.
 	AddStep(0, [this, bManagerHost]()
@@ -152,9 +173,11 @@ void ACameraProbeGameMode::BuildRigScenario(bool bManagerHost)
 
 	// 6. Hold the world at 0.0001 of real time, start the modifier rig, and read for two seconds of real time (60 frames at 30 fps).
 	//    Then stop it immediately and read again.
-	AddStep(0, [this, bManagerHost]()
+	//    The dilation is set two frames before the start: the frame that sets it still runs with the delta it was given (the camera
+	//    update at the end of that frame uses it), so a blend started in the same frame would get one full frame of time.
+	AddStep(0, [this]() { UGameplayStatics::SetGlobalTimeDilation(this, HeldWorldDilation); });
+	AddStep(2, [this, bManagerHost]()
 	{
-		UGameplayStatics::SetGlobalTimeDilation(this, HeldWorldDilation);
 		Report->SetObjectField(TEXT("dilated_start"), Snapshot(TEXT("dilated_start")));
 		ModifierId = StartModifier(bManagerHost);
 		TSharedRef<FJsonObject> S = MakeShared<FJsonObject>();
@@ -227,18 +250,36 @@ void ACameraProbeGameMode::BuildStockScenario()
 	AddStep(3, [this, WithCameras]() { Report->SetObjectField(TEXT("control_back"), WithCameras(Snapshot(TEXT("control_back")))); });
 
 	// Held world: the same blend, two seconds of real time.
-	AddStep(0, [this, WithCameras]()
+	//   The dilation is set two frames before the blend starts (see the rig scenario).
+	AddStep(0, [this]() { UGameplayStatics::SetGlobalTimeDilation(this, HeldWorldDilation); });
+	AddStep(2, [this, WithCameras]()
 	{
-		UGameplayStatics::SetGlobalTimeDilation(this, HeldWorldDilation);
 		PlayerOne()->SetViewTargetWithBlend(PhotoCamera, 0.35f, VTBlend_Linear);
 		Report->SetObjectField(TEXT("stalled_start"), WithCameras(Snapshot(TEXT("stalled_start"))));
 	});
 	AddStep(60, [this, WithCameras]() { Report->SetObjectField(TEXT("stalled"), WithCameras(Snapshot(TEXT("stalled")))); });
 
-	// The cut, still in the held world, and a cut back.
+	// A cut to the camera the stalled blend is already heading for (APlayerCameraManager::SetViewTarget returns early when the new
+	// target is the pending one), a cut to the base camera that aborts the blend, then a cut to the photo camera, all in the held
+	// world, and a cut back.
+	AddStep(0, [this]() { PlayerOne()->SetViewTargetWithBlend(PhotoCamera, 0.f); });
+	AddStep(3, [this, WithCameras]() { Report->SetObjectField(TEXT("cut_to_pending"), WithCameras(Snapshot(TEXT("cut_to_pending")))); });
+	AddStep(0, [this]() { PlayerOne()->SetViewTargetWithBlend(BaseCamera, 0.f); });
+	AddStep(3, [this, WithCameras]() { Report->SetObjectField(TEXT("cut_abort"), WithCameras(Snapshot(TEXT("cut_abort")))); });
 	AddStep(0, [this]() { PlayerOne()->SetViewTargetWithBlend(PhotoCamera, 0.f); });
 	AddStep(3, [this, WithCameras]() { Report->SetObjectField(TEXT("cut"), WithCameras(Snapshot(TEXT("cut")))); });
 	AddStep(0, [this]() { PlayerOne()->SetViewTargetWithBlend(BaseCamera, 0.f); });
 	AddStep(3, [this, WithCameras]() { Report->SetObjectField(TEXT("cut_back"), WithCameras(Snapshot(TEXT("cut_back")))); });
+
+	// The blend started in the same frame that sets the dilation: back to normal time first, then set the dilation and start the
+	// blend in one step. The frame that sets the dilation still runs with the delta it was given, and the camera update at the end
+	// of that frame passes it to the blend, so one frame of the blend (1/30 s) goes through.
+	AddStep(0, [this]() { UGameplayStatics::SetGlobalTimeDilation(this, 1.0f); });
+	AddStep(2, [this]()
+	{
+		UGameplayStatics::SetGlobalTimeDilation(this, HeldWorldDilation);
+		PlayerOne()->SetViewTargetWithBlend(PhotoCamera, 0.35f, VTBlend_Linear);
+	});
+	AddStep(60, [this, WithCameras]() { Report->SetObjectField(TEXT("same_frame"), WithCameras(Snapshot(TEXT("same_frame")))); });
 	AddStep(0, [this]() { UGameplayStatics::SetGlobalTimeDilation(this, 1.0f); });
 }
