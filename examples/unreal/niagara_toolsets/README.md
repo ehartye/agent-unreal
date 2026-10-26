@@ -5,10 +5,14 @@ Backs [Author Niagara systems from Python with the Niagara toolsets](../../../sk
 ## Run
 
 ```text
-node examples/unreal/niagara_toolsets/nts_validate.mjs --engine "C:/Program Files/Epic Games/UE_5.8" [--keep]
+node examples/unreal/niagara_toolsets/nts_validate.mjs --engine "C:/Program Files/Epic Games/UE_5.8" [--keep] [--only author]
 ```
 
-It starts eight hidden headless commandlets and one hidden editor (the stack-issue tick run), about 3 minutes in total, prints PASS or FAIL per claim and exits 0 when all 25 pass. It is not part of `node scripts/check.mjs`; the check logic is tested there (`nts-validate.test.mjs`). Two phases end in an editor crash on purpose, so a non-zero exit code from those is a result, not an error. A timed-out run is retried once, and afterwards only processes whose command line names the throwaway project are stopped.
+It starts eight hidden headless commandlets and one hidden editor (the stack-issue tick run), a few minutes in total (timing varies with machine load, and a loaded machine can take more than twice as long), prints PASS or FAIL per claim and exits 0 when every check passes. A line is written, and flushed, as each phase starts and ends, so a redirected run shows progress and a slow phase can be told from a hung one. It is not part of `node scripts/check.mjs`; the check logic is tested there (`nts-validate.test.mjs`). Two phases end in an editor crash on purpose, so a non-zero exit code from those is a result, not an error. A timed-out run is retried once, and afterwards only processes whose command line names the throwaway project are stopped.
+
+`--only <group>[,<group>...]` (or `--phases`, the same option) runs only the named groups, in pipeline order: `author`, `readback`, `issues`, `recreate` (the five delete-and-recreate phases) and `startup`. `readback`, `issues` and `startup` read what `author` saved, so they need it in the same list. Use `--only author` to iterate on `nts_author.py` in about the time of that one phase. A partial run keeps the project folder, prints the path of each report it wrote (or says it was not written), does not judge the checks, which need every group, and exits 0 when every report it should have written exists.
+
+`--keep` leaves the project folder. When the `startup` phase ran, that folder holds a project `init_unreal.py` that raises on purpose, so any other script run against it exits 1 until that file is deleted; the run prints a note with its path.
 
 ## Files
 
@@ -19,7 +23,7 @@ It starts eight hidden headless commandlets and one hidden editor (the stack-iss
 | `nts_issues.py` | an editor run with a tick callback: `GetStackIssues` and `GetSystemCompileState` for the saved systems (they complete from the editor tick, not in a commandlet) |
 | `nts_recreate.py` | one delete-and-recreate phase per run (`make`, `same_process`, `stale`, `rescan_only`, `remove_rescan`), with a progress line flushed after every step so a crash leaves a trace |
 | `nts_startup.py` | with a project `init_unreal.py` that raises, shows the toolset still registers and answers |
-| `nts-validate-checks.mjs`, `nts-validate.test.mjs` | one check per claim; the test changes one fact at a time and expects the matching check to fail |
+| `nts-validate-checks.mjs`, `nts-validate.test.mjs` | one check per claim; the command-line options and phase list, the report lines of a partial run, the `--keep` note and the flushed-line writer; the test changes one fact at a time and expects the matching check to fail, and takes the number of checks from the code |
 
 ## What it showed (5.8.2)
 

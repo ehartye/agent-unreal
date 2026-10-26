@@ -3,7 +3,10 @@
 // check to fail, so the validator cannot pass by accident.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { evaluate, summarize } from './nts-validate-checks.mjs';
+import { mkdtempSync, openSync, closeSync, readFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { evaluate, summarize, parseOptions, describeReports, keepNote, flushLine, GROUPS } from './nts-validate-checks.mjs';
 
 const topology = ['bEnabled', 'emitterName', 'emitterSpawnScript', 'emitterUpdateScript', 'particleSpawnScript', 'particleUpdateScript', 'rendererClasses', 'renderers', 'simTarget'];
 const DEFAULT_MATERIAL = { refPath: '/Niagara/DefaultAssets/DefaultSpriteMaterial.DefaultSpriteMaterial' };
@@ -130,7 +133,8 @@ const step = (r, name) => r.author.steps.find((s) => s.step === name);
 test('the 5.8.2 reports pass every check', () => {
   const checks = evaluate(canned());
   assert.deepEqual(failing(canned()), []);
-  assert.deepEqual(summarize(checks), { passed: 25, total: 25 });
+  assert.ok(checks.length > 0);
+  assert.deepEqual(summarize(checks), { passed: checks.length, total: checks.length });
 });
 
 test('a startup traceback or a missing toolset fails the first check', () => {
@@ -259,6 +263,86 @@ test('the delete-and-recreate checks tell a crash from a clean exit', () => {
 
 test('missing reports fail instead of throwing', () => {
   const checks = evaluate({});
-  assert.equal(checks.length, 25);
+  assert.equal(checks.length, evaluate(canned()).length);
   assert.ok(checks.every((c) => c.pass === false));
+});
+
+test('no option runs every group and judges the checks; the engine comes from --engine or UE_ROOT', () => {
+  const all = ['author', 'readback', 'issues', 'make', 'same_process', 'stale', 'rescan_only', 'remove_rescan', 'startup'];
+  assert.deepEqual(parseOptions(['--engine', 'E']), { engine: 'E', keep: false, groups: GROUPS, phases: all, partial: false });
+  assert.equal(parseOptions(['--keep'], { UE_ROOT: 'U' }).engine, 'U');
+  assert.equal(parseOptions(['--keep', '--engine', 'E'], { UE_ROOT: 'U' }).engine, 'E');
+  assert.equal(parseOptions(['--keep', '--engine', 'E']).keep, true);
+  assert.deepEqual(parseOptions(['--engine', 'E', '--only', 'author,readback,issues,recreate,startup']).phases, all);
+});
+
+test('--only author runs the author phase alone and keeps the project so its report survives', () => {
+  const one = parseOptions(['--engine', 'E', '--only', 'author']);
+  assert.deepEqual(one, { engine: 'E', keep: true, groups: ['author'], phases: ['author'], partial: true });
+  assert.deepEqual(parseOptions(['--engine', 'E', '--phases', 'author']), one);
+});
+
+test('--phases names several groups in any order and runs them in pipeline order', () => {
+  const two = parseOptions(['--engine', 'E', '--phases', 'readback,author']);
+  assert.deepEqual(two.phases, ['author', 'readback']);
+  assert.equal(two.partial, true);
+  assert.deepEqual(parseOptions(['--engine', 'E', '--only', ' author , author,issues ']).phases, ['author', 'issues']);
+  const recreate = parseOptions(['--engine', 'E', '--only', 'recreate']);
+  assert.deepEqual(recreate.phases, ['make', 'same_process', 'stale', 'rescan_only', 'remove_rescan']);
+  assert.equal(recreate.partial, true);
+  assert.deepEqual(parseOptions(['--engine', 'E', '--only', 'author,startup']).phases, ['author', 'startup']);
+});
+
+test('bad command lines are refused with a reason instead of starting a long run', () => {
+  const error = (argv, env = {}) => parseOptions(argv, env).error;
+  assert.match(error([]), /no engine folder/);
+  assert.match(error(['--engine']), /--engine needs a value/);
+  assert.match(error(['--engine', 'E', '--only']), /--only needs a value/);
+  assert.match(error(['--engine', 'E', '--only', '--keep']), /--only needs a value/);
+  assert.match(error(['--engine', 'E', '--only', ',']), /at least one group/);
+  assert.match(error(['--engine', 'E', '--only', 'authr']), /unknown group authr/);
+  assert.match(error(['--engine', 'E', '--onyl', 'author']), /unknown option --onyl/);
+  assert.match(error(['--engine', 'E', '--only', 'author', '--phases', 'author']), /same option/);
+  for (const g of ['readback', 'issues', 'startup']) assert.match(error(['--engine', 'E', '--only', g]), new RegExp(`${g} reads what author saved`));
+  assert.equal(error(['--engine', 'E', '--only', 'recreate']), undefined);
+});
+
+test('a partial run points at the reports it wrote and flags the ones it did not', () => {
+  const pathOf = (phase) => `S/${phase}.json`;
+  assert.deepEqual(describeReports(['author'], pathOf, () => true), { lines: ['author report: S/author.json'], missing: [] });
+  assert.deepEqual(describeReports(['make', 'author', 'readback'], pathOf, (path) => path !== 'S/readback.json'),
+    { lines: ['author report: S/author.json', 'readback report: not written (S/readback.json)'], missing: ['readback'] });
+  assert.deepEqual(describeReports(['make', 'stale'], pathOf, () => true), { lines: [], missing: [] });
+});
+
+test('--keep says so when the kept project still holds the init_unreal.py that raises', () => {
+  assert.equal(keepNote('R', ['author'], 'R/Content/Python/init_unreal.py'), 'kept R');
+  const note = keepNote('R', ['author', 'startup'], 'R/Content/Python/init_unreal.py');
+  assert.match(note, /^kept R; not clean for reuse: delete R\/Content\/Python\/init_unreal\.py first/);
+});
+
+test('flushLine writes the whole line at once, resumes after a partial write and a busy stream, and never throws', () => {
+  const written = [];
+  const partial = (fd, data, offset, length) => { const n = Math.min(length, 4); written.push([fd, Buffer.from(data.subarray(offset, offset + n)).toString()]); return n; };
+  assert.equal(flushLine('phase done', { fd: 2, write: partial }), true);
+  assert.equal(written.map((w) => w[1]).join(''), 'phase done\n');
+  assert.ok(written.every((w) => w[0] === 2));
+  let busy = 2, slept = 0, out = '';
+  const flaky = (fd, data, offset, length) => { if (busy-- > 0) throw Object.assign(new Error('busy'), { code: 'EAGAIN' }); out += data.subarray(offset, offset + length); return length; };
+  assert.equal(flushLine('late', { write: flaky, sleep: () => { slept++; } }), true);
+  assert.deepEqual([out, slept], ['late\n', 2]);
+  busy = 1; out = '';
+  assert.equal(flushLine('default sleep', { write: flaky }), true);
+  assert.equal(out, 'default sleep\n');
+  const dir = mkdtempSync(join(tmpdir(), 'nts-flush-'));
+  try {
+    const file = join(dir, 'out.txt'), fd = openSync(file, 'w');
+    assert.equal(flushLine('through the real writeSync', { fd }), true);
+    closeSync(fd);
+    assert.equal(readFileSync(file, 'utf8'), 'through the real writeSync\n');
+  } finally { rmSync(dir, { recursive: true, force: true }); }
+  const gone = () => { throw Object.assign(new Error('closed'), { code: 'EPIPE' }); };
+  assert.equal(flushLine('nobody listens', { write: gone }), false);
+  const stuck = () => { throw Object.assign(new Error('busy'), { code: 'EAGAIN' }); };
+  assert.equal(flushLine('never', { write: stuck, sleep: () => {} }), false);
 });

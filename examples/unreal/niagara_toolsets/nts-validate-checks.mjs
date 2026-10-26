@@ -1,6 +1,8 @@
 // Pure checks for nts_validate.mjs: turn the JSON reports, progress notes, exit codes and log text of the Niagara toolset scripts into
 // pass or fail results, one per claim in skills/unreal-effects/references/unreal-niagara-toolsets.md. No Unreal, no files:
-// nts-validate.test.mjs feeds it canned reports, and nts_validate.mjs feeds it real ones.
+// nts-validate.test.mjs feeds it canned reports, and nts_validate.mjs feeds it real ones. Also the pure parts of the runner: parseOptions and
+// the phase list (--only), describeReports (what a partial run prints), keepNote (--keep) and flushLine (one line per phase, written at once).
+import { writeSync } from 'node:fs';
 
 const has = (text, pattern) => pattern.test(String(text || ''));
 const step = (report, name) => ((report || {}).steps || []).find((s) => s.step === name) || {};
@@ -193,4 +195,102 @@ export function evaluate(r) {
 
 export function summarize(checks) {
   return { passed: checks.filter((c) => c.pass).length, total: checks.length };
+}
+
+/** The groups --only and --phases accept, in pipeline order, and the groups each one reads the output of. */
+export const GROUPS = ['author', 'readback', 'issues', 'recreate', 'startup'];
+const NEEDS = { readback: ['author'], issues: ['author'], startup: ['author'] };
+/** The phases of each group, in the order they run. The recreate group is five commandlet runs. */
+export const PHASES_OF = {
+  author: ['author'], readback: ['readback'], issues: ['issues'],
+  recreate: ['make', 'same_process', 'stale', 'rescan_only', 'remove_rescan'], startup: ['startup'],
+};
+/** Phases that write a JSON report the runner can point at. */
+export const REPORT_PHASES = ['author', 'readback', 'issues', 'startup'];
+
+export const USAGE = 'usage: node nts_validate.mjs --engine <UE_5.8 folder> [--keep] [--only <group>[,<group>...]]   groups: ' + GROUPS.join(', ')
+  + '  (--phases is the same option; readback, issues and startup need author)';
+
+/**
+ * Read the command line. Without --only or --phases every group runs and the checks judge the result; with it only the named groups run
+ * (in pipeline order), the project folder is kept and the runner prints where the reports are.
+ * @param {string[]} argv  process.argv without node and the script
+ * @param {Record<string, string|undefined>} [env]  UE_ROOT supplies the engine folder
+ * @returns {{ error?: string, engine?: string, keep?: boolean, groups?: string[], phases?: string[], partial?: boolean }}
+ */
+export function parseOptions(argv, env = {}) {
+  let engine, keep = false, only;
+  for (let i = 0; i < argv.length; i++) {
+    const arg = argv[i];
+    if (arg === '--keep') keep = true;
+    else if (arg === '--engine' || arg === '--only' || arg === '--phases') {
+      const value = argv[i + 1];
+      if (value === undefined || value.startsWith('--')) return { error: `${arg} needs a value` };
+      i++;
+      if (arg === '--engine') engine = value;
+      else if (only !== undefined) return { error: '--only and --phases name the same option; pass one of them once' };
+      else only = value;
+    } else return { error: `unknown option ${arg}` };
+  }
+  engine = engine || env.UE_ROOT;
+  if (!engine) return { error: 'no engine folder: pass --engine or set UE_ROOT' };
+  let groups = GROUPS;
+  if (only !== undefined) {
+    const named = only.split(',').map((g) => g.trim()).filter(Boolean);
+    const unknown = named.filter((g) => !GROUPS.includes(g));
+    if (named.length === 0) return { error: '--only needs at least one group' };
+    if (unknown.length) return { error: `unknown group ${unknown.join(', ')}; the groups are ${GROUPS.join(', ')}` };
+    groups = GROUPS.filter((g) => named.includes(g));
+    for (const g of groups) {
+      const missing = (NEEDS[g] || []).filter((n) => !groups.includes(n));
+      if (missing.length) return { error: `${g} reads what ${missing.join(', ')} saved; add ${missing.join(', ')} to --only` };
+    }
+  }
+  const partial = groups.length < GROUPS.length;
+  return { engine, keep: keep || partial, groups, phases: groups.flatMap((g) => PHASES_OF[g]), partial };   // a partial run keeps the project: its reports are the result
+}
+
+/**
+ * Where the reports of a partial run are, for the lines the runner prints.
+ * @param {string[]} phases  the phases that ran
+ * @param {(phase: string) => string} pathOf  the report path of a phase
+ * @param {(path: string) => boolean} exists
+ * @returns {{ lines: string[], missing: string[] }}  missing names the phases whose report was not written
+ */
+export function describeReports(phases, pathOf, exists) {
+  const lines = [], missing = [];
+  for (const phase of REPORT_PHASES.filter((p) => phases.includes(p))) {
+    const path = pathOf(phase);
+    if (exists(path)) lines.push(`${phase} report: ${path}`);
+    else { lines.push(`${phase} report: not written (${path})`); missing.push(phase); }
+  }
+  return { lines, missing };
+}
+
+/**
+ * The line to print for --keep. The start-up phase leaves a project init_unreal.py that raises on purpose, so a kept project that ran it
+ * exits 1 for any other script until that file is deleted.
+ * @returns {string}
+ */
+export function keepNote(root, phases, initScriptPath) {
+  const base = `kept ${root}`;
+  return phases.includes('startup') ? `${base}; not clean for reuse: delete ${initScriptPath} first, it raises on purpose and makes any other script exit 1` : base;
+}
+
+/**
+ * Write one line now. spawnSync blocks the event loop, so a console.log to a redirected stream can sit unwritten until the whole run ends;
+ * a synchronous write does not. Returns false when the stream is gone (EPIPE and the like); never throws.
+ * @param {string} text
+ * @param {{ fd?: number, write?: Function, sleep?: Function }} [io]  injected by the test
+ */
+export function flushLine(text, { fd = 1, write = writeSync, sleep = (ms) => Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms) } = {}) {
+  const data = Buffer.from(`${text}\n`, 'utf8');
+  let offset = 0, waits = 0;
+  while (offset < data.length) {
+    try { offset += write(fd, data, offset, data.length - offset); waits = 0; } catch (error) {
+      if (error && error.code === 'EAGAIN' && ++waits <= 2000) { sleep(2); continue; }
+      return false;
+    }
+  }
+  return true;
 }

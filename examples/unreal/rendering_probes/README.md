@@ -8,7 +8,7 @@ Backs the [tested] lines of [Two directional lights: ForwardShadingPriority and 
 node examples/unreal/rendering_probes/rp_validate.mjs --engine "C:/Program Files/Epic Games/UE_5.8" [--keep]
 ```
 
-It starts one hidden headless commandlet (`-run=pythonscript`, `-nullrhi`), under a minute including the first start of the new project, prints PASS or FAIL per check and exits 0 when all 3 pass. `--keep` leaves the project folder, with `Saved/probe.json` (the report) and `Saved/Logs/probe.log`. It is not part of `node scripts/check.mjs`; the check logic is tested there (`rp-validate.test.mjs`).
+It starts one hidden headless commandlet (`-run=pythonscript`, `-nullrhi`), usually under a minute including the first start of the new project (timing varies with machine load), prints PASS or FAIL per check and exits 0 when every check passes. A line is written, and flushed, as each phase starts and ends, so a redirected run shows progress. The project folder is deleted after a clean run. A failed check or a missing report keeps it and prints its path and the editor log's path; `--keep` also keeps it after a clean run. The folder holds `Saved/probe.json` (the report) and `Saved/Logs/probe.log`. It is not part of `node scripts/check.mjs`; the check logic is tested there (`rp-validate.test.mjs`).
 
 ## Files
 
@@ -16,7 +16,12 @@ It starts one hidden headless commandlet (`-run=pythonscript`, `-nullrhi`), unde
 |---|---|
 | `rp_probe.py` | makes a level, spawns `DirectionalLight` actors and reads `forward_shading_priority` through `get_editor_property`; calls `set_forward_shading_priority(1)` on one of two lights; tries four other routes to the property, each on a fresh light in its own `try`, keeping the whole error text; looks up two console variables |
 | `rp_validate.mjs` | writes the throwaway project, runs the probe once (a timeout is retried once), stops only processes that name that project, judges the report and the log |
-| `rp-validate-checks.mjs`, `rp-validate.test.mjs` | the three checks as a pure function of the report and the log text; the test changes one fact at a time and expects the matching check to fail, and an empty report to fail all three |
+| `rp-validate-checks.mjs`, `rp-validate.test.mjs` | the checks as a pure function of the report and the log text, plus the folder-keeping rule and the flushed-line writer; the test changes one fact at a time and expects the matching check to fail, and an empty report to fail every check |
+
+## What the checks judge
+
+- Check 2 rejects any recorded text that is a Python `AttributeError` or `NameError` (a bug in the probe, not an engine result) and asserts the outcomes the reference's [tested] lines state: the setter route stores 2, attribute assignment raises the read-only error, the setter with -3 after 2 reads back 0, a Static component keeps 4, a spawned light's mobility reads `STATIONARY`, and reading the attribute works. A changed outcome fails the check; before, it only needed each route to record something.
+- The node tests run these rules on a canned 5.8.2 report. A fresh run against an engine of another version is where a changed outcome would show.
 
 ## What it showed (5.8.2)
 
