@@ -39,15 +39,9 @@ Set Project Settings > Rendering > Substrate > "Substrate GBuffer Format (Projec
 
 New Substrate projects default to Blendable; the Automotive and Architectural templates use Adaptive. Use Blendable for 60 Hz projects and Adaptive when fidelity is the goal (Epic's overview page). Substrate Toon is built on Blendable GBuffer mode (5.8 release notes), so choose Blendable when using it.
 
-## Blend modes and translucent lighting modes
+## Blend modes and layered slabs
 
-Set the Blend Mode on the root node: Opaque, Masked, Translucent - Grey Transmittance, Translucent - Colored Transmittance, Colored Transmittance Only (the Multiply equivalent), Additive, AlphaComposite (Premultiplied Alpha), AlphaHoldout. Translucent modes also need a Lighting Mode:
-
-- Volumetric NonDirectional: cheapest per pixel; ignores the normal.
-- Volumetric Directional: uses the normal; enable Generate Spherical Particles for a useful tangent space.
-- Volumetric PerVertex NonDirectional and Directional: per-vertex evaluation, lower pixel cost.
-- Surface Translucency Volume: blurry, distance-limited, diffuse only, supports reflections.
-- Surface ForwardShading: per-light specular; the most expensive.
+Blend Mode and the translucent Lighting Mode are set on the root node. The mode list, the slab and clear-coat pin names and the layered-slab route from Python are in [Substrate slab graphs](unreal-substrate-slabs.md).
 
 ## Substrate Toon Shading
 
@@ -69,7 +63,7 @@ Set the Blend Mode on the root node: Opaque, Masked, Translucent - Grey Transmit
 | Enable Substrate, pick GBuffer format | Project settings | `r.Substrate`, `r.Substrate.ProjectGBufferFormat`; restart |
 | Tune Adaptive limits | Project settings / cvars | `r.Substrate.ProjectClosuresPerPixel`, `r.Substrate.BytesPerPixel` (default 80) |
 | Author Substrate graphs, Toon BSDF, Toon Profile | Python (row below) or Material Editor UI | Slab and Toon BSDF nodes; right-click the root node > Convert to Substrate (permanent; the material then renders black with Substrate off) |
-| Create Substrate and Toon nodes from script | Python | `MaterialEditingLibrary.create_material_expression` with `unreal.MaterialExpressionSubstrateToonBSDF` |
+| Create Substrate and Toon nodes from script | Python | `MaterialEditingLibrary.create_material_expression` with `unreal.MaterialExpressionSubstrateToonBSDF`; slab and clear-coat pin names: [slab graphs](unreal-substrate-slabs.md) |
 | Set or read cvars | Python | `unreal.SystemLibrary.execute_console_command` (documented for the 5.7 Python API) |
 | Inspect cost | Editor UI | Substrate stats panel; advanced visualization shaders setting (Editor, Win64, DX12) |
 
@@ -77,12 +71,12 @@ Set the Blend Mode on the root node: Opaque, Masked, Translucent - Grey Transmit
 
 1. Enable Substrate and restart; choose Blendable or Adaptive GBuffer per the table.
 2. Author new materials from Slab nodes; use Substrate Simple Clear Coat, Wrap and Diffusion building blocks in place of legacy shading models.
-3. Pick the Blend Mode, then the translucent Lighting Mode with the lowest cost that looks right.
+3. Pick the Blend Mode, then the translucent Lighting Mode with the lowest cost that looks right ([modes](unreal-substrate-slabs.md)).
 4. Reduce cost with parameter blending: Epic's example drops 108 bytes per pixel to 28. Each extra BSDF roughly doubles per-pixel lighting cost.
 5. Read the Substrate stats panel for simplification reasons when a material exceeds closure or bytes-per-pixel limits.
 6. For stylized work, create a Toon Profile, assign it to a Substrate Toon BSDF, and keep the project on Blendable GBuffer.
 
-Related: [Lumen](unreal-lumen.md), [Niagara](../../unreal-effects/references/unreal-niagara.md).
+Related: [Substrate slab graphs](unreal-substrate-slabs.md), [Lumen](unreal-lumen.md), [Niagara](../../unreal-effects/references/unreal-niagara.md).
 
 ## Sources
 
