@@ -32,6 +32,7 @@ When a finding has more than one reasonable fix, present each with its implicati
 
 - `[general]` Recommend one option. Give estimates only when they rest on something observed, such as the count of call sites; otherwise give relative size (one file, one module, cross-module).
 - `[general]` Keep a smaller option that fixes the rank 1 cause even when a larger redesign is better long term; the owner chooses.
+- `[general]` For development tooling in a shipped module, the usual pair is a Developer-type module (a clean boundary, one new module and its include fixes) against in-place `UE_BUILD_SHIPPING` guards (hours, but guards can be skipped by the next probe added). The check is that the Shipping target builds and the switch does nothing there, while capture and replay scripts still work in Development.
 
 ## Hand-offs
 
