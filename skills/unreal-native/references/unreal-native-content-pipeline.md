@@ -1,6 +1,6 @@
 # Separate native gameplay from content-only asset construction
 
-Observed in one consuming Unreal **5.8.2 CL56702186** project on Windows; not reproduced in this repo. Read the [native packaging recipe](unreal-native-packaging.md) for receipt staging and its acceptance limits. This is a conventional content-only project feeding a separately compiled native game. It does not require changing host security policy.
+Observed in one consuming Unreal **5.8.2 CL56702186** project on Windows; not reproduced in this repo. Read the [native packaging staging recipe](unreal-native-packaging-staging.md) for receipt staging and its acceptance limits. This is a conventional content-only project feeding a separately compiled native game. It does not require changing host security policy.
 
 ## Why the split was used
 

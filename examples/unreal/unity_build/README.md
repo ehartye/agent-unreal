@@ -1,6 +1,6 @@
 # Unity builds: names that clash only when files share a chunk
 
-Backs [Unity builds and file-scope names](../../../skills/unreal-native/references/unreal-native-unity-builds.md). Unreal Engine 5.8.2, Windows, Visual Studio 2022 Build Tools.
+Backs [Unity builds and file-scope names](../../../skills/unreal-native/references/unreal-native-unity-builds.md) and [its fixes](../../../skills/unreal-native/references/unreal-native-unity-build-fixes.md). Unreal Engine 5.8.2, Windows, Visual Studio 2022 Build Tools.
 
 The question: which source changes decide whether two files share a translation unit, and what does the build say when they do? The run answers it with a three-file runtime module whose files build alone and fail together.
 
