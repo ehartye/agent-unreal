@@ -15,6 +15,7 @@ Unreal 5.8 on Windows. Pick the feature from the goal, then read that system's r
 | Author terrain with helpers (Landmass; off, beta) | [Landmass](references/unreal-landmass.md) |
 | Add oceans, lakes or rivers (Water; off, experimental) | [Water](references/unreal-water.md) |
 | Build or edit meshes from code, in the editor or at runtime (Geometry Scripting; off) | [Geometry Scripting](references/unreal-geometry-scripting.md) |
+| Stack primitives into one mesh, rotate them, or fix a generated mesh that floats, sinks or faces the wrong way | [Geometry Scripting traps](references/unreal-geometry-scripting-traps.md) |
 | Create a runtime mesh from vertex arrays (Procedural Mesh Component; on) | [Procedural Mesh Component](references/unreal-procedural-mesh-component.md) |
 | Make parameter-driven, sample-accurate game audio (MetaSounds; on) | [MetaSounds](references/unreal-metasounds.md) |
 
