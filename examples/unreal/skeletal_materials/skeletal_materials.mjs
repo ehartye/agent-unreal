@@ -6,7 +6,7 @@
 // skel_probe.py in two separate editor processes: "author" (copies of an engine skeletal mesh, the Python routes, the C++ function, saves)
 // and "read" (a fresh process: the hidden asset-registry Materials tag and the loaded slots). skel-checks.mjs judges both reports.
 // By default both processes are commandlets (UnrealEditor-Cmd.exe -run=pythonscript -nullrhi). --rendering runs the same script inside a
-// rendering editor (UnrealEditor.exe, no -nullrhi, a GPU and a window needed) so the report's authored-material statistics can be compared
+// rendering editor (UnrealEditor.exe with -RenderOffScreen, no -nullrhi, a GPU needed; no window is shown) so the report's authored-material statistics can be compared
 // with the headless run.
 // The compiler and Windows SDK are discovered from the installed Visual Studio (override with --compiler / --sdk).
 // Exit code 0 when every check passes. Not part of node scripts/check.mjs; the checks are tested there.
@@ -51,7 +51,7 @@ function run(mode) {
   const env = { ...process.env, SM_REPORT: report, SM_MODE: mode, SM_RUN: rendering ? 'tick' : 'direct', MSYS_NO_PATHCONV: '1' };
   const common = ['-unattended', '-nosplash', '-nopause', '-nosound', '-notraceserver', `-abslog=${logFile}`];
   const argv = rendering
-    ? [uproject, `-ExecCmds=py ${resolve(here, 'skel_probe.py')}`, ...common]
+    ? [uproject, `-ExecCmds=py ${resolve(here, 'skel_probe.py')}`, '-RenderOffScreen', ...common]   // no window: a session without a desktop cannot create the editor window's swap chain
     : [uproject, '-run=pythonscript', `-script=${resolve(here, 'skel_probe.py')}`, '-nullrhi', ...common];
   for (let attempt = 1; attempt <= 2; attempt++) {
     const started = Date.now();
