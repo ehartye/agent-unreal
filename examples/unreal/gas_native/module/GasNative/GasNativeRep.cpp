@@ -1,5 +1,6 @@
 #include "GasNativeRep.h"
 #include "AbilitySystemComponent.h"
+#include "Engine/Engine.h"
 #include "Engine/World.h"
 #include "GameFramework/GameStateBase.h"
 #include "GameFramework/PlayerController.h"
@@ -21,7 +22,7 @@ namespace
 	// state's BeginPlay. The values leave room for the client to load the map after the server logs the join.
 	constexpr float ClientBeforeAt = 3.f;       // client: snapshot, then try the activation
 	constexpr float ClientSettleFor = 2.f;      // client: wait this long, snapshot again, write the receipt
-	constexpr float ServerAfterAt = 4.5f;       // server: snapshot the player state while the client (gone about 5 s after the join) is still connected
+	constexpr float ServerSnapshotEvery = 0.25f; // server: refresh the "after" snapshot this often while the client is connected (the client's clock runs ahead of the server's wall clock, so no fixed time catches it)
 	constexpr float ServerReceiptAt = 8.f;      // server: write the receipt
 	constexpr float ServerFallbackAt = 90.f;    // server: no client ever joined, write the receipt anyway
 
@@ -213,6 +214,7 @@ void AGasNativeRepPlayerState::ClientBefore()
 
 	// The client asks to activate the ability it was granted. A spec that never arrived is recorded, not retried.
 	TSharedRef<FJsonObject> Activation = MakeShared<FJsonObject>();
+	if (GEngine) { GEngine->Exec(GetWorld(), TEXT("Log LogAbilitySystem VeryVerbose")); }   // the refusal reasons are logged at Log and Verbose
 	const bool bHasSpec = Asc->FindAbilitySpecFromClass(UGasNativeRepAbility::StaticClass()) != nullptr;
 	Activation->SetBoolField(TEXT("had_spec"), bHasSpec);
 	bool bReturned = false;
@@ -221,6 +223,12 @@ void AGasNativeRepPlayerState::ClientBefore()
 	Activation->SetNumberField(TEXT("predicted_count_right_after_call"), ActivationsPredicted);
 	if (bHasSpec && !bReturned)
 	{
+		if (const FGameplayAbilitySpec* Spec = Asc->FindAbilitySpecFromClass(UGasNativeRepAbility::StaticClass()))
+		{
+			FGameplayTagContainer Failed;
+			Activation->SetBoolField(TEXT("can_activate_ability_before_reinit"), Spec->Ability && Asc->AbilityActorInfo.IsValid() && Spec->Ability->CanActivateAbility(Spec->Handle, Asc->AbilityActorInfo.Get(), nullptr, nullptr, &Failed));
+			Activation->SetStringField(TEXT("can_activate_failure_tags"), Failed.ToStringSimple());
+		}
 		// The actor info was filled in when the component initialised, before the player state's owner (the controller) had replicated,
 		// so it may not know the controller. Fill it in again and ask once more; both answers are recorded.
 		Asc->InitAbilityActorInfo(this, this);
@@ -276,7 +284,7 @@ void AGasNativeRepGameMode::PostLogin(APlayerController* NewPlayer)
 	UE_LOG(LogGasNativeRep, Display, TEXT("GasNativeRep: client joined, ability granted and buff applied"));
 	GetWorldTimerManager().ClearTimer(FallbackTimer);
 	JoinedState = State;
-	GetWorldTimerManager().SetTimer(AfterTimer, FTimerDelegate::CreateLambda([this]() { if (JoinedState.IsValid()) { After = JoinedState->Snapshot(); AfterPlayerCount = GetNumPlayers(); } }), ServerAfterAt, false);
+	GetWorldTimerManager().SetTimer(AfterTimer, FTimerDelegate::CreateLambda([this]() { if (JoinedState.IsValid()) { After = JoinedState->Snapshot(); AfterPlayerCount = GetNumPlayers(); } }), ServerSnapshotEvery, true);
 	GetWorldTimerManager().SetTimer(ReceiptTimer, FTimerDelegate::CreateLambda([this]() { WriteServerReceipt(true); }), ServerReceiptAt, false);
 }
 
@@ -291,7 +299,7 @@ void AGasNativeRepGameMode::WriteServerReceipt(bool bClientJoined)
 	TSharedRef<FJsonObject> Phases = MakeShared<FJsonObject>();
 	Root->SetObjectField(TEXT("phases"), Phases);
 	if (Joined.IsValid()) { Phases->SetObjectField(TEXT("joined"), Joined); }
-	// The client has left by now; the "after" snapshot was taken while it was still connected.
+	// The client has left by now; the "after" snapshot is the last one taken while it was still connected.
 	if (After.IsValid()) { Phases->SetObjectField(TEXT("after"), After); }
 	WriteReceipt(Root);
 	FPlatformMisc::RequestExit(false);
