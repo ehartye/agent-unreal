@@ -12,13 +12,13 @@ const SUBJECT = 'check.mjs';
 const SCRIPTS = dirname(fileURLToPath(import.meta.url));
 const CHECK = join(SCRIPTS, SUBJECT);
 const REAL_SKILLS = join(SCRIPTS, '..', 'skills');
-const { STRICTNESS, lintPlan, discoverTests, parseArgs } = await import(pathToFileURL(CHECK).href);
+const { STRICTNESS, DIFF_AWARE, lintPlan, discoverTests, parseArgs, resolveLabelsRef } = await import(pathToFileURL(CHECK).href);
 
 // --- fixtures ---------------------------------------------------------------------------------------------------
 
 const skillMd = (name, rule = '[tested] A rule.') => `---
 name: ${name}
-description: Build a demo. Use before writing demo code. Not for choosing an engine.
+description: Build a demo. Use when writing demo code. Not for choosing an engine.
 ---
 
 # Demo
@@ -69,8 +69,10 @@ function runCheck(root, args, env = {}, script = CHECK) {
   if (root) childEnv.AGENT_UNREAL_ROOT = root;
   Object.assign(childEnv, env);
   const r = spawnSync(process.execPath, [script, ...args], { cwd: tmpdir(), env: childEnv, encoding: 'utf8', timeout: 120000 });
-  const lines = r.stdout.split(/\r?\n/).filter(Boolean);
-  return { code: r.status, out: r.stdout, err: r.stderr, lines, last: lines.at(-1) };
+  const all = r.stdout.split(/\r?\n/).filter(Boolean);
+  // The "listing:" lines (each skill's listing length, shared trigger words) are tested on their own.
+  const lines = all.filter((line) => !line.startsWith('listing: '));
+  return { code: r.status, out: r.stdout, err: r.stderr, lines, listing: all.filter((line) => line.startsWith('listing: ')), last: lines.at(-1) };
 }
 
 // --- lintPlan ---------------------------------------------------------------------------------------------------
@@ -307,9 +309,16 @@ test('discoverTests: scripts first, then examples recursively, sorted; a missing
 
 // --- arguments and the entry point ------------------------------------------------------------------------------
 
-test('parseArgs reads --skill (repeated, comma-separated, =), --no-tests and --help, and rejects the rest', () => {
-  assert.deepEqual(parseArgs([]), { skills: null, noTests: false, help: false });
-  assert.deepEqual(parseArgs(['--no-tests']), { skills: null, noTests: true, help: false });
+test('parseArgs reads --skill (repeated, comma-separated, =), --file, --allow-orphan, --labels-since, --no-tests and --help, and rejects the rest', () => {
+  const none = { skills: null, files: [], allowOrphans: [], labelsSince: null, noTests: false, help: false };
+  assert.deepEqual(parseArgs([]), none);
+  assert.deepEqual(parseArgs(['--no-tests']), { ...none, noTests: true });
+  assert.deepEqual(parseArgs(['--file', 'a.md', '--file=b', '--allow-orphan', 'new.md', '--labels-since', 'origin/main']),
+    { ...none, files: ['a.md', 'b'], allowOrphans: ['new.md'], labelsSince: 'origin/main' });
+  assert.deepEqual(parseArgs(['--labels-since=HEAD~2']).labelsSince, 'HEAD~2');
+  for (const bad of [['--file'], ['--file', '--skill', 'a'], ['--allow-orphan'], ['--labels-since'], ['--labels-since', '--no-tests'], ['--file=']]) {
+    assert.equal(typeof parseArgs(bad).error, 'string', bad.join(' '));
+  }
   assert.deepEqual(parseArgs(['--skill', 'a,b', '--skill=c', '--skill', ' d ']).skills, ['a', 'b', 'c', 'd']);
   assert.equal(parseArgs(['-h']).help, true);
   for (const bad of [['--skill'], ['--skill', ''], ['--skill=', ], ['--skill', ','], ['--nope'], ['name']]) {
@@ -356,6 +365,7 @@ test('a repo laid out like the real one (no override): all table skills and a te
     'scripts/fixture.test.mjs': PASSING_TEST,
     'scripts/check.mjs': readFileSync(CHECK, 'utf8'),
     'scripts/lint-skills.mjs': readFileSync(join(SCRIPTS, 'lint-skills.mjs'), 'utf8'),
+    'scripts/scan-unicode.mjs': readFileSync(join(SCRIPTS, 'scan-unicode.mjs'), 'utf8'),
   });
   const copy = join(repo, 'scripts', 'check.mjs');
   const full = runCheck(null, [], {}, copy);
@@ -372,6 +382,7 @@ test('a repo laid out like the real one (no override): all table skills and a te
     'scripts/fixture.test.mjs': PASSING_TEST,
     'scripts/check.mjs': readFileSync(CHECK, 'utf8'),
     'scripts/lint-skills.mjs': readFileSync(join(SCRIPTS, 'lint-skills.mjs'), 'utf8'),
+    'scripts/scan-unicode.mjs': readFileSync(join(SCRIPTS, 'scan-unicode.mjs'), 'utf8'),
   });
   const stale = runCheck(null, ['--skill', 'unreal-effects'], {}, join(renamed, 'scripts', 'check.mjs'));
   assert.equal(stale.code, 1, stale.out + stale.err);
@@ -386,4 +397,158 @@ test('AGENT_UNREAL_ROOT picks the skills and tests; lint-skills.mjs still comes 
   assert.deepEqual([r.code, r.last], [0, 'check: ok (tests + 1 lint)']);
   // Without the override the real tree is used: a nonexistent name is unknown to it.
   assert.match(runCheck(null, ['--skill', 'a']).err, /unknown skill "a"/);
+});
+const DESC_LEN = 'Build a demo. Use when writing demo code. Not for choosing an engine.'.length;
+
+// --- --file, --allow-orphan, --labels-since, the listing and the Unicode scan --------------------------------------------
+
+test('--file lints only the named files with the gate\'s flags; it prints what the gate prints for that file and skips the tests', () => {
+  const root = mkRoot({
+    ...skill('a', { first: BARE_REF, extra: { 'references/second.md': BARE_REF } }),
+    ...skill('b'),
+    'scripts/fixture.test.mjs': FAILING_TEST,
+  });
+  const gate = runCheck(root, ['--no-tests']);
+  const wanted = gate.lines.filter((l) => l.startsWith('a/references/second.md'));
+  assert.equal(wanted.length, 2, 'the gate prints the label finding and the orphan finding for second.md');
+  // The a skill is not in the table, so it gets the default rules; --file keeps them.
+  const one = runCheck(root, ['--file', 'second.md']);
+  assert.equal(one.code, 1, one.out + one.err);
+  assert.deepEqual(one.lines, [...wanted, 'a: 2 finding(s)', 'check: FAILED a']);
+  assert.equal(ran(root), false, 'the test step is skipped');
+  assert.deepEqual(runCheck(root, ['--file', 'second']).lines, one.lines, 'the .md is optional');
+  // A file only b has leaves a out; SKILL.md with --skill names the skill.
+  assert.deepEqual(runCheck(root, ['--file', 'first.md', '--skill', 'b']).lines, ['b: ok', 'check: ok (1 lint)']);
+  assert.deepEqual(runCheck(root, ['--file', 'SKILL.md', '--skill', 'a']).lines, ['a: ok', 'check: ok (1 lint)']);
+  // Unknown file, or a file that is in no selected skill, is a usage error that runs nothing.
+  const nope = runCheck(root, ['--file', 'nope.md']);
+  assert.deepEqual([nope.code, nope.out], [2, '']);
+  assert.match(nope.err, /no skill has the file "nope\.md"/);
+  const outside = runCheck(root, ['--skill', 'b', '--file', 'second.md']);
+  assert.deepEqual([outside.code, outside.out], [2, '']);
+  assert.match(outside.err, /no selected skill has the file "second\.md"/);
+});
+
+test('real tree: --file prints exactly the findings the gate prints for that file', () => {
+  const refs = join(REAL_SKILLS, 'unreal-rendering', 'references');
+  const name = existsSync(join(refs, 'unreal-megalights.md')) ? 'unreal-megalights.md' : readdirSync(refs).sort()[0];
+  // The gate's flags for this skill: its table flags plus the diff-aware base it resolves (none outside a git checkout).
+  const { ref } = resolveLabelsRef(join(SCRIPTS, '..'), undefined);
+  const flags = [...STRICTNESS['unreal-rendering'], ...(ref ? ['--labels-since', ref] : [])];
+  const gateLines = spawnSync(process.execPath, [join(SCRIPTS, 'lint-skills.mjs'), join(REAL_SKILLS, 'unreal-rendering'), ...flags], { encoding: 'utf8' })
+    .stdout.split(/\r?\n/).filter((l) => l.startsWith(`unreal-rendering/references/${name}:`));
+  const filtered = runCheck(null, ['--file', name]);
+  const shown = filtered.lines.filter((l) => l.startsWith('unreal-rendering/references/'));
+  assert.deepEqual(shown, gateLines);
+  assert.ok(filtered.lines.every((l) => l.startsWith('unreal-rendering') || l.startsWith('check: ')), 'no other skill is linted');
+});
+
+test('--allow-orphan lets a new reference pass before its SKILL.md row exists, and only that reference', () => {
+  const root = mkRoot({ ...skill('a', { extra: { 'references/new.md': GOOD_REF, 'references/other.md': GOOD_REF } }) });
+  const without = runCheck(root, ['--no-tests']);
+  assert.equal(without.code, 1);
+  assert.match(without.out, /^a\/references\/new\.md:1: reference-orphan/m);
+  const partial = runCheck(root, ['--no-tests', '--allow-orphan', 'new.md']);
+  assert.equal(partial.code, 1);
+  assert.deepEqual(partial.lines, ['a/references/other.md:1: reference-orphan: not linked from the SKILL.md table', 'a: 1 finding(s)', 'check: FAILED a']);
+  const both = runCheck(root, ['--no-tests', '--allow-orphan', 'new', '--allow-orphan', 'other.md']);
+  assert.deepEqual([both.code, both.lines], [0, ['a: ok', 'check: ok (1 lint)']]);
+  // A name that matches no reference of the selected skills is a typo, not a pass.
+  for (const bad of ['missing.md', 'SKILL.md']) {
+    const r = runCheck(root, ['--no-tests', '--allow-orphan', bad]);
+    assert.deepEqual([r.code, r.out], [2, ''], bad);
+    assert.match(r.err, /names no reference in the selected skills/);
+  }
+});
+
+/** A git checkout fixture on branch main holding the given files in one commit. */
+function gitRoot(files) {
+  const root = mkRoot(files);
+  const run = (...args) => {
+    const r = spawnSync('git', ['-c', 'user.name=t', '-c', 'user.email=t@example.invalid', '-c', 'commit.gpgsign=false', '-c', 'core.autocrlf=false', ...args], { cwd: root, encoding: 'utf8' });
+    assert.equal(r.status, 0, `git ${args.join(' ')}: ${r.stderr}`);
+    return r.stdout.trim();
+  };
+  run('init', '--quiet');
+  run('symbolic-ref', 'HEAD', 'refs/heads/main');
+  run('add', '-A');
+  run('commit', '--quiet', '-m', 'base');
+  return { root, run, write(rel, text) { writeFileSync(join(root, rel), text); }, commit() { run('add', '-A'); run('commit', '--quiet', '-m', 'work'); } };
+}
+
+test('diff-aware labels: a bullet added to unreal-rendering since the base fails; the same bullet written earlier, a labelled one and an exempt heading pass', () => {
+  const old = '# First\n\n- an old bullet with no label.\n- [tested] an old labelled bullet.\n';
+  const repo = gitRoot({ ...skill('unreal-rendering', { first: old }), ...skill('uefn') });
+  const refFile = 'skills/unreal-rendering/references/first.md';
+  assert.deepEqual(runCheck(repo.root, ['--no-tests']).lines.at(-1), 'check: ok (2 lints)', 'the old unlabelled bullet passes on the base');
+
+  repo.run('checkout', '--quiet', '-b', 'work');
+  repo.write(refFile, `${old}- [documented] a new labelled bullet.\n\n## Sources\n\n- a new unlabelled bullet under an exempt heading.\n`);
+  assert.equal(runCheck(repo.root, ['--no-tests']).code, 0, 'a labelled bullet and an exempt heading pass');
+
+  repo.write(refFile, `${old}- a new bullet with no label.\n`);
+  const bad = runCheck(repo.root, ['--no-tests']);
+  assert.equal(bad.code, 1, bad.out + bad.err);
+  assert.match(bad.out, /^unreal-rendering\/references\/first\.md:5: label-missing: claim bullet added or changed since [0-9a-f]{40} has no evidence label/m);
+  assert.equal(bad.last, 'check: FAILED unreal-rendering');
+
+  // Committed on the branch it still fails (the base is the merge base with main); the other skill is untouched by the mode.
+  repo.commit();
+  assert.equal(runCheck(repo.root, ['--no-tests']).code, 1);
+  const main = repo.run('rev-parse', 'main');
+  assert.equal(runCheck(repo.root, ['--no-tests', '--labels-since', main]).code, 1, 'an explicit base');
+  assert.equal(runCheck(repo.root, ['--no-tests', '--labels-since', 'HEAD']).code, 0, 'the same bullet written before the ref passes');
+
+  // On main itself the base is HEAD: nothing is new, so the old any-text rule applies.
+  repo.run('checkout', '--quiet', 'main');
+  repo.run('merge', '--quiet', '--ff-only', 'work');
+  assert.equal(runCheck(repo.root, ['--no-tests']).code, 0);
+
+  const missing = runCheck(repo.root, ['--no-tests', '--labels-since', 'no-such-ref']);
+  assert.deepEqual([missing.code, missing.out], [2, '']);
+  assert.match(missing.err, /--labels-since no-such-ref is not a commit/);
+  // Only the diff-aware skills use the ref: uefn is not named in it.
+  assert.doesNotMatch(runCheck(repo.root, ['--no-tests', '--skill', 'uefn', '--labels-since', 'no-such-ref']).err, /not a commit/);
+});
+
+test('resolveLabelsRef: the merge base with origin/main, else main; a checkout that is not git, or has neither, falls back with a note', () => {
+  assert.deepEqual(resolveLabelsRef(mkRoot({ 'a.txt': 'x' }), undefined), { ref: null, note: 'not a git checkout' });
+  const repo = gitRoot({ 'a.txt': 'x' });
+  const base = repo.run('rev-parse', 'HEAD');
+  repo.run('checkout', '--quiet', '-b', 'work');
+  repo.write('a.txt', 'y');
+  repo.commit();
+  assert.deepEqual(resolveLabelsRef(repo.root, undefined), { ref: base });
+  assert.deepEqual(resolveLabelsRef(repo.root, 'HEAD'), { ref: 'HEAD' });
+  assert.match(resolveLabelsRef(repo.root, 'nope').error, /nope is not a commit/);
+  repo.run('branch', '-m', 'main', 'trunk');
+  assert.deepEqual(resolveLabelsRef(repo.root, undefined), { ref: null, note: 'neither origin/main nor main exists here' });
+});
+
+test('DIFF_AWARE names unreal-effects and unreal-rendering, both of which the table leaves on the any-text label rule', () => {
+  assert.deepEqual([...DIFF_AWARE].sort(), ['unreal-effects', 'unreal-rendering']);
+  for (const name of DIFF_AWARE) assert.deepEqual(STRICTNESS[name], ['--label-pattern', '.']);
+});
+
+test('the gate prints each skill\'s listing length and headroom, and --skill lists only the selected skills; --file prints none', () => {
+  const root = mkRoot({ ...skill('a'), ...skill('b') });
+  const all = runCheck(root, ['--no-tests']);
+  assert.deepEqual(all.listing.slice(0, 2), [
+    `listing: a  description ${DESC_LEN} + when_to_use 0 = ${DESC_LEN} of 1536 (${1536 - DESC_LEN} left)`,
+    `listing: b  description ${DESC_LEN} + when_to_use 0 = ${DESC_LEN} of 1536 (${1536 - DESC_LEN} left)`,
+  ]);
+  assert.deepEqual(runCheck(root, ['--skill', 'b']).listing.filter((l) => /^listing: [ab] /.test(l)).length, 1);
+  assert.deepEqual(runCheck(root, ['--file', 'first.md']).listing, []);
+});
+
+test('the gate scans every text file for invisible Unicode in a full run, and not in a --skill or --file run', () => {
+  const root = mkRoot({ ...skill('a'), 'tools/x.mjs': `// ok\nconst a = '${String.fromCodePoint(0xfeff)}';\n` });
+  const bad = runCheck(root, ['--no-tests']);
+  assert.equal(bad.code, 1, bad.out + bad.err);
+  assert.match(bad.out, /^tools\/x\.mjs:2:12: invisible-unicode: U\+FEFF byte-order mark \(Cf\) in /m);
+  assert.equal(bad.last, 'check: FAILED unicode');
+  assert.equal(runCheck(root, ['--skill', 'a']).code, 0);
+  assert.equal(runCheck(root, ['--file', 'first.md']).code, 0);
+  const clean = runCheck(mkRoot({ ...skill('a') }), ['--no-tests']);
+  assert.deepEqual(clean.lines, ['a: ok', 'check: ok (1 lint)'], 'a clean scan prints nothing');
 });

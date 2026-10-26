@@ -1,6 +1,6 @@
 # Writing and running a C++ automation test in Unreal 5.8
 
-Target: Unreal Engine 5.8.2, Windows. Running tests and why the process exit code is not the verdict are in [native build and capture](unreal-native-game.md); this page covers writing a test, running it headless and reading the report. Evidence comes from `examples/unreal/automation_test/` (`node automation_test.mjs --engine <UE_5.8 folder>`), which builds the module below in a throwaway code project and ran 9 of 9 checks on 5.8.2.
+Target: Unreal Engine 5.8.2, Windows. This page covers writing a test, running it headless, reading the report and why the process exit code is not the verdict; the build and capture loop is in [native build and capture](unreal-native-game.md). Evidence comes from `examples/unreal/automation_test/` (`node automation_test.mjs --engine <UE_5.8 folder>`), which builds the module below in a throwaway code project and ran 9 of 9 checks on 5.8.2.
 
 ## Write the test
 
@@ -48,6 +48,19 @@ Use a new empty `-ReportExportPath` folder for each run, so a report left from a
 - [tested] The deliberately failing test (`TestEqual(..., 2 + 2, 5)`) was reported as `failed: 1` with `state: "Fail"` and the entry `Expected 'two plus two is five' to be 5, but it was 4.` with its source file and line; the log carried `LogAutomationController: Error: Test Completed. Result={Fail}`.
 - [tested] Exit codes were 0 for the passing `; Quit` run and 255 for the failing `; Quit` run and for the no-match run. The `-TestExit` run with a failing test exited 0. Decide from the report, not the exit code.
 - [tested] `examples/unreal/automation_test/automation_report.mjs <index.json> --filter <prefix>` exits 0 only when the report exists, parses, lists at least one test, every test is inside the filter and in state `Success`, and `failed`, `notRun` and `inProcess` are all 0. A pure Node test covers each rejection with reports shaped like the engine's.
+
+## The exit code is not the verdict
+
+- [general] A failing automation test returned **process exit code 0** under `-TestExit="Automation Test Queue Empty"`. Fresh `index.json` correctly reported failed=1. The engine's queue-empty exit is not a passing test result.
+- [general] The project wrapper therefore parses fresh automation JSON and rejects failed, incomplete, zero-test or unexpected-filter reports, in addition to checking process exit/timeout. Dependency-free tooling checks should exercise those rejection paths using deliberate invalid artifacts.
+- [general] After the guard fix, fresh automation reported all tests succeeded and none failed. Such bounded behaviours do not replace play-through, handling or physical-input checks.
+
+```powershell
+& "$ueRoot/Engine/Binaries/Win64/UnrealEditor-Cmd.exe" $uproject "-ExecCmds=Automation RunTests MyGame" "-TestExit=Automation Test Queue Empty" "-ReportExportPath=$projectRoot/Saved/Verification/fresh-tests" -unattended -nullrhi -nosound -notraceserver
+# Parse fresh index.json: require executed successes and failed/notRun/inProcess == 0.
+```
+
+Use nullrhi for nonvisual automation, never for a rendered acceptance frame. Engine process ownership must be serialized between builders, content generation, tests and captures.
 
 ## Not covered here
 

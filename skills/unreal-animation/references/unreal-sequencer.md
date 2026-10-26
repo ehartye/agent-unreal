@@ -36,7 +36,7 @@ Target: Unreal Engine 5.8, Windows. Sequencer is Epic's multi-track, non-linear 
 | Frame rate and range | Python (documented) | `set_display_rate(unreal.FrameRate(30, 1))`, `set_playback_start`, `set_playback_end`; the default range is 0 to 150 at 30 fps |
 | Bind an existing actor | Python | `sequence.add_possessable(actor)` (5.8 install example); `LevelSequenceEditorSubsystem.add_actors` for the selection (documented) |
 | Bind a temporary actor | Python | `add_spawnable_from_class(unreal.CineCameraActor)`, `add_spawnable_from_instance` (5.8 install example); `convert_to_spawnable` (documented) |
-| Tracks and sections | Python (documented) | `binding.add_track(unreal.MovieScene3DTransformTrack)`, `track.add_section()`, `section.set_range(start, end)` |
+| Tracks and sections | Python (documented) | `binding.add_track(unreal.MovieScene3DTransformTrack)`, `track.add_section()`, `section.set_range(start, end)` (closes both ends); `set_start_frame_bounded(bool)` and `set_end_frame_bounded(bool)` take a boolean, not a frame (5.8 install header) |
 | Keys | Python (5.8 install examples) | channels on sections; see `sequencer_key_examples.py` in the `SequencerScripting` plugin |
 | Camera cuts | Python | `ls_system.create_camera(spawnable=True)` (documented); `sequence.add_track(unreal.MovieSceneCameraCutTrack)` with a `unreal.MovieSceneObjectBindingID` set as `CameraBindingID` (5.8 install example) |
 | Shots | Python (named in the 5.8 install example) | `unreal.MovieSceneCinematicShotTrack` |
@@ -53,7 +53,7 @@ Target: Unreal Engine 5.8, Windows. Sequencer is Epic's multi-track, non-linear 
 2. Choose each binding type. A Possessable references an actor already in the level. A Spawnable is created by Sequencer for the sequence, which keeps one-shot lights and effects out of the level (Epic).
 3. Set Spawned Object Owner on a Spawnable: This Sequence (default) destroys it when the sequence ends, Root Sequence keeps it for the master sequence, External leaves destroying it to Blueprints (Epic).
 4. Structure large work as a master sequence with a Shots track; create alternates with New Take on a Shot (Epic).
-5. Create cameras with Create Camera: it adds a Cine Camera Actor and a Camera Cuts track. Each camera section on that track is one cut. Disable Lock Viewport to preview the cuts as they render (Epic).
+5. Create cameras with Create Camera: it adds a Cine Camera Actor and a Camera Cuts track. Each camera section on that track is one cut. Disable Lock Viewport to preview the cuts as they render (Epic). [general] Close each cut's range with `set_range(start, end)`: observed once on 5.8.x, a cut left open at the start (`set_start_frame_bounded` called with a frame number, by analogy with `set_start_frame`) made the Movie Render Queue's shot-list code assert and crashed the editor in `SetSequence`.
 6. Add transform and animation tracks to bindings and size each section to the range.
 7. When a script edits a sequence open in the editor, call `refresh_current_level_sequence()`.
 8. For gameplay playback, call `Play` from the player; call `SetPlaybackPosition(0)` first to restart. Set a track's When Finished to Keep State so its value stays after the end, and call Go to End and Stop to skip a cutscene with its final state applied (Epic).

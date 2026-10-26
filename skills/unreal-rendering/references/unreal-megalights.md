@@ -21,12 +21,13 @@ MegaLights is a renderer feature, not a plugin: the engine ships no plugin descr
 - Soft area shadows matter: ray traced MegaLights shadows are correct for area lights, which Virtual Shadow Maps only approximate (Epic's page).
 - Lighting channels, IES profiles on volumetrics and translucency, cloud shadows, transmission and first-person weapon lighting are needed; the 5.8 release notes list these as part of the Production Ready update.
 - [documented] Niagara particle lights should light and shadow the scene: set "Allow Mega Lights" (`bAllowMegaLights`) and "Mega Lights Cast Shadows" (`bMegaLightsCastShadows`, editable only while the first is on) on the emitter's Light Renderer. Header comment: use with caution, keep to a few small particle lights, watch noise and sampling cost (`NiagaraLightRendererProperties.h:73-83`). [general] About sixty live particles gave sixty shadow-casting lights.
+- [general] Cost against Virtual Shadow Maps, measured once on one high-end desktop GPU at 1920 x 1080 with hardware ray tracing (5.8.3; a scene with 16 shadow-casting point lights as the base, small point lights scattered in steps, each step a 2.5 s mean). MegaLights GPU time stayed near 7.5 ms from 16 to 416 lights; Virtual Shadow Maps (MegaLights off) went from 5.35 ms at 16 to 7.17 ms at 416 and 24.7 ms at 816, where MegaLights read 5.5 ms for a reason not found. Shadow maps were about 2 ms cheaper at a small count and the two met near 400 lights. One GPU, one resolution, one synthetic scene; the base scene's other costs are in every figure. Measure in the project's own scene ([profiling](../../unreal-native/references/unreal-native-profiling.md)).
 
 ## Use something else when
 
 - The renderer is Forward, or the target is mobile, Switch or previous-generation consoles: use the standard deferred lighting path where supported.
 - A strong sun-like directional light carries the scene: Epic recommends Deferred Lighting with Virtual Shadow Maps for it, with MegaLights reserved for dimmer lights such as moonlight.
-- Water, Clouds, Heterogeneous Volumes and Local Volumetrics need direct light from these lights: MegaLights does not support them (Epic's page).
+- [documented] Water, Clouds, Heterogeneous Volumes ([reference](unreal-heterogeneous-volumes.md)) and Local Volumetrics need direct light from these lights: MegaLights does not support them (Epic's page).
 
 ## How MegaLights relates to Lumen and Virtual Shadow Maps
 
@@ -34,36 +35,14 @@ MegaLights is a renderer feature, not a plugin: the engine ships no plugin descr
 - Virtual Shadow Maps: select "MegaLights Shadow Method" per light, Ray Tracing (default) or Virtual Shadow Maps. VSM casts from full Nanite detail but adds per-light CPU, memory and GPU cost, so use it sparingly.
 - Ray tracing shadows use simplified Nanite fallback meshes. Tune with `r.RayTracing.Culling.*`, the Ray Tracing Group Id, and the Static Mesh Editor's Fallback Target set to Relative Error.
 
-## How an agent drives it
+## Drive and tune it
 
-| Task | Route | What to call |
-|---|---|---|
-| Turn it on for the project | Project settings | Rendering > Direct Lighting > MegaLights; the console variable is `r.MegaLights.EnableForProject` |
-| Override per volume | Editor UI / Python | Post Process Volume "MegaLights" (`bMegaLights`, with `bOverride_bMegaLights`, in the 5.8 install); Epic's 5.7 Python API page lists `mega_lights` and `override_b_mega_lights` on `PostProcessSettings` |
-| Per light opt out, shadow method | Editor UI | Light Details: Allow MegaLights, MegaLights Shadow Method (Blueprint read-only properties in the 5.8 header) |
-| Quality tiers | Scalability ini | `[ShadowQuality@N]` in `BaseScalability.ini`: `r.MegaLights.NumSamplesPerPixel` is 2 at levels 0 and 1 and 4 at levels 2, 3 and Cinematic; `r.MegaLights.DownsampleMode` is 2 below Cinematic and 0 at Cinematic (in the 5.8 install) |
-| Set or read a variable at runtime | Python | `unreal.SystemLibrary.execute_console_command`, `get_console_variable_int_value` (5.7 Python API). [documented] An unknown name returns 0 and only warns (`LogBlueprintUserMessages: Warning: Failed to find console variable '<name>'.`), so a wrong name reads as off (`KismetSystemLibrary.cpp:627-641`) |
-| Debug | Console / view mode | `r.MegaLights.Visualize 1`, `r.MegaLights.Debug 1`, the Light Complexity view mode, `ShowFlag.MegaLightsScreenTraces 0` |
+The console variables, Post Process Volume and Python routes, quality tiers, debug switches and the tuning workflow are in [Driving and tuning MegaLights](unreal-megalights-driving.md). Turn it on with Rendering > Direct Lighting > MegaLights (`r.MegaLights.EnableForProject`) and keep Lumen on hardware ray tracing so the Ray Tracing Scene is shared.
 
-Python reaches console variables and Post Process Volume settings. Project Settings are editor UI or config edits; the class surface dump used for this repo does not cover the rendering classes.
-
-## Workflow
-
-1. [documented] Enable Support Hardware Ray Tracing and MegaLights in Project Settings, with `r.SkinCache.CompileShaders >= 1`; confirm Shader Model 6 and the Deferred renderer.
-2. Keep Lumen on hardware ray tracing so the Ray Tracing Scene is shared.
-3. Leave lights on the Ray Tracing shadow method; reserve Virtual Shadow Maps for the few lights that need Nanite detail.
-4. Keep lights small and sparse: narrow attenuation radius, cone angle and barn doors, no lights inside geometry, and merge clusters into single area lights.
-5. Set `r.Visibility.LocalLightPrimitiveInteraction 0` when every light uses ray tracing to remove most per-light CPU cost.
-6. Tune with `r.MegaLights.NumSamplesPerPixel` and `r.MegaLights.DownsampleMode`; use `r.MegaLights.LightAttenuationFalloff` to tighten light influence.
-7. Profile with `r.RDG.AsyncCompute 0`, then A/B test `r.MegaLights.AsyncCompute.Volume`, `.GenerateSamples` and `r.StochasticLighting.AsyncCompute`.
-8. Inspect shadow mismatches with `r.MegaLights.Visualize 1` and the Light Complexity view.
-
-Related: [Lumen](unreal-lumen.md), [Virtual Shadow Maps](unreal-virtual-shadow-maps.md), [Nanite](unreal-nanite.md).
+Related: [Driving and tuning MegaLights](unreal-megalights-driving.md), [Lumen](unreal-lumen.md), [Virtual Shadow Maps](unreal-virtual-shadow-maps.md), [Nanite](unreal-nanite.md), [Heterogeneous Volumes](unreal-heterogeneous-volumes.md).
 
 ## Sources
 
 - [MegaLights](https://dev.epicgames.com/documentation/en-us/unreal-engine/megalights-in-unreal-engine)
 - [Unreal Engine 5.8 Release Notes](https://dev.epicgames.com/documentation/unreal-engine/unreal-engine-5-8-release-notes)
-- [Unreal Python 5.7 PostProcessSettings](https://dev.epicgames.com/documentation/en-us/unreal-engine/python-api/class/PostProcessSettings?application_version=5.7)
-- [Unreal Python 5.7 SystemLibrary](https://dev.epicgames.com/documentation/en-us/unreal-engine/python-api/class/SystemLibrary?application_version=5.7)
 - [documented] The 5.8.2 install: `Engine/Config/BaseScalability.ini`, `RendererSettings.h`, `Scene.h`, `LightComponent.h`, `MegaLights.cpp`, `MegaLightsRayTracing.cpp`, `RenderUtils.cpp`, `NiagaraLightRendererProperties.h`.

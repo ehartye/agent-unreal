@@ -61,5 +61,5 @@ static AECompare::FRegistrar MineRegistrar(TEXT("mine"),&MakeMine);
 
 ## Related
 
-- [Unreal production stack, Niagara facts tested on 5.8.2](../../unreal-rendering/references/unreal-production-stack.md)
+- [Niagara families and stock content, tested on 5.8.2](../../unreal-effects/references/unreal-niagara-stock-content.md), [Unreal production stack](../../unreal-rendering/references/unreal-production-stack.md)
 - [Native game loop](unreal-native-game.md), [native profiling](unreal-native-profiling.md)

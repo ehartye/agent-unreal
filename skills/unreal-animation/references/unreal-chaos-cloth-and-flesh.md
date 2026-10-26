@@ -8,6 +8,7 @@ Target: Unreal Engine 5.8, Windows. Chaos Cloth simulates cloth on meshes; the C
 |---|---|---|---|---|
 | `ChaosCloth` | Physics | on | none | ChaosCaching, Buoyancy, Water |
 | `ChaosClothAsset` | Physics | off | none | ChaosCloth, GeometryCache, Dataflow |
+| `ChaosClothAssetDataflowNodes` (the nodes; Epic: "required to edit a Cloth Asset") | Physics | off | none; Editor module | ChaosCloth, ChaosClothAsset, Dataflow, GeometryProcessing, MeshResizing |
 | `ChaosOutfitAsset` | Physics | off | beta | ChaosClothAsset, Dataflow, MeshResizing, ChaosClothAssetEditorCore |
 | `ChaosFlesh` | Physics | off | experimental | ProceduralMeshComponent, Dataflow, ChaosCaching, ChaosCachingUSD, GeometryProcessing, ComputeFramework, DeformerGraph, USDImporter, TetMeshing |
 
@@ -36,7 +37,8 @@ Target: Unreal Engine 5.8, Windows. Chaos Cloth simulates cloth on meshes; the C
 | Make legacy cloth from a mesh section | editor UI only | Skeletal Mesh Editor > Section Selection > Create Cloth Asset from Selection; Window > Clothing > Activate Cloth Paint |
 | Create a Cloth, Outfit or Flesh asset | editor UI / Python | Python factories `unreal.ChaosClothAssetFactory`, `ChaosOutfitAssetFactory`, `FleshAssetFactory` |
 | Build or edit the Dataflow graph | editor UI / Python | Dataflow editor; `unreal.DataflowEditorBlueprintLibrary.add_dataflow_node`, `connect_dataflow_nodes`, `set_dataflow_node_property` |
-| Evaluate or rebuild from the graph | Python | `unreal.DataflowBlueprintLibrary.evaluate_dataflow`, `regenerate_asset_from_dataflow`, `override_dataflow_variable_float` and siblings |
+| Evaluate or rebuild from the graph | Python | `unreal.DataflowBlueprintLibrary.evaluate_dataflow` (returns true on error), `regenerate_asset_from_dataflow`, `override_dataflow_variable_float` and siblings |
+| Script the whole Cloth Asset build, or debug a game that draws the default grid | Python, C++ | [Cloth Asset from code](unreal-chaos-cloth-from-code.md) |
 | Inspect assets | Python | `unreal.ChaosClothAsset.dataflow_asset`, `dataflow_terminal`; `unreal.ChaosOutfitAsset`; `unreal.FleshAsset.dataflow_asset`, `skeletal_mesh` |
 | Place cloth in a character | Blueprint / Python | Add `unreal.ChaosClothComponent`, set its `asset` |
 | Tune cloth at runtime | Python / Blueprint | `unreal.ChaosClothingSimulationInteractor.set_num_iterations`, `set_num_substeps`, `enable_gravity_override`; `unreal.ChaosClothAssetInteractor.set_float_property_value` |
