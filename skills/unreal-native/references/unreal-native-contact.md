@@ -14,6 +14,10 @@ Observed in one consuming Unreal 5.8.2 CL56702186 project on Windows; not reprod
 - [general] Two explicit retained-track checks and independent CSV corridor checks made that intermediate receipt RED. The final experiment restored the original continuous triangle contact surface and added hidden collision-only convex support tops a few centimetres beneath it, retaining the original bottoms and the intentional jump gap. The native suite then passed with no recovery or track departures; the closed-loop sample stayed grounded for every frame.
 - [general] The final wall/ram/drop and high-speed seam cases cover bounded initial fixtures. The vertical drop observation window was lengthened to include a real rebound and settling, keeping its original minimum-contact-frame requirement. Other cases kept the shorter window. A longer legitimate observation is different from lowering a failed threshold or relocating the vehicle during measurement.
 
+## A sweep can need the complex triangles
+
+- [general] Observed once on 5.8.x: a probe that finds a wall to kick off found nothing as a simple line trace on the Visibility channel against a Nanite mesh whose collision complexity was Use Complex Collision As Simple (`ECollisionTraceFlag::CTF_UseComplexAsSimple`). A sphere sweep on the pawn channel with `FCollisionQueryParams::bTraceComplex` set ("Whether we should trace against complex collision", `CollisionQueryParams.h`), reaching a metre past the capsule, hit it. The cause was not isolated in source. Check the mesh's collision complexity before debugging the probe, and read a diagnostic field (is a wall near) before debugging the mechanic through its replay.
+
 ## Preserve the evidence contract
 
 - [general] Record fixture-only initial pose/velocity assignments, then observe ordinary production physics without per-frame corrections or rescue resets. Require actual contact/air/ground exposure as well as no-loss outcomes; a fixture that never reaches its hazard proves little. Preserve old failures, intermediate regressions and successful native reports independently.

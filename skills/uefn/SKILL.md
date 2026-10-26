@@ -1,7 +1,7 @@
 ---
 name: uefn
-description: Author and import into UEFN (Unreal Editor for Fortnite) from an agent: Epic's MCP tools and their gaps, native Python and Sequence authoring, WAV and FBX import, saved controls and capture, and the evidence behind each claim. Not for importing into Unreal (use unreal-import) or other engines (use engine-asset-import from agent-engine).
-when_to_use: Use when working in UEFN: missing MCP tools, native Python or Sequencer authoring, exact Reset behaviour, importing rendered WAVs, mirrored or colliderless FBX architecture, material pin failures or sky collision after property edits, moving exhibit cover, saved-device controls and screenshots, or edited native Python helpers that still produce old values in a running editor.
+description: "Author and import into UEFN (Unreal Editor for Fortnite) from an agent: Epic's MCP tools and their gaps, native Python and Sequence authoring, WAV and FBX import, device controls on a Fortnite island, and editor capture. Not for importing into Unreal (use unreal-import) or other engines (use engine-asset-import from agent-engine)."
+when_to_use: "Use when working in UEFN or on a Fortnite island: missing MCP tools, native Python or Sequencer authoring, resetting an Animated Mesh device to its first frame, importing rendered WAVs, an imported building that is mirrored, has reversed lettering or no collision, material pin failures or sky collision after property edits, collision that follows an animated prop's bones, device buttons and switches driven from Python or wired to Verse references, editor screenshots that stall, or edited native Python helpers that still produce old values in a running editor."
 ---
 
 # UEFN
@@ -23,7 +23,7 @@ fix and Epic's MCP server are in FBX clips and MCP (`unreal-import` skill).
 | Take editor screenshots when viewport capture stalls, or capture the Fortnite client window | [Editor and client capture](references/uefn-native-capture.md) |
 | Fix edited Python helpers that still produce old values in a running editor | [Python helper freshness](references/uefn-python-helper-freshness.md) |
 | Diagnose native material pin failures, sky collision after property edits or LevelBounds changes | [Exterior materials](references/uefn-native-exterior.md) |
-| Fit exhibit cover that follows bones | [Moving exhibit cover](references/uefn-native-cover.md) |
+| Fit prop cover that follows bones | [Moving prop cover](references/uefn-native-cover.md) |
 | Check fitted cover: semantic collision, variant state, hidden comparison blockers, misplaced proxies after animation edits | [Cover verification](references/uefn-native-cover-verification.md) |
 | Fix mirrored native FBX architecture, reversed glyphs or missing UCX and deck collision | [UEFN FBX coordinates and collision](references/uefn-native-fbx.md) |
 

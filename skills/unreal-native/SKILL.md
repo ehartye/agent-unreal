@@ -1,7 +1,7 @@
 ---
 name: unreal-native
-description: Build, run, verify, package and profile a native C++ Unreal game from an agent: the build and capture loop, content-only versus native construction, presentation, input replay, material and UV validation, cooking and staging, frame-time profiling against a budget, and side-by-side comparison scenes. Not for importing assets (use unreal-import) or for choosing an Unreal system (use unreal-rendering, unreal-effects, unreal-animation, unreal-gameplay or unreal-procedural) or scripting the editor from Python (use unreal-editor-scripting) or auditing a project's tests, CI or performance practice (use unreal-quality) or its module and state structure (use unreal-architecture).
-when_to_use: Use when building native C++ for an Unreal game, running real gameplay and checking screenshots or automation results, cooking or staging a Windows build, replaying input in native tests, rejecting default-material cook fallbacks, writing or running automation tests, a build that passes and then fails on code you did not change (adaptive unity), a content step that fails with locked asset files (PermissionError), diagnosing lost procedural geometry or collision, profiling an Unreal game's frame time on a quiet machine, capturing an Unreal Insights trace (utrace, -trace channels, trace regions), exporting timer statistics headless, reading a frame time percentile or maximum, hitting a frame budget, costing extra content, or comparing implementations side by side on a stage.
+description: "Build, run, verify, package and profile a native C++ Unreal game: the build and capture loop, content-only versus native construction, presentation, input replay, cooking and staging, frame-time profiling against a budget, and comparison scenes. Not for importing assets (use unreal-import), choosing an Unreal system (the unreal-* domain skills), editor Python (use unreal-editor-scripting) or auditing tests, CI or structure (use unreal-quality or unreal-architecture)."
+when_to_use: "Use when profiling frame time on a quiet machine, hitting a frame budget, reading a frame-time percentile, costing new content, capturing an Insights trace (utrace) or exporting timer statistics headless; when building native C++, checking screenshots or automation results, replaying input, or staging a Windows build that falls back on an uncooked asset; when a build fails on code you did not change (adaptive unity) or a content step hits locked files (PermissionError); when Canvas text draws nothing, static parts sit at the world origin or a car falls through a procedural road; or when comparing implementations on stage."
 ---
 
 # Native Unreal games
@@ -16,17 +16,21 @@ reviewing its module and state structure is [unreal-architecture](../unreal-arch
 
 | You are about to | Read |
 |---|---|
-| Build native C++, run real gameplay, verify screenshots and automation results | [Native game loop](references/unreal-native-game.md) |
+| Pin the compiler, run real gameplay, verify screenshots, or find static parts at the world origin (`is not static`) | [Native game loop](references/unreal-native-game.md) |
+| Add plugins and modules to a native game, or fix a first C++ compile error | [Module setup](references/unreal-native-module-setup.md) |
 | Fix C2374, C2086, C4459 or C2872 in code you did not change, or a build that passes then fails (adaptive unity), and gate replay and test steps on the build | [Unity builds](references/unreal-native-unity-builds.md) |
-| Write a C++ automation test for 5.8, run it headless and read its report | [Automation tests](references/unreal-native-automation-tests.md) |
-| Generate materials and fonts, draw crisp Canvas text, diagnose exposure and palette | [Native presentation](references/unreal-native-presentation.md) |
-| Cook and stage Windows; tell UAT policy failures from real Game EXE proof | [Native packaging](references/unreal-native-packaging.md) |
+| Write a C++ automation test for 5.8, run it headless, read its report and why the exit code is not the verdict | [Automation tests](references/unreal-native-automation-tests.md) |
+| Generate materials and fonts, draw crisp Canvas text (it draws nothing without a `UFont`), record native audio | [Native presentation](references/unreal-native-presentation.md) |
+| Diagnose a near-black first frame, physical-camera exposure, an HDR palette pass or imported vertex colour that hides detail | [Exposure and vertex colour](references/unreal-native-exposure-and-vertex-color.md) |
+| Cook and stage Windows; tell UAT policy failures from real Game EXE proof; cook a folder that code loads only by path | [Native packaging](references/unreal-native-packaging.md) |
+| Check a staged build with a packaged smoke run: windowed start, log read, world counts | [Packaged smoke run](references/unreal-native-packaged-smoke.md) |
 | Separate content-only asset construction from native gameplay and preserve cooked provenance | [Native content pipeline](references/unreal-native-content-pipeline.md) |
 | Replay mapped input and diagnose retained trigger state during native tests | [Native input replay](references/unreal-native-input.md) |
 | Reject default-material cook fallbacks and verify imported UV channel meaning | [Material and UV validation](references/unreal-native-material-validation.md) |
-| Diagnose lost procedural geometry and keep collision regression evidence separate | [Native contact case study](references/unreal-native-contact.md) |
-| Profile frame time against a budget (120 fps), decompose game thread, render thread and GPU, run an ablation matrix and cost per item | [Native profiling](references/unreal-native-profiling.md); method in profiling method (`engine-phaser` skill, agent-engine) |
-| Capture an Unreal Insights trace, mark a region, export timer statistics headless and judge the 99th percentile and maximum frame time | [Insights capture](references/unreal-native-insights-capture.md); runner in `examples/unreal/insights_capture` |
+| Diagnose a body that falls through a procedural surface, a sweep that finds no wall, and keep collision regression evidence separate | [Native contact case study](references/unreal-native-contact.md) |
+| Profile frame time against a budget (120 fps), decompose game thread, render thread and GPU, run an ablation matrix and cost per item | [Native profiling](references/unreal-native-profiling.md); the engine-neutral method is in the `phaser-verification` skill, agent-engine |
+| Read a measured ablation table, per-item cost model and fix results to see what a profile looks like | [Profiling measurements](references/unreal-native-profiling-measurements.md) |
+| Capture an Unreal Insights trace, mark a region, export timer statistics headless and judge the 99th percentile and maximum frame time | [Insights capture](references/unreal-native-insights-capture.md); runner in [insights_capture](../../examples/unreal/insights_capture/README.md) |
 | Prove a performance fix exact, check engine source before predicting a cost, avoid Insights, nullrhi and PowerShell pitfalls | [Profiling facts](references/unreal-native-profiling-facts.md) |
-| Put several ways of doing one visible thing side by side on a stage, film them, time each alone at N copies and write a receipt | [Comparison scene](references/unreal-native-compare-scene.md); source and runner in `examples/unreal/compare-scene` |
+| Put several ways of doing one visible thing side by side on a stage, film them, time each alone at N copies and write a receipt | [Comparison scene](references/unreal-native-compare-scene.md); source and runner in [compare-scene](../../examples/unreal/compare-scene/README.md) |
 | Script the editor from Python: run modes, cameras, keyboard and gamepad input, process cleanup | [Editor Python](../unreal-editor-scripting/references/unreal-editor-python.md) |
