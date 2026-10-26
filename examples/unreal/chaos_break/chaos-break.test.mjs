@@ -1,6 +1,5 @@
 // node --test examples/unreal/chaos_break/chaos-break.test.mjs  (no Unreal, no dependencies)
-// The reports below are built by hand from what ChaosBreakBuildCommandlet.cpp and ChaosBreakRunSubsystem.cpp write. No engine run has produced a
-// report yet, so their shape is an assumption; the first run confirms it. Each test changes one fact and expects the matching check to change.
+// The reports below are built by hand in the shape ChaosBreakBuildCommandlet.cpp and ChaosBreakRunSubsystem.cpp write (copied from an engine run). Each test changes one fact and expects the matching check to change.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { parseReport, judgeBreakRun, linesFor, evaluate, summarize, NO_PARTICLES_LINE, DEFAULT_MAX_HEALTHY_BYTES } from './chaos-break-checks.mjs';
@@ -16,16 +15,17 @@ const buildReport = (rows = [variantRow('healthy'), variantRow('nohull', { hullT
   ({ engine: '5.8.2-0+++UE5+Release-5.8', mesh: '/Engine/BasicShapes/Cube.Cube', material: 'engine', materialPackage: '', sites: 24, seed: 7, variants: rows, errors: [] });
 
 const scenario = (label, extra = {}) => ({ label, asset: `/Game/Chaos/GC_${label.split('_')[0]}.GC_${label.split('_')[0]}`, action: 'strain', spawn: 'deferred', assetLoaded: true, spawned: true,
-  hasProxyAtStrain: true, transforms: 25, breaksAfterStrain: 3, breaksFinal: 24, distinctFinal: 24, ...extra });
+  hasProxyAtStrain: true, transforms: 25, breaksAfterStrain: 24, breaksFinal: 24, distinctFinal: 24,
+  firstBreakSeconds: 3, firstBreakZ: 3921.5, firstBreakVelocityZ: -1425.8, firstBreakFromCrumble: false, ...extra });
 const gameReport = (rows) => ({ world: '/Engine/Maps/Templates/Template_Default', gravityZ: -980, runSeconds: 7.1, scenarios: rows, errors: [] });
 const goodRows = () => [
   scenario('healthy_strain'),
   scenario('healthy_late'),
-  scenario('healthy_idle', { action: 'none', breaksAfterStrain: 0, breaksFinal: 0, distinctFinal: 0 }),
-  scenario('nohull_strain', { breaksAfterStrain: 0, breaksFinal: 0, distinctFinal: 0 }),
-  scenario('noproxy_strain', { action: 'noproxy', hasProxyAtStrain: false, breaksAfterStrain: 0, breaksFinal: 0, distinctFinal: 0 }),
+  scenario('healthy_idle', { action: 'none', breaksAfterStrain: 0, breaksFinal: 0, distinctFinal: 0, firstBreakSeconds: -1, firstBreakZ: 0, firstBreakVelocityZ: 0 }),
+  scenario('nohull_strain', { breaksAfterStrain: 0, breaksFinal: 0, distinctFinal: 0, firstBreakSeconds: -1 }),
+  scenario('noproxy_strain', { action: 'noproxy', hasProxyAtStrain: false, breaksAfterStrain: 0, breaksFinal: 0, distinctFinal: 0, firstBreakSeconds: -1 }),
   scenario('update_hulls_strain'),
-  scenario('simdata_first_strain', { breaksFinal: 0, distinctFinal: 0, breaksAfterStrain: 0 }),
+  scenario('simdata_first_strain', { breaksFinal: 0, distinctFinal: 0, breaksAfterStrain: 0, firstBreakSeconds: -1 }),
 ];
 const verboseLog = [transformLine(3), transformLine(4), nameLine('nohull_strain'), nameLine('simdata_first_strain'), 'LogTemp: ordinary line'].join('\n');
 const run = (rows = goodRows(), log = verboseLog) => ({ exit: 0, report: gameReport(rows), log });
@@ -100,7 +100,7 @@ test('each counted check turns red when its own fact is broken', () => {
   const withRows = (mutate, runsOverride = {}) => judged({ runs: { ...goodRuns(), verbose: run(mutate(goodRows())), ...runsOverride } });
   const set = (label, extra) => (rows) => rows.map((r) => (r.label === label ? { ...r, ...extra } : r));
   assert.ok(failing(withRows(set('healthy_strain', { breaksFinal: 0 }))).includes('a healthy collection breaks'));
-  assert.ok(failing(withRows(set('healthy_idle', { breaksFinal: 4 }))).includes('the control does not break'));
+  assert.ok(failing(withRows(set('healthy_idle', { breaksFinal: 4, firstBreakSeconds: 4.7, firstBreakZ: 18.4, firstBreakVelocityZ: 1018.5 }))).includes('the control does not break'));
   assert.ok(failing(withRows(set('nohull_strain', { breaksFinal: 12 }))).includes('the no-hull control fails the check'));
   assert.ok(failing(withRows(set('noproxy_strain', { hasProxyAtStrain: true }))).includes('a component without a physics proxy is silent'));
   assert.ok(failing(withRows(set('healthy_strain', { spawned: false }))).includes('game process wrote a report'));
