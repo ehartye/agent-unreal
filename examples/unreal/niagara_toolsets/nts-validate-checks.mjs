@@ -1,5 +1,5 @@
 // Pure checks for nts_validate.mjs: turn the JSON reports, progress notes, exit codes and log text of the Niagara toolset scripts into
-// pass or fail results, one per claim in skills/unreal-effects/references/unreal-niagara-toolsets.md. No Unreal, no files:
+// pass or fail results, one per claim in the unreal-niagara-toolsets*.md and unreal-niagara-toolset-*.md references of skills/unreal-effects. No Unreal, no files:
 // nts-validate.test.mjs feeds it canned reports, and nts_validate.mjs feeds it real ones. Also the pure parts of the runner: parseOptions and
 // the phase list (--only), describeReports (what a partial run prints), keepNote (--keep) and flushLine (one line per phase, written at once).
 import { writeSync } from 'node:fs';

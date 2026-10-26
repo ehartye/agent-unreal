@@ -26,6 +26,7 @@ fix and Epic's MCP server are in FBX clips and MCP (`unreal-import` skill).
 | Fit prop cover that follows bones | [Moving prop cover](references/uefn-native-cover.md) |
 | Check fitted cover: semantic collision, variant state, hidden comparison blockers, misplaced proxies after animation edits | [Cover verification](references/uefn-native-cover-verification.md) |
 | Fix mirrored native FBX architecture, reversed glyphs or missing UCX and deck collision | [UEFN FBX coordinates and collision](references/uefn-native-fbx.md) |
+| Match circular decks, check editor physics after an FBX import or decide on a reimport | [FBX decks and verification](references/uefn-native-fbx-verification.md) |
 
 ## What was tested
 

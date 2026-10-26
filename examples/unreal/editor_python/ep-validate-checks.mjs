@@ -1,5 +1,5 @@
 // Pure checks for ep_validate.mjs: turn the JSON reports and log text of the editor Python scripts into pass or fail results, one per
-// claim in skills/unreal-editor-scripting/references/unreal-editor-python.md and unreal-geometry-scripting.md. No Unreal, no files:
+// claim in skills/unreal-editor-scripting/references/unreal-editor-python-maps.md and unreal-geometry-scripting.md. No Unreal, no files:
 // ep-validate.test.mjs feeds it canned reports, and ep_validate.mjs feeds it real ones.
 
 const has = (text, pattern) => pattern.test(String(text || ''));

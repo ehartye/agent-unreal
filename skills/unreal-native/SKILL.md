@@ -25,6 +25,7 @@ reviewing its module and state structure is [unreal-architecture](../unreal-arch
 | Cook and stage Windows; tell UAT policy failures from real Game EXE proof; cook a folder that code loads only by path | [Native packaging](references/unreal-native-packaging.md) |
 | Check a staged build with a packaged smoke run: windowed start, log read, world counts | [Packaged smoke run](references/unreal-native-packaged-smoke.md) |
 | Separate content-only asset construction from native gameplay and preserve cooked provenance | [Native content pipeline](references/unreal-native-content-pipeline.md) |
+| Import rigid GLB controls and WAVs through the content-only bake, or read what the second-generation runtime proof did and did not show | [Content pipeline assets](references/unreal-native-content-pipeline-assets.md) |
 | Replay mapped input and diagnose retained trigger state during native tests | [Native input replay](references/unreal-native-input.md) |
 | Reject default-material cook fallbacks and verify imported UV channel meaning | [Material and UV validation](references/unreal-native-material-validation.md) |
 | Diagnose a body that falls through a procedural surface, a sweep that finds no wall, and keep collision regression evidence separate | [Native contact case study](references/unreal-native-contact.md) |

@@ -13,9 +13,11 @@ Unreal 5.8 on Windows. Pick the feature from the goal, then read that system's r
 | Drive wheeled or modular vehicles (Chaos Vehicles, Chaos Modular Vehicle; off, experimental) | [Chaos vehicles](references/unreal-chaos-vehicles.md) |
 | Move a character or pawn beyond the Character Movement Component (Mover, ChaosMover; off, experimental) | [Mover](references/unreal-mover.md) |
 | Give characters abilities, stat effects, costs or predicted actions (GameplayAbilities; off) | [Gameplay Ability System](references/unreal-gameplay-ability-system.md) |
+| Set up GAS in order: ASC placement, attribute sets, prediction, cues (GameplayAbilities) | [GAS workflow](references/unreal-gameplay-ability-system-workflow.md) |
 | Write Gameplay Effects, attribute sets, native tags or a cost and cooldown in C++ (GameplayAbilities) | [GAS in C++](references/unreal-gas-native-effects.md) |
 | Bind player input and switch controls by situation (EnhancedInput; on) | [Enhanced Input](references/unreal-enhanced-input.md) |
 | Build NPC decisions, sensing, interaction slots or crowds (StateTree, Behavior Trees, Smart Objects, Mass) | [AI](references/unreal-ai-behavior.md) |
+| Follow the numbered steps for a StateTree, Behavior Tree, EQS, Perception or Smart Object setup | [AI workflow](references/unreal-ai-behavior-workflow.md) |
 | Create Smart Objects and claim slots from C++ at run time, with no authored assets (SmartObjects; off) | [Smart Objects from C++](references/unreal-smart-objects-native.md) |
 | Run Mass entities and processors by hand from C++ without the Mass plugins (MassEntity, MassCore modules) | [Native Mass](references/unreal-mass-native.md) |
 | Follow a pawn with a Gameplay Cameras rig, or blend a view while world time is dilated (GameplayCameras; experimental) | [Gameplay Cameras](references/unreal-gameplay-cameras.md) |

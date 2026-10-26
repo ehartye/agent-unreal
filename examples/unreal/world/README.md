@@ -1,6 +1,6 @@
 # World Partition example scenes (Unreal 5.8)
 
-These scenes back the facts in `skills/unreal-procedural/references/unreal-world-partition.md`. Each script writes a JSON report; `world-validate-checks.mjs` turns the reports into PASS or FAIL results, and `world-validate.test.mjs` tests that logic with recorded reports (no engine needed, part of `node scripts/check.mjs`).
+These scenes back the facts in `skills/unreal-procedural/references/unreal-world-partition.md` and its companions `unreal-world-partition-landscape.md` and `unreal-world-partition-commandlets.md`. Each script writes a JSON report; `world-validate-checks.mjs` turns the reports into PASS or FAIL results, and `world-validate.test.mjs` tests that logic with recorded reports (no engine needed, part of `node scripts/check.mjs`).
 
 ## Run
 
