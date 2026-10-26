@@ -280,7 +280,52 @@ const MACRO_H = [
   '',
 ].join('\n');
 
+// A body supplied by a macro after a base list (a shader permutation dimension), a name on the line below its decorating macro, and
+// variable, constructor and continuation-line mentions that sort before the real type by path.
+const MACRO_BODY_H = [
+  '#pragma once',
+  'class FWidgetDim : WIDGET_PERMUTATION_BOOL("WIDGET_DIM");',
+  'class FWidgetSplit : public WIDGET_PERMUTATION_INT("WIDGET_SPLIT", 1, 2);',
+  'enum class EWidgetOpaque : uint8;',
+  'class UE_DEPRECATED(5.5, "Use the new widget list.")',
+  '\tFWidgetBelow',
+  '{',
+  '\tFWidgetBelow();',
+  '};',
+  'struct',
+  'UE_DEPRECATED(all, "Use a stream custom version.")',
+  'FWidgetFarBelow',
+  '{',
+  '};',
+  'enum class UE_DEPRECATED(5.5, "Unused.")',
+  '\tEWidgetBelow : uint8',
+  '{',
+  '\tOne,',
+  '};',
+  '',
+].join('\n');
+
+const VALUE_DECLS_H = [
+  '#pragma once',
+  'struct FWidgetHolderState',
+  '{',
+  '\tuint8 FWidgetKnob;',
+  '\tFWidgetBelow FWidgetBelowSlot;',
+  '\tvoid FWidgetAction(int32 Count);',
+  '\tFWidgetBelow Window = Make();',
+  '\tvoid Blend()',
+  '\t{',
+  '\t\tUse(*Window[0],',
+  '\t\t\t*Window[1]);',
+  '\t}',
+  '};',
+  '',
+].join('\n');
+
 const FILES = {
+  'Engine/Source/Runtime/Widgets/Public/WidgetMacroBody.h': MACRO_BODY_H,
+  'Engine/Plugins/Experimental/Gadget/Source/GadgetCore/Public/AaaValueDecls.h': VALUE_DECLS_H,
+  'Engine/Source/Runtime/Widgets/Public/WidgetKnob.h': 'enum FWidgetKnob\n{\n\tTurn,\n};\nvoid FWidgetAction(int32 Count);\n',
   'Engine/Source/Runtime/Widgets/Public/AaaMacroForward.h': MACRO_FORWARD_H,
   'Engine/Source/Runtime/Widgets/Public/WidgetMacro.h': MACRO_H,
   'Engine/Source/Runtime/Widgets/Public/AaaKindsForward.h': KINDS_FORWARD_H,
@@ -505,6 +550,26 @@ test('any ALL_CAPS macro word or call, alignas or __declspec between class, stru
     assert.deepEqual(shape(await find(name)), [['declaration', 'WidgetMacro.h', false], ['declaration', 'AaaMacroForward.h', true]], name);
   }
   for (const name of ['FWidgetAligned', 'FWidgetPacked', 'TWidgetGuarded']) assert.deepEqual(shape(await find(name)), [['declaration', 'WidgetMacro.h', false]], name);
+});
+
+test('a class whose body a macro supplies is a real declaration, and a name below its decorating macro still reads as one', async () => {
+  const shape = (r) => r.results.map((h) => [h.rank, h.path.split('/').pop(), !!h.forward]);
+  assert.deepEqual(shape(await find('FWidgetDim')), [['declaration', 'WidgetMacroBody.h', false]], 'a macro after a colon completes the class');
+  assert.deepEqual(shape(await find('FWidgetSplit')), [['declaration', 'WidgetMacroBody.h', false]], 'also behind an access keyword');
+  assert.deepEqual(shape(await find('EWidgetOpaque')), [['declaration', 'WidgetMacroBody.h', true]], 'an opaque enum is still forward');
+  for (const name of ['FWidgetBelow', 'FWidgetFarBelow', 'EWidgetBelow']) {
+    const r = await find(name, { max: 1 });
+    assert.deepEqual([r.results[0].rank, r.results[0].forward, r.results[0].path.split('/').pop()], ['declaration', false, 'WidgetMacroBody.h'], name);
+  }
+});
+
+test('a type declaration is listed before a variable or function declaration of the same name, and a continuation line is not a declaration', async () => {
+  const r = await find('FWidgetKnob');
+  assert.deepEqual(r.results.map((h) => [h.rank, h.path.split('/').pop()]), [['declaration', 'WidgetKnob.h'], ['declaration', 'AaaValueDecls.h']], 'the enum comes first although the member sorts first by path');
+  const action = await find('FWidgetAction');
+  assert.deepEqual(action.results.map((h) => [h.rank, h.path.split('/').pop()]), [['declaration', 'AaaValueDecls.h'], ['declaration', 'WidgetKnob.h']], 'two function declarations stay in path order');
+  const window = await find('Window');
+  assert.deepEqual(window.results.map((h) => [h.rank, h.line]), [['declaration', lineOf(VALUE_DECLS_H, 'Window = Make')], ['use', lineOf(VALUE_DECLS_H, '*Window[0]')], ['use', lineOf(VALUE_DECLS_H, '*Window[1]')]]);
 });
 
 test('a namespace, a using directive, an extern variable and its definition are ranked, and an include of a same-named header is not a hit', async () => {
