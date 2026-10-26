@@ -8,7 +8,7 @@
     {
       "name": "agent-unreal",
       "description": "Skills for working in Unreal Engine 5.8 from a coding agent: choose the engine system that fits a goal, audit a project's structure, tests and performance practice against Epic's documentation and plan the fixes, build, package and profile a native C++ game, import sprites, meshes and sounds with a guarded importer, and author for UEFN",
-      "version": "0.13.3",
+      "version": "0.14.0",
       "source": "./",
       "license": "MIT"
     }
