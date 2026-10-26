@@ -13,7 +13,9 @@ Unreal 5.8 on Windows. Pick the feature from the goal, then read that system's r
 | Make fire, smoke, trails, liquid, sand or any particle effect, pick a Niagara route, or verify a system (Niagara; fluids in NiagaraFluids; on) | [Niagara](references/unreal-niagara.md) |
 | Choose a Niagara template or template emitter: a stream such as a fountain of sparks, a burst, a beam or ribbon, a gas or liquid system | [Niagara templates](references/unreal-niagara-templates.md) |
 | Author a Niagara system from Python: create it, add emitters, read and set a stack input such as a spawn rate or lifetime, set renderer properties | [Toolsets](references/unreal-niagara-toolsets.md) |
-| Add a renderer (such as a Light renderer) to an emitter and address it by index; replace a linked or dynamic input; get past a hidden-input refusal; use local space, `SortOrderHint` or a ribbon material flag | [Toolset inputs](references/unreal-niagara-toolset-inputs.md) |
+| Replace a linked or dynamic input, or get past a hidden-input refusal | [Toolset inputs](references/unreal-niagara-toolset-inputs.md) |
+| Add a renderer (such as a Light renderer) to an emitter and address it by index; use local space, `SortOrderHint` or a ribbon material flag | [Toolset renderers](references/unreal-niagara-toolset-renderers.md) |
+| Delete and recreate a Niagara system saved by an earlier process, or read the NiagaraToolsets start-up log | [Toolsets lifecycle](references/unreal-niagara-toolsets-lifecycle.md) |
 | Choose cheap Niagara families, set scalability and instance caps, bake a flipbook, or find which stock Niagara and fluid content was tested on 5.8.2 | [Niagara families and stock content](references/unreal-niagara-stock-content.md) |
 | Keep or convert existing Cascade particle content (Cascade on in the editor; converter off, beta) | [Cascade](references/unreal-cascade.md) |
 | Drive effects from destruction or physics events (ChaosNiagara; on, beta) | [Chaos Niagara](references/unreal-chaos-niagara.md) |

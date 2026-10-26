@@ -1,6 +1,6 @@
 # Niagara toolsets scene: author a system from Python and check the call shapes
 
-Backs [Author Niagara systems from Python with the Niagara toolsets](../../../skills/unreal-effects/references/unreal-niagara-toolsets.md). Verified on Unreal Engine 5.8.2, Windows. Nothing here needs a project of yours: the validator makes a throwaway project (PythonScriptPlugin, EditorScriptingUtilities, Niagara, NiagaraToolsets) in the OS temp folder.
+Backs [Author Niagara systems from Python with the Niagara toolsets](../../../skills/unreal-effects/references/unreal-niagara-toolsets.md) and its companions on [delete and recreate](../../../skills/unreal-effects/references/unreal-niagara-toolsets-lifecycle.md), [inputs](../../../skills/unreal-effects/references/unreal-niagara-toolset-inputs.md) and [renderers](../../../skills/unreal-effects/references/unreal-niagara-toolset-renderers.md). Verified on Unreal Engine 5.8.2, Windows. Nothing here needs a project of yours: the validator makes a throwaway project (PythonScriptPlugin, EditorScriptingUtilities, Niagara, NiagaraToolsets) in the OS temp folder.
 
 ## Run
 
