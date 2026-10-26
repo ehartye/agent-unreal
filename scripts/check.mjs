@@ -5,6 +5,15 @@
 //   node scripts/check.mjs --no-tests      the lints only
 //   node scripts/check.mjs --skill <name>  only the named skills' lints, with the flags the gate uses (repeat the
 //                                          option or separate names with commas); the test step is skipped
+//   node scripts/check.mjs --file <name>   only the findings in the named file (a reference's name with or without .md, or
+//                                          SKILL.md), from the skills that have it, with the gate's flags; repeatable; the
+//                                          test step is skipped. Combine with --skill to name the skill.
+//   node scripts/check.mjs --allow-orphan <file>
+//                                          do not report that reference as an orphan before its SKILL.md row exists (repeatable)
+//   node scripts/check.mjs --labels-since <ref>
+//                                          compare against this git ref instead of the merge base with origin/main (or main)
+// The gate also prints each skill's listing length and headroom and the trigger words two skills share (warnings only), and, in a
+// run over every skill, scans every text file for invisible Unicode.
 // Every step runs even after one fails, so a single run shows every finding. The last line names what failed.
 // Exit code 0 when everything passed, 1 when any step failed, 2 on a usage error.
 // AGENT_UNREAL_ROOT points the run at another root for skills/ and the tests (lint-skills.mjs still comes from
@@ -17,6 +26,7 @@ import { discoverSkills } from './lint-skills.mjs';
 
 const SCRIPTS = dirname(fileURLToPath(import.meta.url));
 const LINT = join(SCRIPTS, 'lint-skills.mjs');
+const UNICODE = join(SCRIPTS, 'scan-unicode.mjs');
 const DEFAULT_ROOT = resolve(SCRIPTS, '..');
 
 // unreal-native passes the strict rules and uefn passes the default rules (labels, size, structure). the six domain skills and
@@ -35,6 +45,10 @@ export const STRICTNESS = {
   'unreal-editor-scripting': ['--label-pattern', '.'],
   'unreal-import': ['--label-pattern', '.'],
 };
+
+// Skills whose label rule is still "any text" because of old unlabelled bullets. In these, a bullet added or changed since the base
+// ref must carry a real label (--labels-since), so the backlog cannot grow while it is being cleared.
+export const DIFF_AWARE = new Set(['unreal-effects', 'unreal-rendering']);
 
 /**
  * The lints to run: [{ name, dir, flags }] for every folder under skillsDir that has a SKILL.md, sorted by folder.
@@ -69,24 +83,42 @@ export function discoverTests(root) {
   return [...list('scripts').filter((name) => name.endsWith('.test.mjs')).map((name) => `scripts/${name}`), ...walk('examples')];
 }
 
-const USAGE = `usage: node scripts/check.mjs [--no-tests] [--skill <name>[,<name>...]]...
-  (no options)    run the Node tests, then lint every folder under skills/
-  --no-tests      skip the Node tests
-  --skill <name>  lint only the named skills with the gate's flags (repeatable, comma-separated); skips the tests
-  --help          print this text`;
+const USAGE = `usage: node scripts/check.mjs [--no-tests] [--skill <name>[,<name>...]]... [--file <name>]... [--allow-orphan <file>]... [--labels-since <ref>]
+  (no options)           run the Node tests, then lint every folder under skills/ and scan every text file for invisible Unicode
+  --no-tests             skip the Node tests
+  --skill <name>         lint only the named skills with the gate's flags (repeatable, comma-separated); skips the tests and the scan
+  --file <name>          show only the findings in this file (a reference's name with or without .md, or SKILL.md), from the skills
+                         that have it (repeatable); skips the tests and the scan
+  --allow-orphan <file>  do not report this reference as an orphan before its SKILL.md row exists (repeatable)
+  --labels-since <ref>   bullets added or changed since this git ref need a real label in unreal-effects and unreal-rendering
+                         (default: the merge base with origin/main, else main)
+  --help                 print this text`;
 
-/** { skills: null | string[], noTests, help }, or { error }. skills is null when no --skill was given. */
+/**
+ * { skills: null | string[], files, allowOrphans, labelsSince: null | string, noTests, help }, or { error }. skills is null when no
+ * --skill was given.
+ */
 export function parseArgs(argv) {
-  const parsed = { skills: null, noTests: false, help: false };
+  const parsed = { skills: null, files: [], allowOrphans: [], labelsSince: null, noTests: false, help: false };
+  // The value of --name <value> or --name=<value>; null when it is missing or is the next option.
+  const valueOf = (arg, name, i) => {
+    const value = arg === name ? argv[i + 1] : arg.slice(name.length + 1);
+    return value === undefined || value.startsWith('--') ? null : value;
+  };
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
+    const option = ['--skill', '--file', '--allow-orphan', '--labels-since'].find((name) => arg === name || arg.startsWith(`${name}=`));
     if (arg === '--no-tests') parsed.noTests = true;
     else if (arg === '--help' || arg === '-h') parsed.help = true;
-    else if (arg === '--skill' || arg.startsWith('--skill=')) {
-      const value = arg === '--skill' ? argv[++i] : arg.slice('--skill='.length);
-      const names = (value ?? '').startsWith('--') ? [] : (value ?? '').split(',').map((name) => name.trim()).filter(Boolean);
-      if (names.length === 0) return { error: '--skill needs a skill name' };
-      parsed.skills = [...(parsed.skills ?? []), ...names];
+    else if (option) {
+      const value = valueOf(arg, option, i);
+      if (arg === option) i++;
+      const names = (value ?? '').split(option === '--labels-since' ? '\0' : ',').map((name) => name.trim()).filter(Boolean);
+      if (names.length === 0) return { error: `${option} needs a ${option === '--skill' ? 'skill name' : option === '--labels-since' ? 'git ref' : 'file name'}` };
+      if (option === '--skill') parsed.skills = [...(parsed.skills ?? []), ...names];
+      else if (option === '--file') parsed.files.push(...names);
+      else if (option === '--allow-orphan') parsed.allowOrphans.push(...names);
+      else parsed.labelsSince = names[0];
     } else return { error: arg.startsWith('-') ? `unknown option ${arg}` : `unexpected argument ${arg}` };
   }
   return parsed;
@@ -97,6 +129,34 @@ function step(label, args, { cwd, env }) {
   const result = spawnSync(process.execPath, args, { cwd, env, stdio: 'inherit' });
   if (result.error) console.error(`check: ${label}: ${result.error.message}`);
   return result.status === 0;
+}
+
+const git = (root, args) => spawnSync('git', ['-C', root, ...args], { encoding: 'utf8' });
+
+/**
+ * The git ref the label rule compares with: the one asked for (it must resolve to a commit, or the answer is { error }), else the
+ * merge base of HEAD with origin/main, else with main. { ref: null, note } when the root is not a git checkout or neither branch
+ * exists, so a shallow clone or an exported tree keeps the any-text rule instead of failing.
+ */
+export function resolveLabelsRef(root, requested) {
+  if (!existsSync(join(root, '.git'))) return { ref: null, note: 'not a git checkout' };
+  if (requested) {
+    const r = git(root, ['rev-parse', '--verify', '--quiet', `${requested}^{commit}`]);
+    return r.status === 0 ? { ref: requested } : { error: `--labels-since ${requested} is not a commit in this checkout` };
+  }
+  for (const base of ['origin/main', 'main']) {
+    if (git(root, ['rev-parse', '--verify', '--quiet', `${base}^{commit}`]).status !== 0) continue;
+    const mergeBase = git(root, ['merge-base', 'HEAD', base]);
+    if (mergeBase.status === 0 && mergeBase.stdout.trim()) return { ref: mergeBase.stdout.trim() };
+  }
+  return { ref: null, note: 'neither origin/main nor main exists here' };
+}
+
+/** Whether a skill folder has the named file: SKILL.md, or references/<name> with or without .md. */
+function hasFile(dir, name) {
+  const base = basename(name.replace(/\\/g, '/'));
+  if (base === 'SKILL.md') return true;
+  return existsSync(join(dir, 'references', base)) || existsSync(join(dir, 'references', `${base}.md`));
 }
 
 /** Runs the gate and returns the exit code. */
@@ -129,8 +189,32 @@ export function main(argv, env = process.env) {
     }
     selected = plan.filter((p) => args.skills.includes(p.name));
   }
+  if (args.files.length > 0) {
+    // A file name picks the skills that have it, among those already selected; SKILL.md is in every skill, so name the skill too.
+    const missing = args.files.filter((name) => !selected.some((p) => hasFile(p.dir, name)));
+    if (missing.length > 0) {
+      console.error(`check: no ${args.skills ? 'selected ' : ''}skill has the file ${missing.map((name) => `"${name}"`).join(', ')}`);
+      return 2;
+    }
+    selected = selected.filter((p) => args.files.some((name) => hasFile(p.dir, name)));
+  }
+  const orphanless = args.allowOrphans.filter((name) => !selected.some((p) => hasFile(p.dir, name) && basename(name) !== 'SKILL.md'));
+  if (orphanless.length > 0) {
+    console.error(`check: --allow-orphan ${orphanless.map((name) => `"${name}"`).join(', ')} names no reference in the selected skills`);
+    return 2;
+  }
 
-  const runTests = args.skills === null && !args.noTests;
+  // Bullets added or changed since the base need a real label in the diff-aware skills.
+  let labelsRef = null;
+  if (selected.some((p) => DIFF_AWARE.has(p.name))) {
+    const resolved = resolveLabelsRef(root, args.labelsSince);
+    if (resolved.error) { console.error(`check: ${resolved.error}`); return 2; }
+    labelsRef = resolved.ref;
+    if (!labelsRef) console.error(`check: label rule: ${resolved.note}, so ${[...DIFF_AWARE].join(' and ')} keep the any-text label rule here`);
+  }
+
+  const selection = args.skills !== null || args.files.length > 0;
+  const runTests = !selection && !args.noTests;
   const failed = [];
   if (runTests) {
     const tests = discoverTests(root);
@@ -148,8 +232,16 @@ export function main(argv, env = process.env) {
     }
   }
   for (const { name, dir, flags } of selected) {
-    if (!step(name, [LINT, dir, ...flags], { cwd: root, env })) failed.push(name);
+    const extra = [
+      ...(labelsRef && DIFF_AWARE.has(name) ? ['--labels-since', labelsRef] : []),
+      ...args.files.flatMap((file) => ['--file', file]),
+      ...args.allowOrphans.flatMap((file) => ['--allow-orphan', file]),
+    ];
+    if (!step(name, [LINT, dir, ...flags, ...extra], { cwd: root, env })) failed.push(name);
   }
+  // Listing lengths and shared trigger words (warnings only), then the whole-checkout scan.
+  if (args.files.length === 0 && !step('listing', [LINT, '--listing', ...selected.map((p) => p.dir)], { cwd: root, env })) failed.push('listing');
+  if (!selection && !step('unicode', [UNICODE, '--quiet', root], { cwd: root, env })) failed.push('unicode');
 
   const lints = `${selected.length} lint${selected.length === 1 ? '' : 's'}`;
   console.log(failed.length === 0 ? `check: ok (${runTests ? 'tests + ' : ''}${lints})` : `check: FAILED ${failed.join(', ')}`);
