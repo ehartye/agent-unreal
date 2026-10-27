@@ -2,9 +2,8 @@
 
 Read this when rerunning a native editor script still produces the old layout,
 an edited helper seems ignored, or a reloaded module's imported function stays
-old. Observed in one consuming UEFN project on an earlier UEFN build with embedded Python
-3.11.8; not reproduced in this repo and not yet verified on the pinned UEFN build. The probe source and its recorded receipt
-are in `examples/uefn`.
+old. First observed in one consuming UEFN project with embedded Python 3.11.8, then run once in a UEFN
+session in this repo (below). The probe source and its recorded receipt are in `examples/uefn`.
 
 ## What the local experiment established
 
@@ -32,6 +31,8 @@ preserved actor identities/transforms, the `.uasset` file set, selection and
 clean package state. It created no Unreal actors or assets and sent no input.
 The experiment executed two entrypoint versions inside one interpreter; it does
 not establish that every remote command mode creates a fresh namespace.
+
+[tested] The probe ran once in a UEFN editor session in this repo (embedded Python 3.11.8; a project with 118 actors and 118 `.uasset` files) and gave the same results: the edited entry point returned its new value with the old helper value, from the same module and function; finder-cache invalidation left the helper old; an explicit reload returned the new value; a function reference captured before the reload still returned the old value; a name removed from the helper source remained in the module dictionary; a mismatched source path was rejected before the reload. Cleanup left no module, `sys.path` entry or temporary folder, and the actor and `.uasset` digests, the selection and the clean package state were unchanged.
 
 [general] Source and recorded output are
 [`python_helper_freshness_probe.py`](../../../examples/uefn/python_helper_freshness_probe.py)
