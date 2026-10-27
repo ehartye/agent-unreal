@@ -172,3 +172,27 @@ test('only limits the judged phases', () => {
   assert.deepEqual(evaluate({ ...g, only: 'landmass' }).filter((c) => !c.pass), []);
   assert.equal(evaluate({ ...g, only: 'landmass' }).some((c) => c.name.startsWith('pcg')), false);
 });
+
+const merge = (rendering = 1209, nullrhi = 1209) => ({
+  prepare: { errors: [], mode: 'prepare', force_layers_full_update: { ok: true }, saved: { level: { ok: true, value: 'True' } }, control: { event_fired: true, points: rendering } },
+  sample: { errors: [], mode: 'sample', proxies_loaded_after_open: { descriptors: 4, loaded: 4 }, fixture: { landscape_actors: 1, streaming_proxies: 4, components: 16 }, control: { event_fired: true, points: nullrhi } },
+});
+
+test('pcgmerge runs only when asked for, and a matching or a zero -nullrhi count is an observation, not a failure', () => {
+  const g = good();
+  assert.equal(evaluate({ ...g, pcgmerge: merge() }).some((c) => c.name.startsWith('pcgmerge')), false, 'not part of the default run');
+  for (const nullrhi of [1209, 0]) {
+    const checks = evaluate({ ...g, pcgmerge: merge(1209, nullrhi), only: 'pcgmerge' });
+    assert.deepEqual(checks.filter((c) => !c.pass), []);
+    assert.match(checks.find((c) => c.observe).detail, nullrhi === 0 ? /"nullrhi_points":0,"equal":false/ : /"equal":true/);
+  }
+});
+
+test('pcgmerge fails when the rendering editor found no points or the -nullrhi editor did not load the proxies', () => {
+  const g = good();
+  assert.equal(evaluate({ ...g, pcgmerge: merge(0, 0), only: 'pcgmerge' }).filter((c) => !c.pass).length, 1);
+  const unloaded = merge();
+  unloaded.sample.fixture.streaming_proxies = 0;
+  assert.equal(evaluate({ ...g, pcgmerge: unloaded, only: 'pcgmerge' }).filter((c) => !c.pass).length, 1);
+  assert.equal(evaluate({ ...g, pcgmerge: undefined, only: 'pcgmerge' }).filter((c) => !c.pass).length, 2, 'no reports fail both asserts instead of throwing');
+});

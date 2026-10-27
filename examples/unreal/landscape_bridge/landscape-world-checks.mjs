@@ -92,6 +92,17 @@ function pcgChecks(pcg, add, observe) {
   observe('pcg: grid size', 'the PCG World Actor grid size', show(part?.pcg_grid_size_cm ?? null));
 }
 
+function pcgMergeChecks(pcgmerge, add, observe) {
+  const prepare = pcgmerge?.prepare, sample = pcgmerge?.sample;
+  add('pcgmerge: the rendering editor sampled the Landscape', 'after the edit-layer update ran, a control volume in a rendering editor generates points on the bridge Landscape (the earlier rendering run gave points)',
+    noErrors(prepare) && prepare?.control?.event_fired === true && prepare?.control?.points > 0, prepare ? show({ errors: errorText(prepare), event: prepare.control?.event_fired, points: prepare.control?.points }) : 'no prepare report');
+  add('pcgmerge: the -nullrhi editor opened the saved map with every proxy loaded', 'the saved map reopens with its four streaming proxies loaded, so a point count of 0 is not a loading artifact',
+    noErrors(sample) && sample?.fixture?.streaming_proxies === 4, sample ? show({ errors: errorText(sample), fixture: sample.fixture, after_open: sample.proxies_loaded_after_open }) : 'no sample report');
+  const before = prepare?.control?.points, after = sample?.control?.points;
+  observe('pcgmerge: points in the -nullrhi editor against the rendering editor', 'if the unmerged edit layer was the cause, the saved map gives the -nullrhi editor the same points; 0 points again means it was not',
+    show({ rendering_points: before ?? null, nullrhi_points: after ?? null, equal: typeof before === 'number' && typeof after === 'number' ? before === after : null, force_update: prepare?.force_layers_full_update ?? null, saved: prepare?.saved ?? null }));
+}
+
 function unloadChecks(unload, add, observe) {
   const steps = unload?.steps ?? {};
   add('unload: no script errors', 'every step of wp_unload_probe.py ran', noErrors(unload), errorText(unload));
@@ -106,19 +117,20 @@ function unloadChecks(unload, add, observe) {
 }
 
 /**
- * input: { build: {exit, log}, landmass, pcg, unload }; any report may be undefined (that phase did not run or wrote nothing).
+ * input: { build: {exit, log}, landmass, pcg, unload, pcgmerge: {prepare, sample} }; any report may be undefined (that phase did not run or wrote nothing).
  * Returns checks: { name, claim, pass, detail, observe? }. An observe check always passes and is not counted by summarize.
  */
-export function evaluate({ build, landmass, pcg, unload, only } = {}) {
+export function evaluate({ build, landmass, pcg, unload, pcgmerge, only } = {}) {
   const checks = [];
   const add = (name, claim, pass, detail) => checks.push({ name, claim, pass: !!pass, detail });
   const observe = (name, claim, detail) => checks.push({ name, claim, pass: true, observe: true, detail });
   add('module compiles', 'UBT builds the editor target with the LandscapeBridge module, including the brush functions', build?.exit === 0 && /Result: Succeeded/.test(build?.log ?? ''),
     `exit ${build?.exit}, ${/Result: Succeeded/.test(build?.log ?? '') ? 'Result: Succeeded' : 'no success line'}`);
-  const wanted = (phase) => !only || only === phase;
+  const wanted = (phase) => (!only && phase !== 'pcgmerge') || only === phase;
   if (wanted('landmass')) landmassChecks(landmass, add, observe);
   if (wanted('pcg')) pcgChecks(pcg, add, observe);
   if (wanted('unload')) unloadChecks(unload, add, observe);
+  if (wanted('pcgmerge')) pcgMergeChecks(pcgmerge, add, observe);
   return checks;
 }
 
