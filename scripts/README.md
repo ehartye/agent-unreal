@@ -9,8 +9,7 @@ Dependency-free Node (20.11 or newer) used by the merge gate and by authors. `no
 | `scan-unicode.mjs` | Invisible Unicode in every tracked and untracked text file. |
 | `skill-citations.mjs` | The citation check described below; `sibling-skills.json` is its names-only snapshot. |
 | `release-consistency.test.mjs` | Manifest, README and hygiene checks, and the citation test. |
-| `verify-engine.mjs`, `verify-engine-manifest.mjs` | Runs every engine probe and validator in the manifest against an installed engine, judges each against its expected count and writes a JSON report. |
-| `pin-engine.mjs` | Writes the engine pin (`engine-version.json`) from an installed engine and green `verify-engine` reports; a dry run unless `--write`. |
+| `pin-engine.mjs` | Writes the engine pin (`engine-version.json`) from an installed engine; a dry run unless `--write`. |
 | `engine-version-pin.test.mjs` | Validates the pin file and scans the skills, READMEs and docs for version strings outside `engine-version-allowlist.json`. |
 
 ## The gate
@@ -19,20 +18,17 @@ Dependency-free Node (20.11 or newer) used by the merge gate and by authors. `no
 - `--skill <name>` lints only those skills with the gate's flags. `--file <name>` shows only the findings in that file (a reference's name, with or without `.md`, or `SKILL.md`) from the skills that have it. Both skip the tests and the Unicode scan.
 - `--allow-orphan <file>` hides the orphan finding for a new reference until its selector row exists. It names a reference of a selected skill, or the run stops with exit code 2.
 - `--labels-since <ref>` sets the base for the diff-aware label rule. The rule applies to `unreal-effects` and `unreal-rendering`, whose old bullets are still accepted with any text: a bullet added or changed since the base must carry a real `[tested]`, `[documented]` or `[general]` label. The default base is the merge base of `HEAD` with `origin/main`, else `main`; a checkout with neither (a shallow clone) keeps the any-text rule and says so on stderr. The rule reuses the lint's own claim detection, so the exempt headings (Links, Related, See also, Sources, Not covered here), code fences and link-only bullets are the same ones the label rule skips.
-- `[tested]` means checked in this repo: a run on the engine pinned in `engine-version.json`, or for the repo's own scripts a node test (the line says so); `[documented]` is Epic documentation or engine source; `[general]` is judgement or an observation not reproduced here. A different engine is not blocked; it is at your own risk.
+- `[tested]` means checked in this repo: a run here, or for the repo's own scripts a node test (the line says so); it is a record of what was seen, not a promise about every build, and nothing obliges a rerun when the engine changes. `[documented]` is Epic documentation or engine source; `[general]` is judgement or an observation not reproduced here.
 - The lint also checks: the listing length (`description` + ` - ` + `when_to_use`, warning from 1,400 characters, failure over 1,536), that `when_to_use` starts with "Use when", that frontmatter is strict YAML (an unquoted value with a colon and a space fails; double-quote it), and that no `$1` or `$ARGUMENTS` placeholder is left in a skill. `SKILL.md` is checked everywhere, code fences included, because the host substitutes text. In a reference only `$ARGUMENTS` is rejected inside code; `$1` is rejected in prose and allowed in code, because shell and regex examples use it. Sizes count bytes with line endings normalised to LF.
 - The listing report prints each skill's listing length and headroom, and warns when two skills share two or more trigger words that no third skill uses. It never fails the gate.
 
-## Verifying a new engine version
+## Moving the engine pin
 
-Plugin development tooling, not something a skill asks a user to run. The one verified build is pinned in `engine-version.json` at the repo root. Nothing refuses to run on another build: a runner under `examples/unreal` prints a `NOTE: not the pinned build ...` line after the engine line and carries on, and results from another build are at your own risk. To verify a new build and move the pin:
+Plugin development tooling, not something a skill asks a user to run. `engine-version.json` at the repo root names the build the repo is worked on; it is informational. Nothing refuses to run on another build: a runner under `examples/unreal` prints a `NOTE: not the pinned build ...` line after the engine line and carries on. Moving to a new build takes no verification run and creates no rework: `[tested]` lines are records of what was seen, and a line is revisited only when work touches it.
 
-1. `node scripts/verify-engine.mjs --list` shows every probe and validator with its class (`headless` needs no GPU, `render` starts a rendering editor, `package` builds and packages a game, `owner` needs a person and is never run by default), its expected result and what the machine needs.
-2. On each machine class run `node scripts/verify-engine.mjs --engine "<UE folder>" --class headless --report headless.json`, and on a machine with a GPU `--class render,package --report render.json`. Entries run one at a time, each with its own timeout, and are judged against `verify-engine-manifest.mjs`; a known partial pass is reported as `as-expected` and fails if the set of failing checks changes. The exit code is 0 when every entry that ran passed or failed as expected. Wrap the command in `examples/unreal/engine_lock/with-engine-lock.ps1` on a machine shared with other agents.
-3. `node scripts/pin-engine.mjs --engine "<UE folder>" --report headless.json --report render.json` prints the pin it would write; add `--write` to update the `unreal` block of `engine-version.json` (the `uefn` block is left alone). It needs green reports that cover the manifest and were run on this engine's changelist, and it refuses to guess a version when `Build.version` is stale after a launcher update: pass `--version X.Y.Z` then.
-4. The docs need no edit: they carry no patch version, and `engine-version-pin.test.mjs` keeps it that way.
-
-A probe that gains or loses checks changes its expected count: update its entry in `verify-engine-manifest.mjs` with the probe.
+1. Work on the new build as usual.
+2. `node scripts/pin-engine.mjs --engine "<UE folder>"` prints the pin it would write; add `--write` to update the `unreal` block (the `uefn` block is left alone). It reads the changelist from the editor executable and refuses to guess a version when `Build.version` is stale after a launcher update: pass `--version X.Y.Z` then.
+3. The docs need no edit: they carry no patch version, and `engine-version-pin.test.mjs` keeps it that way.
 
 ## Invisible Unicode
 

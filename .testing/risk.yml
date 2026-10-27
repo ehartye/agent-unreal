@@ -44,9 +44,6 @@ areas:
   - path: scripts/scan-unicode*
     tier: standard
     why: Catches invisible characters in skill text before it ships.
-  - path: scripts/verify-engine*
-    tier: low
-    why: Maintainer tooling that runs the engine probes; never part of plugin use or the merge lane.
   - path: scripts/pin-engine*
     tier: low
     why: Maintainer tooling that writes the pinned engine version; nothing is gated on it.
