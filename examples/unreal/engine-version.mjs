@@ -2,10 +2,64 @@
 //   - readEngineVersion(): the version from Engine/Build/Build.version and, on Windows, the changelist inside the editor
 //     executable's product version ("++UE5+Release-5.8-CL-58902052"). After a Launcher update the version files can be left
 //     stale while the binaries are new, so a disagreement is reported as a warning and the executable's changelist wins.
-//   - describeEngine(): the lines a runner prints first (the engine line, then one line per warning).
+//   - readPin() and pinNote(): the pinned engine build in engine-version.json at the repo root, and the one line a runner prints when
+//     the engine it found is another build. The note informs; nothing in this repo refuses to run, or exits non-zero, on a different build.
+//   - describeEngine(): the lines a runner prints first (the engine line, one line per warning, then the pin note when it applies).
 import { spawnSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
+const DATE = /^\d{4}-\d{2}-\d{2}$/;
+
+/**
+ * The problems with a parsed pin file (an empty list when it is valid): the unreal block needs a version "X.Y.Z", an integer
+ * changelist and a verifiedOn date; the uefn block needs a version "NN.NN", a build, a verifiedOn date or null, and may carry a note.
+ */
+export function validatePin(pin) {
+  const problems = [];
+  const object = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
+  if (!object(pin)) return ['the pin is not an object'];
+  const { unreal, uefn } = pin;
+  if (!object(unreal)) problems.push('unreal is missing');
+  else {
+    if (typeof unreal.version !== 'string' || !/^\d+\.\d+\.\d+$/.test(unreal.version)) problems.push('unreal.version must look like 5.8.4');
+    if (!Number.isInteger(unreal.changelist) || unreal.changelist <= 0) problems.push('unreal.changelist must be a positive integer');
+    if (typeof unreal.verifiedOn !== 'string' || !DATE.test(unreal.verifiedOn)) problems.push('unreal.verifiedOn must be a date like 2026-10-26');
+  }
+  if (!object(uefn)) problems.push('uefn is missing');
+  else {
+    if (typeof uefn.version !== 'string' || !/^\d+\.\d{2}$/.test(uefn.version)) problems.push('uefn.version must look like 42.40');
+    if (typeof uefn.build !== 'string' || !/^\d+$/.test(uefn.build)) problems.push('uefn.build must be a string of digits');
+    if (uefn.verifiedOn !== null && (typeof uefn.verifiedOn !== 'string' || !DATE.test(uefn.verifiedOn))) problems.push('uefn.verifiedOn must be a date or null');
+    if (uefn.note !== undefined && typeof uefn.note !== 'string') problems.push('uefn.note must be a string');
+  }
+  return problems;
+}
+
+/**
+ * The pin in engine-version.json at `root` (default: the repo root, found from this module's location). Never throws: returns null
+ * when the file is absent, unreadable, not JSON or not a valid pin (see validatePin).
+ */
+export function readPin(root = REPO_ROOT) {
+  try {
+    const pin = JSON.parse(readFileSync(join(root, 'engine-version.json'), 'utf8'));
+    return validatePin(pin).length === 0 ? pin : null;
+  } catch { return null; }
+}
+
+/**
+ * null when there is no pin or the engine's changelist (the editor executable's when it could be read, else Build.version's)
+ * equals the pin's; otherwise one line saying this is not the pinned build. An engine whose changelist could not be read gets the
+ * line too, since nothing shows it is the pinned build. It is a note, not a gate.
+ */
+export function pinNote(info, pin) {
+  const unreal = pin && pin.unreal;
+  if (!unreal || !Number.isInteger(unreal.changelist)) return null;
+  if (info && info.changelist === unreal.changelist) return null;
+  return `NOTE: not the pinned build (pin: ${unreal.version}, changelist ${unreal.changelist}); claims in this repo were verified on the pin and results here are at your own risk`;
+}
 
 /** The changelist in an editor executable's product version ("++UE5+Release-5.8-CL-58902052" gives 58902052), or undefined. */
 export function changelistFromProductVersion(productVersion) {
@@ -57,8 +111,12 @@ export function readEngineVersion(engine, { platform = process.platform, readPro
   return info;
 }
 
-/** The lines a runner prints for an engine read by readEngineVersion: the engine line, then each warning prefixed "WARNING: ". */
-export function describeEngine(info, engine) {
+/**
+ * The lines a runner prints for an engine read by readEngineVersion: the engine line, each warning prefixed "WARNING: ", then the pin
+ * note (see pinNote) when the engine is not the pinned build. options.pin replaces the pin read from the repo (null means none).
+ */
+export function describeEngine(info, engine, options = {}) {
+  const pin = options.pin === undefined ? readPin() : options.pin;
   const numbers = info.major === null ? null : `${info.major}.${info.minor}.${info.patch}`;
   const stale = info.warnings.length > 0;
   let line;
@@ -66,5 +124,6 @@ export function describeEngine(info, engine) {
   else if (numbers === null) line = `engine version: Build.version unreadable, changelist ${info.changelist} (editor executable)`;
   else if (stale) line = `engine ${numbers} (version file), changelist ${info.changelist} (editor executable)`;
   else line = `engine ${numbers} (changelist ${info.changelist ?? 'unknown'})`;
-  return [`${line}, ${engine}`, ...info.warnings.map((w) => `WARNING: ${w}`)];
+  const note = pinNote(info, pin);
+  return [`${line}, ${engine}`, ...info.warnings.map((w) => `WARNING: ${w}`), ...(note ? [note] : [])];
 }
