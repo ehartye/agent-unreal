@@ -35,6 +35,21 @@ areas:
   - path: scripts/unreal-import*
     tier: critical
     why: The importer writes into a user's Unreal project and reads every setting back.
+  - path: scripts/engine-version-pin*
+    tier: standard
+    why: The lint that keeps the prose free of engine version strings; part of the merge gate.
+  - path: scripts/lint-skills*
+    tier: standard
+    why: Enforces the skill byte budgets and evidence labels that the merge gate relies on.
+  - path: scripts/scan-unicode*
+    tier: standard
+    why: Catches invisible characters in skill text before it ships.
+  - path: scripts/verify-engine*
+    tier: low
+    why: Maintainer tooling that runs the engine probes; never part of plugin use or the merge lane.
+  - path: scripts/pin-engine*
+    tier: low
+    why: Maintainer tooling that writes the pinned engine version; nothing is gated on it.
   - path: .claude-plugin/**
     tier: critical
     why: Plugin and marketplace manifests that installations resolve.
