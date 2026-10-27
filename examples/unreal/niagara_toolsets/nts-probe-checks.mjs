@@ -250,10 +250,10 @@ function wireChecks({ build, sim, images }, check) {
     'Against a baseline with the actor hidden, the shot with the system running changes at least 0.1 percent of the pixels',
     flipDiff > 0.001 * flipTotal && flipTotal > 0, `changed pixels ${flipDiff} of ${flipTotal}`);
   const user = step(build, 'user_variable'), override = stepOf(sim, 'MeshUser', 'override');
-  check('wire', 'a Static Mesh user parameter is added and the runtime override call runs',
-    'AddUserVariables adds a Static Mesh data-interface parameter to a copy of the mesh system; override_system_user_variable_static_mesh runs on its component without an error and the system still emits. The renderer is not bound to the parameter, so this does not show the override on screen',
-    ok(user) && user.add_error === '' && list(user.names).includes('User.Mesh') && Boolean(override) && !override.error && metric(override) > 0,
-    user.error ? String(user.error).split('\n').slice(-2).join(' ').slice(0, 160) : `listed ${list(user.names).join(', ') || 'none'}; override step ${override ? override.error || `particles ${metric(override)}` : 'not run'}`);
+  check('wire', 'a Static Mesh user parameter is added from the toolsets (as an object parameter) and the runtime override call runs',
+    'AddUserVariables with type StaticMesh and a NiagaraExt_VariableValue_Object default lists User.MeshObj on a copy of the mesh system; the data-interface shapes (class only, and an instance) are recorded and are not expected to list; override_system_user_variable_static_mesh runs on the component without an error and the system still emits. The renderer is not bound to the parameter (MeshesBinding takes a renderable-mesh-array data interface), so this does not show the override on screen',
+    ok(user) && user.add_error === '' && list(user.names).includes('User.MeshObj') && Boolean(override) && !override.error && metric(override) > 0,
+    user.error ? String(user.error).split('\n').slice(-2).join(' ').slice(0, 160) : `listed ${list(user.names).join(', ') || 'none'}; shapes ${(user.variants || []).map((v) => `${v.variant}=${v.listed ? 'listed' : 'not listed'}`).join(', ') || 'not recorded'}; override step ${override ? override.error || `particles ${metric(override)}` : 'not run'}`);
 }
 
 function gradientChecks(report, check) {

@@ -18,7 +18,7 @@ Written for Unreal 5.8. A [tested] line ran in [`nts_probe.mjs`](../../../exampl
 
 ## Mesh renderer
 
-- [general] A mesh renderer takes a static mesh from the system or a user parameter (`override_system_user_variable_static_mesh`); the Static Mesh data interface also binds an actor or component. The Audio Player data interface plays a `SoundBase` from particle data.
+- [general] A mesh renderer takes a static mesh from the system or from a Static Mesh data-interface user parameter (`override_system_user_variable_static_mesh`); the Static Mesh data interface also binds an actor or component. The Audio Player data interface plays a `SoundBase` from particle data.
 - [general] A rigged GLB (a fox) imported through Interchange with the default pipeline gave 1 skeletal mesh and no static mesh (19 assets), so there was no static mesh for the renderer; observed on an earlier engine build, not repeated on the pinned build.
 - [tested] The built-in cube imported as one static mesh, `.../StaticMeshes/cube.cube` (2 assets).
 - [tested] `GetRendererData` of a mesh renderer lists nested struct fields in lower camel case (`mesh`, `lODBias`, `lODMode`). A mesh written under the key `Mesh` returned no error and the read-back still had no mesh; written under `mesh` the read-back held the same asset path ([renderers](unreal-niagara-toolset-renderers.md)).
@@ -26,7 +26,8 @@ Written for Unreal 5.8. A [tested] line ran in [`nts_probe.mjs`](../../../exampl
 
 ## Static Mesh user parameter
 
-- [tested] `AddUserVariables` with type `/Script/Niagara.NiagaraDataInterfaceStaticMesh` and a default `NiagaraExt_VariableValue_DataInterface` carrying only `dataInterfaceClass` returned no error and no value, and `GetUserVariables` listed nothing.
-- [tested] `NiagaraFunctionLibrary.override_system_user_variable_static_mesh` on the copy's component ran without an error and the system still emitted (80 particles). With no such variable the call shows nothing, so a clean return does not show that a mesh was bound.
+- [tested] Static Mesh user parameter from the toolsets: `AddUserVariables` with the data-interface type `/Script/Niagara.NiagaraDataInterfaceStaticMesh` returned no error and no value, and `GetUserVariables` listed nothing, both with a default carrying only `dataInterfaceClass` and with one that also named a data interface instance made in Python. The same call with type `/Script/Engine.StaticMesh` and a `NiagaraExt_VariableValue_Object` default (`objectClass`, `object`) added the parameter and listed it.
+- [tested] `NiagaraFunctionLibrary.override_system_user_variable_static_mesh` on the copy's component ran without an error and the system still emitted (80 particles); the call shows nothing when the parameter is missing, so a clean return does not show that a mesh was bound.
+- [documented] That override looks up a parameter of the data-interface type, so it does not reach the object parameter; `UNiagaraComponent::SetVariableStaticMesh` (`set_variable_static_mesh`) uses the object type and was not run. A mesh renderer's `MeshesBinding` accepts only a renderable-mesh-array data interface (`Engine/Plugins/FX/Niagara/Source/Niagara/Public/NiagaraMeshRendererProperties.h`, `Private/NiagaraFunctionLibrary.cpp`), so the object parameter does not change what it draws. To change the mesh, use `SetRendererData` with `Meshes[0].Mesh`.
 - [documented] `AddUserVariable` returns without a message when the default is invalid, and builds the default from `DataInterface` (the instance), not from the class (`NiagaraEditor/Private/NiagaraExternalSystemEditorUtilities.cpp`, `FNiagaraExt_VariableValue::Get`).
 - [general] Not covered by these runs: binding the mesh renderer's mesh to a user parameter that the override sets, so the override was checked for acceptance, not for appearance.
