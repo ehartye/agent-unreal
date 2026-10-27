@@ -61,7 +61,7 @@ Generation modes (Non-partitioned, Partitioned, Hierarchical, Runtime), their gr
 
 GPU execution, its supported nodes and limits: [PCG GPU execution](unreal-pcg-gpu.md).
 
-- [tested] In one throwaway project with a Landscape from an editor module, the Get Landscape Data and Surface Sampler graph gave 1209 points in a rendering editor (also across the cells of a partitioned volume) and 0 points in `-nullrhi` editors; the cause is not isolated. Counts and variants: [World Partition Landscape](unreal-world-partition-landscape.md).
+- [tested] In one throwaway project with a Landscape from an editor module, the Get Landscape Data and Surface Sampler graph gave 1209 points in a rendering editor (also across the cells of a partitioned volume) and 0 points in `-nullrhi` editors on a Landscape that was never merged; once a rendering editor had merged and saved the edit layers, a `-nullrhi` editor gave the same 1209. In these runs a Landscape made from code needed one rendering-editor merge before a headless PCG run could sample it. Counts and variants: [World Partition Landscape](unreal-world-partition-landscape.md).
 
 World Partition: assign PCG assets to a Data Layer and HLOD Layer and the generated actors inherit them; Spawn Actor and Create Target Actor nodes expose Data Layer Source and HLOD Source settings.
 
