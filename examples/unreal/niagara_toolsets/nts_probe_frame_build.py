@@ -154,11 +154,22 @@ def link_other():
 
 
 def diagnostics():
-    """What the emitter holds after the link: its scripts and modules (so a second SubUV module or a later writer of SubImageIndex would show), and the two SubUV inputs read back."""
+    """What the emitter holds after the link: the modules of each script in order (so a second SubUV module or a later writer of SubImageIndex would show),
+    the inputs of the SubUV module with their visible, editable and static switch flags, and the two SubUV inputs read back."""
     topology = c.call("GetEmitterTopology", {"emitterRef": {"system": c.ref(SYSTEM), "emitterName": "Sprite"}})
+    value = topology["value"] or {}
+    scripts = {}
+    subuv_inputs = []
+    for key, script in value.items():
+        if isinstance(script, dict) and "modules" in script:
+            scripts[key] = [("%s%s" % (m.get("moduleName"), "" if m.get("enabled", True) else " (disabled)")) for m in script["modules"]]
+            for m in script["modules"]:
+                if "SubUV" in str(m.get("moduleName")):
+                    subuv_inputs += [{"script": key, "module": m.get("moduleName"), "input": i.get("name"), "visible": i.get("bIsVisible"), "editable": i.get("bIsEditable"),
+                                      "dynamic": i.get("bIsDynamic"), "static_switch": i.get("bIsStaticSwitch")} for i in m.get("inputs", [])]
     mode = c.get_input(c.at(SYSTEM, "Sprite", "ParticleUpdateScript", "SubUVAnimation", ["SubUV Animation Mode"]))
     frame = c.get_input(c.at(SYSTEM, "Sprite", "ParticleUpdateScript", "SubUVAnimation", ["Direct Frame Index"]))
-    return {"topology_error": topology["error"], "topology": json.dumps(topology["value"])[:3500], "mode_error": mode["error"], "mode": json.dumps(mode["value"])[:600],
+    return {"topology_error": topology["error"], "scripts": scripts, "subuv_inputs": subuv_inputs, "mode_error": mode["error"], "mode": json.dumps(mode["value"])[:600],
             "frame_error": frame["error"], "frame": json.dumps(frame["value"])[:600]}
 
 
