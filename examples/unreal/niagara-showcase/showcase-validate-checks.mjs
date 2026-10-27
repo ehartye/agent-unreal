@@ -31,6 +31,22 @@ const FATAL = [
   /Critical error/i,
 ];
 const SCRIPT_ERROR = [/LogPython: Error: .*\[showcase_explore\]/, /LogPython: Error: .*\[showcase_build\]/, /Traceback \(most recent call last\)/];
+// Epic's own experimental plugins (NiagaraToolsets reads `unreal.AgentSkill`, ToolsetRegistry reads `unreal.PythonTestRunner`, neither of which this build has) log a traceback from their init_unreal.py at start-up in a game run. It is not
+// the showcase script's: such a block is set aside and recorded as an observation instead of failing the script-exception check.
+const ENGINE_STARTUP_TRACEBACK = /Engine[\/]Plugins[\/].*init_unreal\.py|NiagaraToolsets[\/]Content[\/]Python|has no attribute '(?:AgentSkill|PythonTestRunner)'/;
+export function setAsideEngineTracebacks(text) {
+  const lines = String(text ?? '').split(/\r?\n/), kept = [], aside = [];
+  for (let i = 0; i < lines.length; i += 1) {
+    if (/Traceback \(most recent call last\)/.test(lines[i])) {
+      let end = i + 1;
+      while (end < lines.length && /LogPython: Error:/.test(lines[end]) && !/Traceback \(most recent call last\)/.test(lines[end])) end += 1;
+      const block = lines.slice(i, end);
+      if (block.some((l) => ENGINE_STARTUP_TRACEBACK.test(l))) { aside.push(block.join('\n')); i = end - 1; continue; }
+    }
+    kept.push(lines[i]);
+  }
+  return { text: kept.join('\n'), aside };
+}
 const NIAGARA_PROBLEM = /LogNiagara(?:\w*): (?:Error|Warning)/;
 
 /** Reads the self-test lines out of a log. Lines are split on any line ending; a missing or empty log reads as no lines. */
@@ -110,7 +126,11 @@ export function evaluate({ build, play } = {}) {
   const fatal = [['build', buildLog], ['self-test', playLog]].flatMap(([label, text]) => text.split(/\r?\n/).filter((l) => FATAL.some((p) => p.test(l))).map((l) => `${label}: ${l.trim().slice(0, 140)}`));
   add('no fatal error in the logs', 'neither run logs a fatal error, failed assertion or crash', !!buildLog && !!playLog && fatal.length === 0,
     !buildLog || !playLog ? `log missing (${!buildLog ? 'build' : 'self-test'})` : fatal.length ? fatal.slice(0, 3).join(' | ') : 'build and self-test logs scanned');
-  const scriptErrors = [['build', buildLog], ['self-test', playLog]].flatMap(([label, text]) => text.split(/\r?\n/).filter((l) => SCRIPT_ERROR.some((p) => p.test(l))).map((l) => `${label}: ${l.trim().slice(0, 140)}`));
+  const buildSplit = setAsideEngineTracebacks(buildLog), playSplit = setAsideEngineTracebacks(playLog);
+  const scriptErrors = [['build', buildSplit.text], ['self-test', playSplit.text]].flatMap(([label, text]) => text.split(/\r?\n/).filter((l) => SCRIPT_ERROR.some((p) => p.test(l))).map((l) => `${label}: ${l.trim().slice(0, 140)}`));
+  const engineTracebacks = buildSplit.aside.length + playSplit.aside.length;
+  add('observe: the engine plugin start-up traceback', "recorded, not asserted: tracebacks logged by Epic's engine plugins at start-up (unreal.AgentSkill and unreal.PythonTestRunner missing), set aside from the script-exception check", true,
+    engineTracebacks ? `${engineTracebacks} traceback block(s): build ${buildSplit.aside.length}, self-test ${playSplit.aside.length}` : 'none', true);
   add('no script exception', 'neither script logs an error line or a Python traceback', scriptErrors.length === 0, scriptErrors.length ? scriptErrors.slice(0, 3).join(' | ') : 'no script error lines');
   const niagara = playLog.split(/\r?\n/).filter((l) => NIAGARA_PROBLEM.test(l));
   add('observe: Niagara warnings and errors in the self-test log', 'recorded, not asserted: how many Niagara warning or error lines the run logged and the first one', true,

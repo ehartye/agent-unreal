@@ -136,14 +136,17 @@ export function evaluate(r) {
     keys.includes('/NiagaraFluids/Templates/Gas/2D/Systems/Grid2D_Gas_MovingFire') && !fire.error && JSON.stringify(fireVars) === JSON.stringify(['SimRT']),
     fire.error || `[${(fire.user_variables || []).join(',')}]`);
   const fireEmitters = fire.emitters && typeof fire.emitters === 'object' ? fire.emitters : {};
-  const source = fireEmitters.SourceParticles, grid = fireEmitters.Grid2D_Gas_SmokeFire_Emitter;
-  check('the fire template has a renderer-less source emitter and one sprite emitter',
-    'Two emitters: SourceParticles (no renderer) and Grid2D_Gas_SmokeFire_Emitter (one sprite renderer)',
-    Object.keys(fireEmitters).length === 2 && Boolean(source) && source.renderers.length === 0 && Boolean(grid) && grid.renderers.length === 1
-      && grid.renderers[0] === 'NiagaraSpriteRendererProperties',
-    JSON.stringify(Object.fromEntries(Object.entries(fireEmitters).map(([n, e]) => [n, e.renderers]))));
-  const materials = grid && Array.isArray(grid.materials) ? grid.materials : [];
-  check('the sprite renderer draws M_2D_SmokeFire', 'one translucent unlit material, M_2D_SmokeFire', materials.includes('M_2D_SmokeFire'), materials.join(',') || 'no material names read');
+  const perEmitter = Object.entries(fireEmitters).map(([n, e]) => `${n}: renderers [${(e.renderers || []).join(',')}], materials [${(e.materials || []).join(',')}]${e.topology_error ? ' (topology call refused it)' : ''}`);
+  check('the fire template has the two documented emitters',
+    'Two emitters: SourceParticles and Grid2D_Gas_SmokeFire_Emitter (the renderers each holds are recorded in the detail, not asserted)',
+    JSON.stringify(Object.keys(fireEmitters).sort()) === JSON.stringify(['Grid2D_Gas_SmokeFire_Emitter', 'SourceParticles']),
+    perEmitter.join(' | ') || 'no emitters read');
+  const srcR = (fireEmitters.SourceParticles || {}).renderers || [], gridR = (fireEmitters.Grid2D_Gas_SmokeFire_Emitter || {}).renderers || [];
+  const fireMaterials = [...new Set(Object.values(fireEmitters).flatMap((e) => (Array.isArray(e.materials) ? e.materials : [])))].sort();
+  check('the fire template emitters hold the renderers and materials that were read',
+    'SourceParticles holds one sprite renderer; Grid2D_Gas_SmokeFire_Emitter holds two renderers; the materials they name are M_2D_GasBase_Inst and M_Alpha (not M_2D_SmokeFire)',
+    srcR.length === 1 && srcR[0] === 'NiagaraSpriteRendererProperties' && gridR.length === 2 && JSON.stringify(fireMaterials) === JSON.stringify(['M_2D_GasBase_Inst', 'M_Alpha']),
+    `SourceParticles [${srcR.join(',')}], smoke emitter ${gridR.length} renderer(s); materials ${fireMaterials.join(',') || 'none read'}`);
   const mat = templates.fire_material || {};
   const absent = [...lacking(mat.scalar, FIRE_SCALARS), ...lacking(mat.vector, FIRE_VECTORS)];
   check('M_2D_SmokeFire is translucent and unlit with the documented parameters',

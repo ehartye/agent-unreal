@@ -3,7 +3,7 @@
 // Each test changes one fact and expects the matching check to fail, so the judge cannot pass by accident.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { evaluate, summarize, parseSelftest, STATION_IDS, VORTEX_MODULES, EXPECTED_CHECKS } from './showcase-validate-checks.mjs';
+import { evaluate, summarize, parseSelftest, STATION_IDS, VORTEX_MODULES, EXPECTED_CHECKS, setAsideEngineTracebacks } from './showcase-validate-checks.mjs';
 
 const P = '[2026.10.26-12.00.00:000][  5]LogPython: [showcase_explore]';
 const motion = [
@@ -40,7 +40,7 @@ test('a clean run passes every check', () => {
   const sum = summarize(checks);
   assert.equal(sum.passed, sum.total);
   assert.equal(sum.total, 19);
-  assert.equal(sum.observed, 1);
+  assert.equal(sum.observed, 2);
   assert.equal(EXPECTED_CHECKS, 12);
 });
 
@@ -132,7 +132,7 @@ test('Niagara warnings are recorded, never judged', () => {
   g.play.log = passLog(['LogNiagara: Warning: Failed to compile a thing', 'LogNiagara: Error: another']);
   const checks = evaluate(g);
   assert.deepEqual(checks.filter((c) => !c.pass), []);
-  assert.match(checks.find((c) => c.observe).detail, /2 lines; first: LogNiagara: Warning/);
+  assert.match(checks.find((c) => c.observe && /Niagara warnings/.test(c.name)).detail, /2 lines; first: LogNiagara: Warning/);
 });
 
 test('a failed or incomplete build fails the build checks', () => {
@@ -149,4 +149,15 @@ test('the authored system needs its three modules unless it was reused', () => {
   assert.deepEqual(failing((g) => { g.build.report.steps[0].saved = false; }), ['build: the authored system gets its three modules']);
   assert.deepEqual(failing((g) => { g.build.report.steps[0] = { step: 'vortex', note: 'exists, reused' }; }), []);
   assert.deepEqual(failing((g) => { g.build.report.steps = g.build.report.steps.filter((s) => s.step !== 'vortex'); }), ['build: the authored system gets its three modules']);
+});
+
+test('a start-up traceback from the engine NiagaraToolsets plugin is set aside, a script traceback still fails', () => {
+  const engine = [
+    '[2026.10.27-01.20.21:131][  0]LogPython: Error: Traceback (most recent call last):',
+    '[2026.10.27-01.20.21:131][  0]LogPython: Error:   File "C:/Program Files/Epic Games/UE_5.8/Engine/Plugins/Experimental/Toolsets/NiagaraToolsets/Content/Python/init_unreal.py", line 3, in <module>',
+    "[2026.10.27-01.20.21:131][  0]LogPython: Error: AttributeError: module 'unreal' has no attribute 'AgentSkill'",
+  ];
+  assert.deepEqual(failing((g) => { g.play.log = passLog(engine); }), []);
+  assert.deepEqual(failing((g) => { g.play.log = passLog([...engine, 'LogPython: Error: Traceback (most recent call last):', 'LogPython: Error:   File "showcase_explore.py", line 9', 'LogPython: Error: ValueError: x']); }), ['no script exception']);
+  assert.equal(setAsideEngineTracebacks(engine.join('\n')).aside.length, 1);
 });

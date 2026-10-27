@@ -19,8 +19,8 @@ const templatesReport = () => ({
     Grid2D_Gas_MovingFire: {
       path: '/NiagaraFluids/Templates/Gas/2D/Systems/Grid2D_Gas_MovingFire', user_variables: ['User.SimRT'],
       emitters: {
-        SourceParticles: { renderers: [], materials: [] },
-        Grid2D_Gas_SmokeFire_Emitter: { renderers: ['NiagaraSpriteRendererProperties'], materials: ['M_2D_SmokeFire'] },
+        SourceParticles: { renderers: ['NiagaraSpriteRendererProperties'], materials: ['M_Alpha'] },
+        Grid2D_Gas_SmokeFire_Emitter: { renderers: ['renderer 0', 'renderer 1'], materials: ['M_2D_GasBase_Inst', 'M_Alpha'], topology_error: 'GetEmitterTopology refused the grid emitter' },
       },
     },
   },
@@ -107,9 +107,10 @@ test('each stock-content claim fails when its fact changes', () => {
   assert.deepEqual(failing((r) => { r.templates.stock.Grid2D_Gas_MovingFire.user_variables = []; }),
     ['FountainLightweight exposes no user parameters', 'the moving-fire fluid template ships and its only user parameter is User.SimRT']);
   assert.deepEqual(failing((r) => { r.templates.stock.Grid2D_Gas_MovingFire.user_variables.push('User.DrawBounds'); }), ['the moving-fire fluid template ships and its only user parameter is User.SimRT']);
-  assert.deepEqual(failing((r) => { r.templates.stock.Grid2D_Gas_MovingFire.emitters.SourceParticles.renderers = ['NiagaraSpriteRendererProperties']; }), ['the fire template has a renderer-less source emitter and one sprite emitter']);
-  assert.deepEqual(failing((r) => { r.templates.stock.Grid2D_Gas_MovingFire.emitters.Grid2D_Gas_SmokeFire_Emitter.renderers = ['NiagaraRibbonRendererProperties']; }), ['the fire template has a renderer-less source emitter and one sprite emitter']);
-  assert.deepEqual(failing((r) => { r.templates.stock.Grid2D_Gas_MovingFire.emitters.Grid2D_Gas_SmokeFire_Emitter.materials = ['M_2D_Other']; }), ['the sprite renderer draws M_2D_SmokeFire']);
+  assert.deepEqual(failing((r) => { delete r.templates.stock.Grid2D_Gas_MovingFire.emitters.SourceParticles; }), ['the fire template has the two documented emitters', 'the fire template emitters hold the renderers and materials that were read']);
+  assert.deepEqual(failing((r) => { r.templates.stock.Grid2D_Gas_MovingFire.emitters.Extra = { renderers: [], materials: [] }; }), ['the fire template has the two documented emitters']);
+  assert.deepEqual(failing((r) => { r.templates.stock.Grid2D_Gas_MovingFire.emitters.Grid2D_Gas_SmokeFire_Emitter.materials = ['M_2D_Other']; }), ['the fire template emitters hold the renderers and materials that were read']);
+  assert.deepEqual(failing((r) => { r.templates.stock.Grid2D_Gas_MovingFire.emitters.SourceParticles.renderers = []; }), ['the fire template emitters hold the renderers and materials that were read']);
   assert.deepEqual(failing((r) => { r.templates.fire_material.blend_mode = 'MaterialBlendMode.BLEND_OPAQUE'; }), ['M_2D_SmokeFire is translucent and unlit with the documented parameters']);
   assert.deepEqual(failing((r) => { r.templates.fire_material.scalar = ['Blackbody']; }), ['M_2D_SmokeFire is translucent and unlit with the documented parameters']);
 });

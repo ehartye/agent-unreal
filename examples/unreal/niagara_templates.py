@@ -82,13 +82,30 @@ def inspect_stock(name, package_path):
         for emitter in (call("GetSystemSummary", {"system": system}) or {}).get("emitters", []):
             emitter_name = emitter["emitterName"]
             ref = {"system": system, "emitterName": emitter_name}
-            topology = call("GetEmitterTopology", {"emitterRef": ref}) or {}
-            renderers = sorted(topology.get("renderers") or [], key=lambda r: r.get("rendererIndex", 0))
-            info = {"renderers": [short_class(r.get("rendererClass")) for r in renderers], "materials": []}
-            for index, renderer in enumerate(renderers):
-                data = call("GetRendererData", {"rendererRef": dict(ref, rendererIndex=renderer.get("rendererIndex", index))})
+            info = {"renderers": [], "materials": []}
+            try:
+                topology = call("GetEmitterTopology", {"emitterRef": ref}) or {}
+                renderers = sorted(topology.get("renderers") or [], key=lambda r: r.get("rendererIndex", 0))
+                info["renderers"] = [short_class(r.get("rendererClass")) for r in renderers]
+                indexes = [r.get("rendererIndex", i) for i, r in enumerate(renderers)]
+            except Exception as exc:
+                # A grid emitter has no particle spawn or update script, so the topology call can refuse it: record that
+                # and read the renderers directly by index instead.
+                info["topology_error"] = str(exc)[:200]
+                indexes = list(range(4))
+            for index in indexes:
+                try:
+                    data = call("GetRendererData", {"rendererRef": dict(ref, rendererIndex=index)})
+                except Exception as exc:
+                    if "topology_error" in info:
+                        break                       # past the last renderer
+                    info.setdefault("renderer_errors", []).append(str(exc)[:200])
+                    continue
                 text = json.dumps(data, default=str)
+                if "topology_error" in info:
+                    info["renderers"].append("renderer %d" % index)
                 info["materials"] += sorted(set(re.findall(r"M_[A-Za-z0-9_]+", text)))
+            info["materials"] = sorted(set(info["materials"]))
             out["emitters"][emitter_name] = info
     except Exception as exc:
         out["error"] = str(exc)[:400]
