@@ -51,14 +51,14 @@ def run(expected_level, content_directory, receipt_path):
         raise RuntimeError('Unsaved editor work')
     original_path = list(sys.path)
     temp_base = Path(tempfile.gettempdir()).resolve()
-    directory = Path(tempfile.mkdtemp(prefix='agent-engine-helper-', dir=temp_base)).resolve()
-    if directory.parent != temp_base or not directory.name.startswith('agent-engine-helper-'):
+    directory = Path(tempfile.mkdtemp(prefix='agent-unreal-helper-', dir=temp_base)).resolve()
+    if directory.parent != temp_base or not directory.name.startswith('agent-unreal-helper-'):
         raise RuntimeError('Unexpected fixture directory')
-    name = '_agent_engine_helper_probe_' + uuid.uuid4().hex
+    name = '_agent_unreal_helper_probe_' + uuid.uuid4().hex
     helper = directory / (name + '.py')
     entry = directory / 'probe_entry.py'
     module = None
-    report = {'schema': 'agent-engine-native-helper-probe@1', 'pending': True,
+    report = {'schema': 'agent-unreal-native-helper-probe@1', 'pending': True,
               'world': world.get_path_name(), 'pythonVersion': sys.version,
               'baseline': baseline, 'moduleName': name, 'fixtureDirectory': str(directory),
               'probeSourceSha256': sha(Path(__file__).read_text(encoding='utf-8').encode()),
@@ -116,7 +116,7 @@ def run(expected_level, content_directory, receipt_path):
         sys.path[:] = original_path
         if module is not None and sys.modules.get(name) is module:
             del sys.modules[name]
-        if directory.parent != temp_base or not directory.name.startswith('agent-engine-helper-'):
+        if directory.parent != temp_base or not directory.name.startswith('agent-unreal-helper-'):
             raise RuntimeError('Refusing cleanup outside the owned fixture')
         shutil.rmtree(directory)
         report['cleanup'] = {'pathRestored': sys.path == original_path,
