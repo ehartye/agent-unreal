@@ -2,7 +2,7 @@
 
 Backs [Chaos destruction from C++](../../../skills/unreal-effects/references/unreal-chaos-destruction-native.md). Unreal Engine 5.8, Windows, Visual Studio 2022 Build Tools.
 
-**Status:** Run 2026-10-26 (Windows, Visual Studio 2022 toolset 14.44): 11 of 11 counted checks pass, with the default flags, with `--render`, with `--sizes` and, in a session with no desktop, with `--material project --render`, and the break-event counts are the same in each (below). The first run found two probe faults, fixed here: the ticker handle type in the subsystem (`FTSTicker::FDelegateHandle`, not `FDelegateHandle`), and a spawn height of 5000 cm that let the no-strain control reach the floor and break from the impact (now 100000 cm). Not run: an interactive editor.
+**Status:** Run 2026-10-26 (Windows, Visual Studio 2022 toolset 14.44): 11 of 11 counted checks pass, with the default flags, with `--render`, with `--sizes` and, in a session with no desktop, with `--material project --render`, and the break-event counts are the same in the default and `--material project --render` runs (below); the `--render` and `--sizes` runs were judged 11 of 11 only. The first run found two probe faults, fixed here: the ticker handle type in the subsystem (`FTSTicker::FDelegateHandle`, not `FDelegateHandle`), and a spawn height of 5000 cm that let the no-strain control reach the floor and break from the impact (now 100000 cm). Not run: an interactive editor.
 
 The question: does a collection built from a static mesh with `AppendStaticMesh`, `VoronoiFracture` and the convex hull step break in a running game, how many pieces separate, and does the check fail for a collection that loads, renders and never breaks?
 
@@ -19,7 +19,7 @@ The question: does a collection built from a static mesh with `AppendStaticMesh`
 node examples/unreal/chaos_break/chaos_break.mjs --engine "<UE_5.8 folder>" [--sizes] [--material engine|project] [--render] [--keep] [--compiler <x.y.z>] [--sdk <10.0.n.n>]
 ```
 
-`--sizes` adds the fine-spacing asset. `--material project` builds a project material with the Geometry Collections usage flag; `--render` starts the game with a renderer, offscreen (`-RenderOffScreen`), so the engine's material usage warning can appear (no warning appeared in a null-RHI run, in an offscreen render run with the engine's basic shape material, or in the verbose run with a project material carrying the Geometry Collections usage flag, rendered offscreen; the cause is not established). Exit code 0 when every counted check passes; observations print as INFO and never fail.
+`--sizes` adds the fine-spacing asset. `--material project` builds a project material with the Geometry Collections usage flag; `--render` starts the game with a renderer, offscreen (`-RenderOffScreen`), so the engine's material usage warning can appear (no warning appeared in a null-RHI run, in the verbose run of an offscreen render with the engine's basic shape material, or in the verbose run with a project material carrying the Geometry Collections usage flag, rendered offscreen; the cause is not established). Exit code 0 when every counted check passes; observations print as INFO and never fail.
 
 ## What it checks
 

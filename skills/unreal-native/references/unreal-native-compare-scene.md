@@ -17,7 +17,8 @@ A reusable C++ game mode that sets several ways of doing one thing in a row on a
 ## Adopt it in a native C++ game
 
 - [tested] Copy `AECompare.h` and `AECompare.cpp` into the game module. Add `InputCore` (`AECompare.cpp` uses `EKeys`; an Editor build without it failed to link on an earlier engine build, not repeated on the pinned build), `Json`, `RHI` and `RenderCore` to the module's dependency lists (`Niagara` too if a set spawns Niagara systems, as the example does). The `?game=` class path names that module: `/Script/<Module>.AECompareGameMode`.
-- [general] Enable the plugins your candidates need in the `.uproject` (Niagara is on by default; the Niagara Fluids plugin is not). Engine-plugin content a cooked game loads by path must be cooked: add `+DirectoriesToAlwaysCook=(Path="/Niagara/DefaultAssets/Templates/Systems")` to `Config/DefaultGame.ini`.
+- [tested] Enable the plugins your candidates need in the `.uproject`: Niagara is on by default; Niagara Fluids is not (`niagara_validate`).
+- [general] Engine-plugin content a cooked game loads by path must be cooked: add `+DirectoriesToAlwaysCook=(Path="/Niagara/DefaultAssets/Templates/Systems")` to `Config/DefaultGame.ini`.
 - [general] To compare an authored Niagara system instead of an engine template, create it in the editor project first (the Python routes are in [Niagara in Unreal](../../unreal-effects/references/unreal-niagara.md)), save it under `/Game/FX`, add `+DirectoriesToAlwaysCook=(Path="/Game/FX")` to `Config/DefaultGame.ini` and pass its object path to the Niagara candidate helper. Stateless and stateful systems cost differently, which a row here measures; per-emitter particle counts come from the editor-only simulation cache, not from this packaged harness. This was not run from the example.
 - [tested] Register a set from its own source file, so adding a comparison touches no other file:
 
@@ -39,8 +40,7 @@ static AECompare::FRegistrar MineRegistrar(TEXT("mine"),&MakeMine);
 
 - [tested] `compare.json` holds `scenario` (`compare`), `screenshot` and `screenshot_b` (full paths), `set`, `title`, `engine_version`, `rhi_adapter`, the showcase and stress settings, `frame_time_meaning`, and `candidates[]`: id, label, note, whatever `Describe` added, and `stress` with `copies`, `frames`, `frame_ms_mean`, `frame_ms_p50`, `frame_ms_p95`, `frame_ms_max` and its screenshot.
 - [general] The runner fails unless both showcase PNGs are valid 1920x1080 PNGs (signature and IHDR), the receipt parses and names this scenario and screenshot, and every candidate has at least 10 timed frames and a stress screenshot. Passing proves the artifacts exist and are well formed; look at the images.
-- [tested] `rhi_adapter` carried the GPU adapter name in a receipt.
-- [general] Strip `rhi_adapter` from receipts you publish.
+- [general] `rhi_adapter` carried the GPU adapter name in a receipt (observed once); strip it from receipts you publish.
 
 ## What the frame times mean
 

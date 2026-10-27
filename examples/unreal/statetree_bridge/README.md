@@ -36,7 +36,7 @@ About 70 s to build, 25 to 75 s for the build session and 30 s for the run sessi
 - Python reads the built structure. It cannot set the factory's schema (`Failed to find property 'state_tree_schema_class'`), so `create_asset` returns `None`; states have no add functions; there is no compile class in `unreal`. It can write raw properties (rename a state, append a state to `children`, append an empty node to `tasks`, clear `sub_trees`); `InstancedStruct` has no initializer and the custom task struct is not a Python type.
 - A fresh session loads the saved trees ready to run. On the probe pawn the events are `started`, `enter:Work`, `exit:Work`, `enter:Done`; the counter stops at 3 and the run status stays Running. On the gated pawn the events stay `started`, `enter:Work` while the counter keeps rising.
 - The play session logs no StateTree warnings or errors.
-- The 8 more checks (rows S1 and S2) are in the next section; the 13 above passed again.
+- The 8 more checks (rows S1 and S2) are in the next section; the 13 above also passed.
 
 ## Component schema and a tree parameter (rows S1 and S2)
 

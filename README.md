@@ -17,10 +17,10 @@ repository is marked as tested.
 Early (0.17.1). Eleven skills.
 
 The skills moved here from agent-engine 0.14.0, where their history up to that tag lives; `unreal-import` and its importer scripts followed in 0.2.0. The scripts in `examples/`
-were run on Windows against the engine build pinned in `engine-version.json`, as each README states; other platforms were not run.
+were run on Windows against the engine build pinned in `engine-version.json` unless their README says an earlier build or a hand run; other platforms were not run. The sample scene, the `compare.ps1` example set and the showcase hand runs are earlier-build observations.
 
-[`docs/sample-scene.md`](docs/sample-scene.md) records what Unreal 5.8 and UEFN passed of the cross-engine
-sample scene. Its spec stays in agent-engine, which also holds the Godot, Unity and web builds.
+[`docs/sample-scene.md`](docs/sample-scene.md) records what earlier builds of Unreal and UEFN passed of the cross-engine
+sample scene, none of it verified on the pinned builds. Its spec stays in agent-engine, which also holds the Godot, Unity and web builds.
 
 ## Verification status
 
@@ -116,7 +116,7 @@ placeholders and evidence labels. `unreal-native` passes the strict rules, and `
 structure and size. `node scripts/check.mjs --skill <name>` (repeatable or comma-separated) lints only those skills with the gate's flags and skips the tests; `--no-tests` runs every lint without the test step. The gate runs every step even after a failure and prints all findings. Every folder under `skills/` is linted, and a new skill with no strictness-table entry in `scripts/check.mjs` gets the default rules and fails until it complies or earns an entry. Structural checks do not
 establish that a skill improves an agent's work.
 
-`[tested]` means a run in this repo on the engine pinned in `engine-version.json`; `[documented]` is Epic documentation or engine source; `[general]` is judgement or an observation not reproduced here. A different engine is not blocked; it is at your own risk.
+`[tested]` means checked in this repo: a run on the engine pinned in `engine-version.json`, or for the repo's own scripts a node test (the line says so); `[documented]` is Epic documentation or engine source; `[general]` is judgement or an observation not reproduced here. A different engine is not blocked; it is at your own risk.
 
 ## Install
 

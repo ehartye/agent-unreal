@@ -1,7 +1,7 @@
 # Guarded Unreal project import reuse
 
 - [general] Use this small Node helper for a **final delivered, self-contained GLB** imported into a closed Windows Unreal project. It calls the installed Editor's Interchange importer. It does not implement a new converter or replace agent-meshes `verify-unreal`, which remains scratch import verification. Cook, gameplay, rendering, Unity and Godot are separate acceptance paths.
-- [tested] The host filesystem/process contracts cover output ownership, exact file hashes, missing-output invalidation, source/config/importer changes, force, no-launch reuse, pending-operation refusal, and broken-junction refusal.
+- [tested] (node test, no engine) The host filesystem/process contracts cover output ownership, exact file hashes, missing-output invalidation, source/config/importer changes, force, no-launch reuse, pending-operation refusal, and broken-junction refusal.
 - [general] Native acceptance was recorded on a disposable fixture on an earlier engine build; it was not repeated on the pinned build. Do not generalize it to another engine build or a live project.
 
 ## Configure one exclusively generated destination

@@ -25,9 +25,9 @@ The `perf` block of the [comparison scene](unreal-native-compare-scene.md) recor
 - [general] A headless sampler is probably better off reading wall time than the game and render thread series; a judgement from this one run.
 - [documented] `compare.ps1 -Headless` starts the game with `-nullrhi` (read from the script, not from the run evidence).
 - [documented] The engine assigns `GGameThreadTime` in `FViewport::Draw` (`Engine/Source/Runtime/Engine/Private/UnrealClient.cpp`) and is assigned only there. Why the game and render thread series read 0 in the headless run was not traced.
-- [tested] The receipt carries the GPU adapter name (`rhi_adapter`).
+- [general] The receipt carries the GPU adapter name (`rhi_adapter`; observed once).
 - [general] Strip `rhi_adapter` before publishing a receipt.
-- [tested] The receipt's engine string comes from the running executable and can differ from the install's `Build.version`: a Launcher update can leave `Build.version` stale, and the executable's changelist is the one that matches the binaries.
+- [general] A Launcher update can leave `Build.version` stale while the binaries are newer (observed once; the editor's own `get_engine_version()` printed the stale changelist then).
 
 ## Not shown
 

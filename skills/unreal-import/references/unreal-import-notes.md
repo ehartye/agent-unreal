@@ -27,9 +27,9 @@ Built and run in the Unreal [sample scene](../../../docs/sample-scene.md); scrip
 Observed on an earlier engine build; not repeated on the pinned build. The same scripts from `examples/unreal` passed on an earlier 5.8 build (fox animating, music bed playing, both flipbooks advancing,
 screenshot read by eye) after three changes. Each failed quietly on the first try.
 
-- **The fox split into 48 meshes.** The same `InterchangeManager.import_asset` call that gave one `fox` mesh on
-  an earlier 5.7 build gave 48 skeletal meshes on an earlier 5.8 build, 48 physics assets and one shared skeleton, so "the first SkeletalMesh" was
-  `back_mantle`. Pass a saved pipeline asset with `combine_skeletal_meshes_behavior = BY_SKELETON` through
+- **The fox split into 48 meshes.** On an earlier 5.7 build the same `InterchangeManager.import_asset` call gave
+  one `fox` mesh; on an earlier 5.8 build it gave 48 skeletal meshes, 48 physics assets and one shared skeleton, so
+  "the first SkeletalMesh" was `back_mantle`. Pass a saved pipeline asset with `combine_skeletal_meshes_behavior = BY_SKELETON` through
   `ImportAssetParameters.override_pipelines`, and pick the mesh by name. Python cannot pass a pipeline object there:
   it takes soft asset paths, so create the pipeline with `AssetTools.create_asset`, save it, and pass its path.
   The enum has `BY_SKELETON`, `BY_SKELETON_VISIBLE_ONLY` and `DO_NOT_COMBINE`.
