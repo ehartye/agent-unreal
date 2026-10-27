@@ -2,6 +2,13 @@
 // one per claim in skills/unreal-effects/references/unreal-niagara.md. No Unreal, no files: the tests in
 // niagara-validate.test.mjs feed it canned reports, and niagara_validate.mjs feeds it real ones.
 
+const STOCK_SYSTEMS = '/Niagara/DefaultAssets/Templates/Systems/';
+const DOCUMENTED_STOCK_SYSTEMS = ['AttributeReaderTrails', 'DirectionalBurst', 'DirectionalBurstLightweight', 'FountainLightweight', 'MinimalLightweight', 'RadialBurst', 'SimpleExplosion'];
+const FIRE_SCALARS = ['TemperatureCurve', 'DensityScale', 'TemperatureGain', 'DepthFade', 'Blackbody', 'TemperatureMaximum'];
+const FIRE_VECTORS = ['Density Tint', 'Temperature Tint', 'EnvironmentColor', 'SunColor'];
+const bare = (name) => String(name).replace(/^User\./, '');
+const lacking = (have, want) => want.filter((n) => !(have || []).includes(n));
+
 const AUTHORING_VERBS = /^(add|remove|create|set_emitter|set_renderer)_/;
 
 const emitterCounts = (verify, label) => {
@@ -10,11 +17,13 @@ const emitterCounts = (verify, label) => {
 };
 
 /**
- * @param {{ traps?: any, build?: any, author?: any, authorRerun?: any, verify?: any }} r the five reports
+ * @param {{ traps?: any, build?: any, author?: any, authorRerun?: any, verify?: any, templates?: any, plugins?: any[] }} r the six reports,
+ *   and `plugins`: the engine's plugin descriptors as engine_plugins.mjs reads them (no Unreal process)
  * @returns {{ name: string, claim: string, pass: boolean, detail: string }[]}
  */
 export function evaluate(r) {
   const traps = r.traps || {}, build = r.build || {}, author = r.author || {}, rerun = r.authorRerun || {}, verify = r.verify || {};
+  const templates = r.templates || {}, plugins = Array.isArray(r.plugins) ? r.plugins : [];
   const out = [];
   const check = (name, claim, pass, detail = '') => out.push({ name, claim, pass: Boolean(pass), detail: String(detail) });
 
@@ -84,6 +93,63 @@ export function evaluate(r) {
   const pyMembers = [...(traps.python_emitter_members || []), ...(traps.python_module_members || [])];
   check('NiagaraPythonEmitter and NiagaraPythonModule cannot add anything', 'They inspect emitters and set properties; they cannot author the stack',
     pyMembers.length > 0 && !pyMembers.some((n) => AUTHORING_VERBS.test(n)), pyMembers.join(','));
+
+  // Plugin descriptors: the throwaway project enables Niagara itself, so the default is read from the engine's own .uplugin files
+  const plugin = (name) => plugins.find((p) => p.name === name);
+  const niagara = plugin('Niagara'), fluids = plugin('NiagaraFluids');
+  check('the Niagara plugin is enabled by default', 'Niagara is enabled by default',
+    Boolean(niagara) && niagara.enabledByDefault === true, niagara ? `EnabledByDefault ${niagara.enabledByDefault}` : 'Niagara.uplugin not found');
+  check('the Niagara Fluids plugin is not enabled by default', 'The Niagara Fluids plugin (not enabled by default)',
+    Boolean(fluids) && fluids.enabledByDefault === false, fluids ? `EnabledByDefault ${fluids.enabledByDefault}` : 'NiagaraFluids.uplugin not found');
+
+  // What Python lacks (the traps project enables the toolsets, so absence there is the stronger fact)
+  const libraries = traps.niagara_libraries, editorNames = traps.niagara_editor_utilities_names;
+  check('Python has no Niagara editor library', 'There is no Niagara editor library in editor Python',
+    Array.isArray(libraries) && Array.isArray(editorNames) && editorNames.length === 0 && libraries.includes('NiagaraFunctionLibrary'),
+    `libraries ${(libraries || []).join(',')}; editor-named ${(editorNames || []).join(',') || 'none'}`);
+  check('Python has no NiagaraMeshRendererProperties class', 'There is no NiagaraMeshRendererProperties class in editor Python',
+    traps.mesh_renderer_properties_in_python === false, String(traps.mesh_renderer_properties_in_python));
+  check('the system factory emitter list cannot be set from Python', "The system factory's emitter list cannot be set",
+    traps.factory_emitters_attribute === false && typeof traps.factory_emitters_set_error === 'string' && traps.factory_emitters_set_error !== '',
+    `attribute ${traps.factory_emitters_attribute}; set error: ${String(traps.factory_emitters_set_error).slice(0, 120)}`);
+
+  // Stock content, from niagara_templates.py
+  const keys = Object.keys(templates.templates || {});
+  const stockNames = keys.filter((k) => k.startsWith(STOCK_SYSTEMS)).map((k) => k.slice(STOCK_SYSTEMS.length)).sort();
+  check('the default template systems are the documented seven and none is a fire',
+    'AttributeReaderTrails, DirectionalBurst, DirectionalBurstLightweight, FountainLightweight, MinimalLightweight, RadialBurst, SimpleExplosion; none is a fire',
+    JSON.stringify(stockNames) === JSON.stringify([...DOCUMENTED_STOCK_SYSTEMS].sort()) && !stockNames.some((n) => /fire/i.test(n)),
+    stockNames.join(',') || 'no templates report');
+  const emitterTemplates = Array.isArray(templates.emitter_templates) ? templates.emitter_templates : [];
+  check('the default template emitters are under /Templates/Emitters', 'emitters in /Templates/Emitters/',
+    emitterTemplates.length > 0 && emitterTemplates.every((p) => p.startsWith('/Niagara/DefaultAssets/Templates/Emitters/')), `${emitterTemplates.length} emitters`);
+
+  const stock = templates.stock && typeof templates.stock === 'object' ? templates.stock : {};
+  const fountain = stock.FountainLightweight || {}, fire = stock.Grid2D_Gas_MovingFire || {};
+  const fountainVars = Array.isArray(fountain.user_variables) ? fountain.user_variables : undefined;
+  check('FountainLightweight exposes no user parameters', 'It exposes no user parameters',
+    fountainVars !== undefined && fountainVars.length === 0 && !fountain.error && Array.isArray(fire.user_variables) && fire.user_variables.length > 0,
+    fountain.error || (fountainVars ? `fountain [${fountainVars.join(',')}]; the fire template, as a control, lists [${(fire.user_variables || []).join(',')}]` : String(templates.stock || 'no stock section')));
+  const fireVars = Array.isArray(fire.user_variables) ? fire.user_variables.map(bare) : undefined;
+  check('the moving-fire fluid template ships and its only user parameter is User.SimRT',
+    '/NiagaraFluids/Templates/Gas/2D/Systems/Grid2D_Gas_MovingFire; its only user parameter is User.SimRT',
+    keys.includes('/NiagaraFluids/Templates/Gas/2D/Systems/Grid2D_Gas_MovingFire') && !fire.error && JSON.stringify(fireVars) === JSON.stringify(['SimRT']),
+    fire.error || `[${(fire.user_variables || []).join(',')}]`);
+  const fireEmitters = fire.emitters && typeof fire.emitters === 'object' ? fire.emitters : {};
+  const source = fireEmitters.SourceParticles, grid = fireEmitters.Grid2D_Gas_SmokeFire_Emitter;
+  check('the fire template has a renderer-less source emitter and one sprite emitter',
+    'Two emitters: SourceParticles (no renderer) and Grid2D_Gas_SmokeFire_Emitter (one sprite renderer)',
+    Object.keys(fireEmitters).length === 2 && Boolean(source) && source.renderers.length === 0 && Boolean(grid) && grid.renderers.length === 1
+      && grid.renderers[0] === 'NiagaraSpriteRendererProperties',
+    JSON.stringify(Object.fromEntries(Object.entries(fireEmitters).map(([n, e]) => [n, e.renderers]))));
+  const materials = grid && Array.isArray(grid.materials) ? grid.materials : [];
+  check('the sprite renderer draws M_2D_SmokeFire', 'one translucent unlit material, M_2D_SmokeFire', materials.includes('M_2D_SmokeFire'), materials.join(',') || 'no material names read');
+  const mat = templates.fire_material || {};
+  const absent = [...lacking(mat.scalar, FIRE_SCALARS), ...lacking(mat.vector, FIRE_VECTORS)];
+  check('M_2D_SmokeFire is translucent and unlit with the documented parameters',
+    'translucent unlit; scalar TemperatureCurve, DensityScale, TemperatureGain, DepthFade, Blackbody, TemperatureMaximum; vector Density Tint, Temperature Tint, EnvironmentColor, SunColor',
+    mat.loaded === true && /TRANSLUCENT/i.test(mat.blend_mode || '') && /UNLIT/i.test(mat.shading_model || '') && absent.length === 0,
+    `${mat.blend_mode}, ${mat.shading_model}${absent.length ? `; missing ${absent.join(',')}` : ''}`);
   return out;
 }
 

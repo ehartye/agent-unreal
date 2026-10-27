@@ -27,6 +27,16 @@ The project needs PythonScriptPlugin and EditorScriptingUtilities; `system` also
 
 It also takes `--timeout <ms>` (default 600000). The pure logic (arguments, report shape, failure message) is in `probe-checks.mjs`, and `probe-checks.test.mjs` tests it with no Unreal; the test runs in `node scripts/check.mjs`. The editor runs are a manual lane.
 
+## One command: judge the values
+
+**Status:** Prepared, not yet run on an engine. `probes_validate.mjs` and its judge exist and are tested with canned reports; a later step records the first run.
+
+```text
+node examples/unreal/editor_probes/probes_validate.mjs --engine "C:/Program Files/Epic Games/UE_5.8" [--keep]
+```
+
+It makes a throwaway project in the OS temp folder (PythonScriptPlugin, EditorScriptingUtilities, Niagara, NiagaraToolsets) and builds the fixture with `probes_fixture.py` in a headless commandlet: two copies of the engine cube (one with Nanite saved on), a masked two-sided material with the sprite flag and an `Opacity` parameter, an instance of it, and a Niagara system `NS_Probe` made through the toolset with emitters `Dust` and `Motes` (Motes' `Lifetime Min` written as 2.5, its sprite renderer pointed at the material). It then runs `probe.mjs` for `doc`, `system` and `asset`, and once more from a copy of the launcher beside a `doc_probe.py` that does not parse. `probes-validate-checks.mjs` judges 21 values from the section below, and `probes-validate.test.mjs` runs the judge on canned reports with passing and failing cases; the test is part of `node scripts/check.mjs`, the editor runs are not. Five more values are observations: they are recorded and never fail the run (the template `Lifetime` input, the script stack names, the system's `problems` list, the `nearby` names and the launcher seconds). Exit code 0 when every asserted check passes. A passing run deletes the project; `--keep` (or a failing run) keeps it with the reports in `Saved` and the editor logs in `Saved/Logs`. Takes about five minutes.
+
 ## Opt-in: the launcher under a time limit
 
 **Status:** Prepared and first run 2026-10-26 on Unreal 5.8.2: `probe_timeout.mjs` passed 7 of 7 checks in 108 s with no change to the probe. Rerun on 5.8.4 with the same result (7 of 7). The three probes above and their launcher runs are unchanged.

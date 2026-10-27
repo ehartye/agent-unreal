@@ -8,7 +8,9 @@ What it records, each backing a sentence in the reference:
   - spawn_system_at_location returns None in the commandlet's blank map;
   - the Python surface: NiagaraComponent runtime setters and getters exist; NiagaraSystem has no authoring methods;
     UNiagaraExternalEditUtilities is absent while its NiagaraExt_* data structs are present; NiagaraPythonEmitter and
-    NiagaraPythonModule offer no way to add emitters, renderers or modules.
+    NiagaraPythonModule offer no way to add emitters, renderers or modules;
+  - what the stock-content reference says Python lacks without the toolsets: no Niagara editor library among the Niagara*Library classes,
+    no NiagaraMeshRendererProperties class, and a NiagaraSystemFactoryNew whose emitter list (a C++ member, not a property) cannot be set.
 It must run before anything else touches the asset registry in the same process, so it is its own commandlet run.
 """
 import json
@@ -55,6 +57,20 @@ try:
     report["python_module_members"] = members(unreal.NiagaraPythonModule)
 except Exception:
     report["error"] = traceback.format_exc()[-900:]
+
+try:
+    report["niagara_libraries"] = sorted(n for n in dir(unreal) if n.startswith("Niagara") and "Library" in n)
+    report["niagara_editor_utilities_names"] = sorted(n for n in dir(unreal) if n.startswith("Niagara") and ("EditorLibrary" in n or "EditUtilities" in n or "EditorUtilities" in n))
+    report["mesh_renderer_properties_in_python"] = hasattr(unreal, "NiagaraMeshRendererProperties")
+    factory = unreal.NiagaraSystemFactoryNew()
+    report["factory_emitters_attribute"] = hasattr(factory, "emitters_to_add_to_new_system")
+    try:
+        factory.set_editor_property("emitters_to_add_to_new_system", [])
+        report["factory_emitters_set_error"] = ""
+    except Exception as exc:
+        report["factory_emitters_set_error"] = (str(exc) or type(exc).__name__)[:200]
+except Exception:
+    report["surface_error"] = traceback.format_exc()[-600:]
 
 path = report_path()
 os.makedirs(os.path.dirname(path), exist_ok=True)
