@@ -1,8 +1,8 @@
 # UEFN native Python
 
-Use this to run Python in a running UEFN editor and to avoid its operational traps. Observed in one consuming UEFN project on UEFN 42.30; not reproduced in this repo. Capability discovery and the choice of route are in the [authoring reference](uefn-authoring.md).
+Use this to run Python in a running UEFN editor and to avoid its operational traps. Observed in one consuming UEFN project on an earlier UEFN build; not reproduced in this repo. Capability discovery and the choice of route are in the [authoring reference](uefn-authoring.md).
 
-## Native Python execution in UEFN 42.30
+## Native Python execution in UEFN
 
 [general] **Project files:** `Content/Python/init_unreal.py` ran automatically after reopening
 the project with Python enabled. It waited for the exact island world, then
@@ -85,7 +85,7 @@ hardcode a machine's catalog ID. No arbitrary UEFN `-project=` route was proved.
 
 Native architecture imports exposed reflected coordinates, reversed glyphs and
 omitted UCX collision. The [FBX reference](uefn-native-fbx.md) records the
-42.30 basis, shape/readback recipe, editor traces and uncertain reimport crash;
+observed basis, shape/readback recipe, editor traces and uncertain reimport crash;
 none establishes cooked character or weapon collision.
 
 - [general] Verify the active level and project mount before each connection's first edit.
@@ -96,7 +96,7 @@ none establishes cooked character or weapon collision.
   reject an empty list when intending a scoped save.
 - [general] Property updates may partly succeed before reporting an error. Read back before
   retrying. Use stable labels/IDs; repeated placement should update, not duplicate.
-- [tested] Set Blender's frame rate before importing GLB, and choose a rate that aligns
+- [general] Observed on an earlier UEFN build, not yet verified on the pinned build. Set Blender's frame rate before importing GLB, and choose a rate that aligns
   clip lengths to whole frames, as [glb_to_fbx.py](../../../examples/uefn/glb_to_fbx.py)
   does at 30 fps. Verify transforms, scale and text-facing in a capture.
 - [general] `CaptureViewport` returned an MCP image content block; its JSON image URN was

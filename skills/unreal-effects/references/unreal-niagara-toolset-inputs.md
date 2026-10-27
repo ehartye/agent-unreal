@@ -1,6 +1,6 @@
 # Niagara toolsets: linked, dynamic and hidden inputs
 
-Written for Unreal 5.8.2 and rerun on 5.8.4 with the same result. [`nts_validate.mjs`](../../../examples/unreal/niagara_toolsets/README.md) runs each [tested] line on a throwaway project; [documented] lines name a file under the engine's `Engine` folder. Argument shapes, refs and the plain-input worked example are in [Author Niagara systems from Python](unreal-niagara-toolsets.md); which template emitter covers which effect is in [Niagara templates](unreal-niagara-templates.md).
+Written for Unreal 5.8. [`nts_validate.mjs`](../../../examples/unreal/niagara_toolsets/README.md) runs each [tested] line on a throwaway project; [documented] lines name a file under the engine's `Engine` folder. Argument shapes, refs and the plain-input worked example are in [Author Niagara systems from Python](unreal-niagara-toolsets.md); which template emitter covers which effect is in [Niagara templates](unreal-niagara-templates.md).
 
 ## Replace a linked or dynamic input as a whole
 
@@ -25,6 +25,6 @@ Written for Unreal 5.8.2 and rerun on 5.8.4 with the same result. [`nts_validate
 
 ## Gradient and curve inputs
 
-- [tested] On 5.8.4, `nts_probe.mjs --only gradient` passed 3 of 3: the System toolset registers, a data-interface input whose name mentions a curve or gradient exists, and a gradient or curve input written as a whole reads back changed.
+- [tested] `nts_probe.mjs --only gradient` passed 3 of 3: the System toolset registers, a data-interface input whose name mentions a curve or gradient exists, and a gradient or curve input written as a whole reads back changed.
 
 Local space, `SortOrderHint`, the ribbon material flag and adding a renderer are in [Local space, sort order, ribbon materials and added renderers](unreal-niagara-toolset-renderers.md).

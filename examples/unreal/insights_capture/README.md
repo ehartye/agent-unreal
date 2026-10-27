@@ -1,6 +1,6 @@
 # Capturing an Unreal Insights trace and exporting frame times headless
 
-Backs [Capturing and reading an Unreal Insights trace](../../../skills/unreal-native/references/unreal-native-insights-capture.md). Unreal Engine 5.8.2, Windows. No GPU and no window are needed.
+Backs [Capturing and reading an Unreal Insights trace](../../../skills/unreal-native/references/unreal-native-insights-capture.md). Unreal Engine 5.8, Windows. No GPU and no window are needed.
 
 The question: can an agent capture a short trace with a named region and read per-frame game-thread times out of it without opening the Insights window, and are the numbers the ones the script produced? A script runs a known load on the game thread (3 ms on every tick, plus a 30 ms stall on every 40th tick) inside `Trace.RegionBegin Measured` / `Trace.RegionEnd Measured`, with a bookmark at each end. `UnrealInsights.exe` then exports the region.
 
@@ -35,15 +35,15 @@ TimingInsights.ExportTimers <out>/timers.csv
 TimingInsights.ExporTimers <out>/timers-typo.csv
 ```
 
-## What was observed (12 of 12 checks passed on 5.8.2; one run is 119 full frames)
+## What was observed (11 of 11 checks passed: trace written, trace control, markers issued, headless export, command spelling, statistics columns, region matched, frame times parsed, units agree, injected stalls found, repeat runs agree; one run is 119 full frames)
 
 - The page [Using the Timers and Counters tabs in Unreal Insights](https://dev.epicgames.com/documentation/en-us/unreal-engine/using-the-timers-and-counters-tabs-in-unreal-insights-for-unreal-engine) spells one command `TimingInsights.ExporTimers`. The installed source and the run agree on `TimingInsights.ExportTimers`; the page spelling writes no file.
 - `ExportTimerStatistics` columns: `Name,Count,C.Avg,Incl,I.Min,I.Max,I.Avg,I.Med,Excl,E.Min,E.Max,E.Avg,E.Med`, one row per timer, values in seconds, aggregated per instance. The Insights window shows milliseconds. There is no percentile column.
 - `ExportTimingEvents` writes the requested columns, one row per timer instance, `Duration` in seconds. Of the available columns (`ThreadId, ThreadName, TimerId, TimerName, StartTime, EndTime, Duration, Depth`) the default is `ThreadId,TimerId,StartTime,EndTime,Depth`, which has no duration, so ask for `Duration`.
 - A region with 120 ticks gave 121 `FEngineLoop::Tick` events: the tick running when the region began and the one running when it ended are included whole. The statistics export clips them to the region, so its `Incl` is a little smaller than the sum of the event durations. The checks drop the two edge events.
-- Two runs of the same window: median 3.5 and 3.7 ms, 99th percentile 33.5 and 33.7 ms, maximum 33.7 and 33.8 ms, mean 4.1 and 4.3 ms; both stalls found. `--pause` (20 of 120 ticks paused) left 101 events instead of 121.
+- Two runs of the same window (figures from the first run): median 3.5 and 3.7 ms, 99th percentile 33.5 and 33.7 ms, maximum 33.7 and 33.8 ms, mean 4.1 and 4.3 ms; both stalls found. `--pause` (20 of 120 ticks paused) left 101 events instead of 121.
 - Without `-game` (`--mode editor`) the same load gave a median of 16.70 ms: the editor caps its tick rate, so the frame time is the cap and not the work. `t.MaxFPS 0` set from the script did not lift it.
-- `-traceautostart=0` with `-tracefile=<path>` and no `Trace.File` stays "Not tracing" and writes no file. `Trace.Start` logs that it is deprecated in favour of `Trace.File` and writes `<Project>/Saved/Profiling/<timestamp>.utrace`. Both were observed in ad hoc runs of `insights_probe.py`, not in the runner.
+- `-traceautostart=0` with `-tracefile=<path>` and no `Trace.File` stays "Not tracing" and writes no file. `Trace.Start` logs that it is deprecated in favour of `Trace.File` and writes `<Project>/Saved/Profiling/<timestamp>.utrace`. Both were observed in ad hoc runs of `insights_probe.py`, not in the runner, on an earlier engine build; not repeated on the pinned build.
 - Insights exits 0 when `-region=` matches nothing; the failure is a `TimingInsights: Error:` line in its log, which the runner reads.
 
 ## Not verified
@@ -52,7 +52,7 @@ A rendered frame (`-nullrhi` throws render data away), the `gpu` and `rendercomm
 
 ## Measurement commands (opt-in)
 
-**Status:** Run on 5.8.2 (an installed Launcher build): 8 of 8 counted checks pass, and again on 5.8.4 with the same result. The first run passed 5 of 8: one check asserted a claim the build contradicts (below), and two failed because of the probe's timing (below).
+**Status:** Run (an installed Launcher build): 8 of 8 counted checks pass, and again with the same result. The first run passed 5 of 8: one check asserted a claim the build contradicts (below), and two failed because of the probe's timing (below).
 
 Backs [Measurement conditions and budgets](../../../skills/unreal-quality/references/unreal-quality-measurement.md) and [Profiling tools: what each answers](../../../skills/unreal-quality/references/unreal-quality-profiling-tools.md). The run above captures one trace with the default channels; this phase runs the commands those pages name. It is a separate runner, so the run above is unchanged:
 
@@ -66,7 +66,7 @@ node examples/unreal/insights_capture/insights_stats.mjs --engine "<UE_5.8 folde
 
 What it checks (counted): the stats run finished; `stat help` lists the Unit and FPS commands with their descriptions; a bare `stat` prints the stat help; `stat startfile` and `stat stopfile` are compiled out of the installed build, so no `.uestats` file is written; the memory trace answers Active Alloc; Memory Leaks returns the held array and not the freed one; Limited Lifetime returns the freed one; a trace without the memory channel answers nothing. The two leak checks look for the exact allocation sizes (4 bytes per element), because other engine allocations of several megabytes also start and stay alive inside the window.
 
-Observed on 5.8.4:
+Observed:
 
 - `stat startfile` and `stat stopfile` do nothing. The stat help and a bare `stat` do not list them, the log has no line for them and no `.uestats` file is written. `Engine/Source/Runtime/Core/Private/Stats/StatsCommand.cpp` compiles the `startfile`, `stopfile`, `startfileraw` and `testfile` commands only when `UE_ENABLE_STATS_FILE_DEPRECATED_IN_5_8` is 1, and `Engine/Source/Runtime/Core/Public/Stats/StatsFile.h` defaults it to 0. The check asserts this (they are compiled out), not that a file appears.
 - A memory trace gives each allocation the time of the last memory marker, and the engine writes a marker once per 4096 memory events (`Engine/Source/Runtime/Core/Private/ProfilingDebugging/MemoryTrace.cpp`, `MarkerSamplePeriod`). In the first run the held array was stamped 2.6 ms before the `LeakA` bookmark although it was allocated after it, so Memory Leaks and Limited Lifetime returned 0 rows while Active Alloc returned 3.5 million. The probe now separates every bookmark and allocation by thousands of small allocations; the queries then returned the held array (1200000 bytes) from Memory Leaks and the freed array (6000000 bytes) from Limited Lifetime.

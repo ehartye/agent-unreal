@@ -1,8 +1,8 @@
 # Packaged smoke run for a native game
 
-Observed once in a consuming Unreal 5.8.x project on Windows; the checklist was not run from this repo. [general] A packaged build can boot, run and quietly fall back; replays and automation tests run in the editor build and cannot see a cooking gap. Run this on the staged executable, not the editor, after [staging](unreal-native-packaging-staging.md).
+Observed once in a consuming project on Windows, on an earlier engine build; the checklist was not run from this repo. [general] A packaged build can boot, run and quietly fall back; replays and automation tests run in the editor build and cannot see a cooking gap. Run this on the staged executable, not the editor, after [staging](unreal-native-packaging-staging.md).
 
-- [general] Observed once on 5.8.x: a character loaded a camera asset by path string. Every editor-build replay and test passed; the first rebuilt package booted and ran, its log named the missing asset, a fallback drew the view, and the cook gave no warning. The folder was not referenced by anything, so it was not cooked; the fix is the `DirectoriesToAlwaysCook` entry in [assets loaded only by path](unreal-native-packaging.md#assets-loaded-only-by-path). Whether a soft object path set on a data asset is found by the cook's reference scan is unverified; only the string case was seen.
+- [general] Observed once in a consuming project on an earlier engine build: a character loaded a camera asset by path string. Every editor-build replay and test passed; the first rebuilt package booted and ran, its log named the missing asset, a fallback drew the view, and the cook gave no warning. The folder was not referenced by anything, so it was not cooked; the fix is the `DirectoriesToAlwaysCook` entry in [assets loaded only by path](unreal-native-packaging.md#assets-loaded-only-by-path). Whether a soft object path set on a data asset is found by the cook's reference scan is unverified; only the string case was seen.
 
 ## Checklist
 

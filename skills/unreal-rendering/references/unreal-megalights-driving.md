@@ -35,4 +35,4 @@ Related: [MegaLights](unreal-megalights.md), [Lumen](unreal-lumen.md), [Virtual 
 - [MegaLights](https://dev.epicgames.com/documentation/en-us/unreal-engine/megalights-in-unreal-engine)
 - [Unreal Python 5.7 PostProcessSettings](https://dev.epicgames.com/documentation/en-us/unreal-engine/python-api/class/PostProcessSettings?application_version=5.7)
 - [Unreal Python 5.7 SystemLibrary](https://dev.epicgames.com/documentation/en-us/unreal-engine/python-api/class/SystemLibrary?application_version=5.7)
-- The 5.8.2 install: `Engine/Config/BaseScalability.ini`, `Scene.h`, `LightComponent.h`, `KismetSystemLibrary.cpp`.
+- The installed engine: `Engine/Config/BaseScalability.ini`, `Scene.h`, `LightComponent.h`, `KismetSystemLibrary.cpp`.

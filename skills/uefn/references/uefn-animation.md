@@ -1,6 +1,6 @@
 # UEFN animation and asset migration
 
-Use this for exact Reset, Level Sequences and moving assets from regular Unreal. Observed in one consuming UEFN project on UEFN 42.30; not reproduced in this repo. Setup is in [native Python](uefn-native-python.md).
+Use this for exact Reset, Level Sequences and moving assets from regular Unreal. Observed in one consuming UEFN project on an earlier UEFN build; not reproduced in this repo. Setup is in [native Python](uefn-native-python.md).
 
 ## Animation: preserve the actual control requirement
 

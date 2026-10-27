@@ -2,7 +2,7 @@
 
 Read this when an imported building is mirrored, lettering reverses, UCX hulls
 are missing or circular platforms do not match their collision. Observed in one
-consuming UEFN project on UEFN 42.30; not reproduced in this repo. Re-discover
+consuming UEFN project on an earlier UEFN build; not reproduced in this repo. Re-discover
 native APIs after upgrades.
 
 ## Choose a bounded repair

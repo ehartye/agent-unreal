@@ -1,6 +1,6 @@
 # Unreal profiling: exactness proofs, engine-source facts and tooling traps
 
-Companion to [native profiling](unreal-native-profiling.md) (one consuming Unreal 5.8.2 CL56702186 project on Windows; not reproduced in this repo). The method is in the profiling method (`phaser-verification` skill, agent-engine); measured costs are in [profiling measurements](unreal-native-profiling-measurements.md). Read an engine fact from the installed source before predicting a cost from it. Counts and timings are reported from one project; switch and counter names are placeholders.
+Companion to [native profiling](unreal-native-profiling.md) (one consuming project on an earlier engine build; not reproduced in this repo). The method is in the profiling method (`phaser-verification` skill, agent-engine); measured costs are in [profiling measurements](unreal-native-profiling-measurements.md). Read an engine fact from the installed source before predicting a cost from it. Counts and timings are reported from one project; switch and counter names are placeholders.
 
 ## Exact versus behaviour-changing, and the shadow check
 
@@ -10,7 +10,7 @@ Companion to [native profiling](unreal-native-profiling.md) (one consuming Unrea
 - [general] Non-exact ideas stay prototypes until the owner approves: a scenery animation skip beyond 200 m of the camera (far items hold their last pose) measured 7.23 ms against 7.19 without it in the combined run, no measurable gain. A cached hazard penalty field and a lower AI planning rate change paths and outcomes and were held back for review.
 - [general] Measure fixes alone and combined on the worst scenes. The merged effect transform gave no gain headless; the AI loop hoist gave 3.2 ms; together the exact set took the heaviest scene from 13.06 to 7.18 ms rendered.
 
-## Engine facts read from the installed 5.8.2 source
+## Engine facts read from the installed source
 
 - [documented] `USceneComponent::SetWorldScale3D` converts to a relative scale and calls `SetRelativeScale3D`, which (when the value changed) calls `UpdateComponentToWorld`. That recomputes the component transform, propagates the update to attached children (`PropagateTransformUpdate`) and reaches `UPrimitiveComponent::OnUpdateTransform`, which updates the physics body scale. An unchanged scale is already skipped, so a per-frame scale on many pooled components pays this every time the value moves.
 - [documented] `USceneComponent::OnVisibilityChanged` calls `MarkRenderStateDirty`, and so does `UStaticMeshComponent::SetStaticMesh`. Toggling visibility or meshes per frame marks render state dirty; count toggles (a project counter) instead of assuming they are free.
@@ -24,7 +24,7 @@ Companion to [native profiling](unreal-native-profiling.md) (one consuming Unrea
 - [general] Other editors, commandlets or games on the same machine share CPU, GPU and memory with the run being measured. A receipt recorded beside them can look like a regression in the game. Record the count of other Unreal processes and the free physical memory in every capture and profiling receipt, before the run and again after it, because another editor can start mid-run.
 - [general] Wait a bounded time for the other processes to leave, then refuse to record unless contention is allowed explicitly. A receipt recorded with the allow flag keeps `contended: true`; a budget comparison rejects a contended receipt or one with no block.
 - [tested] Helper: [editor contention](../../../examples/unreal/contention/README.md) (`wait`, `sample`, `verify`, and `waitForQuiet` / `stampReceipt` / `judgeReceipt` for scripts). It lists processes through a hidden PowerShell call, counts `UnrealEditor*.exe`, `UnrealEditor-Cmd.exe` and the game executables you name, leaves out your own process tree and any scratch project you name, and writes `{otherUnrealProcesses, freeMemoryMB, contended, reasons}` into the receipt.
-- [tested] On 5.8.2 a headless `UnrealEditor-Cmd.exe -nullrhi` editor in a near-empty project held about 3 GB of working set, so each one removes that much free memory. The default floor is 4096 MB.
+- [general] Observed on an earlier engine build; not repeated on the pinned build: a headless `UnrealEditor-Cmd.exe -nullrhi` editor in a near-empty project held about 3 GB of working set, so each one removes that much free memory. The default floor is 4096 MB.
 - [tested] A fixed CPU-only workload timed beside one and two idle or busy headless editors moved by a few percent at the median and more in the tail (p95 and max); the helper flagged every such phase. A rendering editor or game also shares the GPU; that case was not measured.
 - [general] Contention from builds, cooks and shader compilation is not detected; run those before the measurement, not during it.
 

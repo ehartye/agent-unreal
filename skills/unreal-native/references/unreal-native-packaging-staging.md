@@ -1,6 +1,6 @@
 # Native Windows packaging: receipt staging, UnrealPak and the packaged runtime proof
 
-Continues [native packaging](unreal-native-packaging.md): the same Unreal 5.8.2 CL56702186 project on Windows, observed there and not reproduced in this repo. A real packaged executable was run; no final-game or visual-parity claim follows.
+Continues [native packaging](unreal-native-packaging.md): the same consuming project on an earlier engine build, observed there and not reproduced in this repo. A real packaged executable was run; no final-game or visual-parity claim follows.
 
 ## Receipt staging and native UnrealPak
 

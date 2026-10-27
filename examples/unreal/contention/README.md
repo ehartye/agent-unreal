@@ -37,7 +37,7 @@ From Node: `await waitForQuiet({ timeoutMs, pollMs, allowContention, excludeComm
 
 - `timeoutMs` 300000 and `pollMs` 5000: a few minutes covers a build or a cook that another session is finishing; a longer wait hides a machine that is never quiet. The wait is a loop on the condition that stops at the first quiet reading or at the deadline, not a fixed sleep.
 - `maxOtherProcesses` 0: the demonstration below moved a CPU-only frame time by only a few percent per added headless editor, and widened the tail more than the median, so the helper does not try to judge how much a neighbour matters. A rendering editor or game shares the GPU and is expected to matter more (not measured here). Raise the limit only when the other process is known to be idle.
-- `minFreeMemoryMB` 4096: a headless `-nullrhi` editor in a near-empty project held about 3 GB of working set when measured on 5.8.2; the floor is one more editor plus about 1 GB of headroom, so starting the measured process does not push the machine into paging.
+- `minFreeMemoryMB` 4096: a headless `-nullrhi` editor in a near-empty project held about 3 GB of working set ([general] measured on an earlier engine build; not repeated on the pinned build); the floor is one more editor plus about 1 GB of headroom, so starting the measured process does not push the machine into paging.
 - Not measured: GPU load from non-Unreal programs, CPU load from builds and shader compilation. Process names are the only signal, so add other executables with `--game-name` if they matter.
 
 ## Demonstration

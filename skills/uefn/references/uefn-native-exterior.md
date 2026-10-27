@@ -1,6 +1,6 @@
 # UEFN native exterior materials and collision
 
-Read for native material pin failures, decorative sky collision or derived LevelBounds changes. Observed in one consuming UEFN project on UEFN 42.30; not reproduced in this repo. These are local observations, not a universal engine contract. Use the [authoring reference](uefn-authoring.md) for connection setup and exact-world guards. An extra dirty ActorFolder package is in [scoped saves](uefn-native-saves.md).
+Read for native material pin failures, decorative sky collision or derived LevelBounds changes. Observed in one consuming UEFN project on an earlier UEFN build; not reproduced in this repo. These are local observations, not a universal engine contract. Use the [authoring reference](uefn-authoring.md) for connection setup and exact-world guards. An extra dirty ActorFolder package is in [scoped saves](uefn-native-saves.md).
 
 ## Choose the work and the evidence
 

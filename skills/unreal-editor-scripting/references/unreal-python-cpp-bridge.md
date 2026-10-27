@@ -1,10 +1,10 @@
 # Bridging editor Python to C++: an editor-only module for what Python does not expose
 
-Target: Unreal Engine 5.8.4, Windows. When an editor Python script needs a function the `unreal` module does not have, add a small editor-only C++ module whose `UFUNCTION(BlueprintCallable)` statics Python then calls. Everything else (materials, water, PCG, placement) stays in Python. The worked example creates a Landscape from a height array; `examples/unreal/landscape_bridge/` holds the module and `landscape_bridge.mjs`, which builds it and ran 19 of 19 checks on 5.8.4. Five brush functions: [Landscape bridge brushes](unreal-landscape-bridge-brushes.md).
+Target: Unreal Engine 5.8, Windows (the build pinned in `engine-version.json`). When an editor Python script needs a function the `unreal` module does not have, add a small editor-only C++ module whose `UFUNCTION(BlueprintCallable)` statics Python then calls. Everything else (materials, water, PCG, placement) stays in Python. The worked example creates a Landscape from a height array; `examples/unreal/landscape_bridge/` holds the module and `landscape_bridge.mjs`, which builds it and ran 19 of 19 checks. Five brush functions: [Landscape bridge brushes](unreal-landscape-bridge-brushes.md).
 
 ## When the bridge is needed
 
-- [tested] On 5.8.4 the members of `unreal.Landscape` and `unreal.LandscapeProxy` whose names contain create, import, export, spawn, new or build were only `landscape_export_heightmap_to_render_target`, `landscape_import_heightmap_from_render_target` and `landscape_import_weightmap_from_render_target`. None creates a Landscape. Check the same way (`dir(unreal.<Class>)`) before writing a bridge.
+- [tested] The members of `unreal.Landscape` and `unreal.LandscapeProxy` whose names contain create, import, export, spawn, new or build were only `landscape_export_heightmap_to_render_target`, `landscape_import_heightmap_from_render_target` and `landscape_import_weightmap_from_render_target`. None creates a Landscape. Check the same way (`dir(unreal.<Class>)`) before writing a bridge.
 - [documented] The C++ route is `ALandscapeProxy::Import`, declared inside `#if WITH_EDITOR` in `Engine/Source/Runtime/Landscape/Classes/LandscapeProxy.h` (line 1418) with `LANDSCAPE_API` and no `UFUNCTION`, so Python cannot reach it. Class page: https://dev.epicgames.com/documentation/en-us/unreal-engine/API/Runtime/Landscape/ALandscapeProxy
 
 ```cpp
@@ -32,7 +32,7 @@ static ALandscape* CreateLandscapeFromHeights(UWorld* World, const TArray<float>
 
 The body converts centimetres to `uint16`, spawns the `ALandscape`, calls `Import`, then `ULandscapeSubsystem::ChangeGridSize` when `IsGridBased()` and the grid size is above 0. It returns null for sizes that do not divide into components. A second static, `GetLandscapeHeightAt`, wraps `GetHeightAtLocation` so Python can read heights back.
 
-- [tested] The module compiled with those four dependencies on the Editor target: 47 to 101 s for the first build in a new project. The `Build.bat` versions come from the installed Visual Studio and SDK (flags: the `unreal-native` skill).
+- [tested] The module compiled with those four dependencies on the Editor target. The `Build.bat` versions come from the installed Visual Studio and SDK (flags: the `unreal-native` skill).
 - [tested] A `.cpp` added to a module that was already built was not compiled until the module's `.Build.cs` was touched.
 - [tested] The example uses no Live Coding or hot reload: each run builds with `Build.bat` while no editor of the project is open, then starts a fresh editor. After a module change, close the editor, rebuild the Editor target, start the editor again.
 
@@ -62,12 +62,12 @@ All three runs used `UnrealEditor.exe -nullrhi -ExecCmds="py <script>"` (no rend
 
 ## A second example: Animation Blueprints
 
-- [tested] `examples/unreal/anim_bridge/` ([README](../../../examples/unreal/anim_bridge/README.md)) uses the same layout for an `AnimBridge` editor module and a `SlotClip` runtime module. Probe Python first: on 5.8.4 `unreal.BlueprintGraphEditor` already places Slot, Sequence Player and Blend Space Player nodes, so the bridge only adds what `dir()` and the action list do not reach: `AddState`, `AddTransition` and `ResampleBlendSpace`. Routes and rules: [Animation Blueprints](../../unreal-animation/references/unreal-animation-blueprints.md).
+- [tested] `examples/unreal/anim_bridge/` ([README](../../../examples/unreal/anim_bridge/README.md)) uses the same layout for an `AnimBridge` editor module and a `SlotClip` runtime module. Probe Python first: `unreal.BlueprintGraphEditor` already places Slot, Sequence Player and Blend Space Player nodes, so the bridge only adds what `dir()` and the action list do not reach: `AddState`, `AddTransition` and `ResampleBlendSpace`. Routes and rules: [Animation Blueprints](../../unreal-animation/references/unreal-animation-blueprints.md).
 - [tested] A bridge function that returns a `USTRUCT` reaches Python as a struct with snake_case fields (`unreal.SlotBridgeResult`), and a `UEdGraph*` parameter accepts the state machine graph Python found with `BlueprintEditorLibrary.list_graphs`.
 
 ## A third example: skeletal mesh material slots
 
-- [tested] `examples/unreal/skeletal_materials/` ([README](../../../examples/unreal/skeletal_materials/README.md)) passed 15 of 15 headless and with `--rendering` on 5.8.4. Python reads a skeletal mesh's slots with `get_editor_property("materials")`; `slots[0].material_interface = m` on the returned array raises nothing and changes nothing, saved or not. The editor-module route is a `UFUNCTION(BlueprintCallable)` static, `USkeletalMaterialsBridgeLibrary::SetSkeletalMeshMaterials(USkeletalMesh*, const TArray<UMaterialInterface*>&)`.
+- [tested] `examples/unreal/skeletal_materials/` ([README](../../../examples/unreal/skeletal_materials/README.md)) passed 15 of 15 headless and with `--rendering`. Python reads a skeletal mesh's slots with `get_editor_property("materials")`; `slots[0].material_interface = m` on the returned array raises nothing and changes nothing, saved or not. The editor-module route is a `UFUNCTION(BlueprintCallable)` static, `USkeletalMaterialsBridgeLibrary::SetSkeletalMeshMaterials(USkeletalMesh*, const TArray<UMaterialInterface*>&)`.
 - [tested] It writes `GetMaterials()[i].MaterialInterface` between `Modify()` and `PostEditChange()`, then `MarkPackageDirty()`. Python calls `unreal.SkeletalMaterialsBridgeLibrary.set_skeletal_mesh_materials(mesh, [materials])`. A wrong count returns False with an error logged and the slots unchanged; one and two slots are set in order, a default save writes the file and a fresh process reads the same materials.
 - [tested] Python-side findings for the same example are in [Unreal import policy](../../unreal-import/references/unreal-import-policy.md).
 

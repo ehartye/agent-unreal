@@ -1,12 +1,12 @@
 # Animation Blueprints from Python, and the C++ bridge for the rest
 
-Backs [Animation Blueprints](../../../skills/unreal-animation/references/unreal-animation-blueprints.md) and the second example in [Bridging editor Python to C++](../../../skills/unreal-editor-scripting/references/unreal-python-cpp-bridge.md). Unreal Engine 5.8.4, Windows, Visual Studio 2022 Build Tools.
+Backs [Animation Blueprints](../../../skills/unreal-animation/references/unreal-animation-blueprints.md) and the second example in [Bridging editor Python to C++](../../../skills/unreal-editor-scripting/references/unreal-python-cpp-bridge.md). Unreal Engine 5.8, Windows, Visual Studio 2022 Build Tools.
 
 The question: how much of an Animation Blueprint can an agent script, and what needs a small editor module? The run answers it with an engine skeleton (`/Engine/EngineMeshes/SkeletalCube`, bones `Bone01` and `Bone02`), two generated animation clips and a Play-In-Editor session that reads a bone back.
 
 ## What Python reaches and what it does not
 
-| Part of the graph | From Python alone on 5.8.4 | Needs C++ |
+| Part of the graph | From Python alone | Needs C++ |
 |---|---|---|
 | Animation Blueprint asset | `AnimBlueprintFactory` with `target_skeleton` and `parent_class` through `AssetTools.create_asset` | no |
 | Slot, Sequence Player, Blend Space Player and State Machine nodes | `BlueprintGraphEditor.get_graph_editor(graph).create_node_from_name("Animation\|Montage\|Slot'DefaultSlot'", Vector2D, [])`; pins linked with `try_create_connection`; `BlueprintEditorLibrary.compile_blueprint` | no |
@@ -32,7 +32,7 @@ node examples/unreal/anim_bridge/anim_bridge.mjs --engine "C:/Program Files/Epic
 
 About 50 s to build and 30 to 40 s per editor session. The editors start hidden with `-nullrhi`.
 
-## What it checks (22 checks, all passed on 5.8.4)
+## What it checks (22 checks, all passed)
 
 - Both modules compile. The classes, `BlueprintGraphEditor` and the state classes are visible in Python. `AnimationGraph.Nodes` is protected for read and write (`Property 'Nodes' ... is protected and cannot be read`).
 - A state machine graph offers no state or transition; `new_object(AnimStateNode)` leaves the graph empty.
@@ -42,7 +42,7 @@ About 50 s to build and 30 to 40 s per editor session. The editors start hidden 
 
 ## Runtime phase (opt-in)
 
-**Status:** Prepared and first run 2026-10-26 on Unreal 5.8.2: `anim_runtime.mjs` passed 13 of 13 checks in 99 s, including the first compile of its two C++ modules, with no change to the probe. Rerun on 5.8.4 with the same result (13 of 13).
+**Status:** Prepared and first run 2026-10-26: `anim_runtime.mjs` passed 13 of 13 checks in 99 s (the first run, including the first compile of its two C++ modules), with no change to the probe. Rerun with the same result (13 of 13).
 
 The item left open above, a state machine played at runtime, 2D Blend Spaces and linked layers, has its own runner, so the run above is unchanged:
 
@@ -61,4 +61,4 @@ Not prepared: montage slot groups other than the default (no API for a slot grou
 
 ## Not verified
 
-The default run's state machine has no content and its transition has no rule. The runtime phase above ran on 5.8.4 (13 of 13): a state machine played at runtime, 2D Blend Spaces and linked layers. Not run: montage slot groups other than the default, and a linked layer whose guest is a separate skeleton.
+The default run's state machine has no content and its transition has no rule. The runtime phase above ran (13 of 13): a state machine played at runtime, 2D Blend Spaces and linked layers. Not run: montage slot groups other than the default, and a linked layer whose guest is a separate skeleton.

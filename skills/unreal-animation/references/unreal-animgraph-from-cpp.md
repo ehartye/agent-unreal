@@ -1,6 +1,6 @@
 # AnimGraph nodes from C++ in Unreal 5.8: the editor bridge, AnimDynamics on a bone chain and Two Bone IK
 
-Target: Unreal Engine 5.8, Windows. Python places the Slot, Sequence Player, Blend Space Player and State Machine nodes ([Animation Blueprints](unreal-animation-blueprints.md)). Every other AnimGraph node, and the states and transitions inside a state machine, needs a small editor C++ module. Names and signatures below were read in the 5.8 install; `[general]` behaviour was observed once in a native C++ project on 5.8.x and has not been run from this repo.
+Target: Unreal Engine 5.8, Windows. Python places the Slot, Sequence Player, Blend Space Player and State Machine nodes ([Animation Blueprints](unreal-animation-blueprints.md)). Every other AnimGraph node, and the states and transitions inside a state machine, needs a small editor C++ module. Names and signatures below were read in the 5.8 install; `[general]` behaviour was observed once in a consuming native C++ project on an earlier engine build and has not been run from this repo.
 
 ## Use it when
 
@@ -12,10 +12,10 @@ Target: Unreal Engine 5.8, Windows. Python places the Slot, Sequence Player, Ble
 - [tested] Python cannot add states or transitions: `AnimationGraph.Nodes` is protected and a state machine graph offers only comment actions. The bridge's `AddState` and `AddTransition` built them.
 - [tested] Python writes a Blend Space (`blend_parameters`, `sample_data`), but the player holds the reference pose until C++ `ResampleData` runs (`BlendSpace.h` line 660); the bridge's `ResampleBlendSpace` fixes it.
 - [tested] Add a node with `FGraphNodeCreator<UAnimGraphNode_Slot>` on the animation graph (`Engine/Source/Runtime/Engine/Classes/EdGraph/EdGraph.h`): `CreateNode()`, set members of the node's `Node` struct, `Finalize()`, connect pose pins with the graph schema's `TryCreateConnection`, then `FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified` and `FKismetEditorUtilities::CompileBlueprint`. The editor module lists `AnimGraph` and `AnimGraphRuntime` as dependencies.
-- [tested] A played state machine, on 5.8.4: `AddState`, `SetStateSequence` (a Sequence Player in a state's graph) and `AddTransitionOnVariable` (a Boolean-variable rule on each transition) build Idle and Walk with no node errors. At runtime the state name reads Idle, Walk, Idle, and the bone pose follows the state.
-- [tested] A 2D Blend Space, on 5.8.4: written from Python and resampled by `ResampleBlendSpace`, it plays one clip at each corner sample and blends all three clips at an interior point.
-- [tested] Linked layers, on 5.8.4: an interface with one layer, a host and a guest that implement it, and a Linked Anim Layer node in the host build and compile clean. At runtime the host swaps to the guest's layer after `LinkAnimClassLayers` and back to its own after `LinkAnimClassLayers` with no class. Not run: a guest on a separate skeleton, and montage slot groups other than the default.
-- Details: [anim_bridge README](../../../examples/unreal/anim_bridge/README.md) (the runtime phase is `anim_runtime.mjs`; 13 of 13 checks passed on 5.8.4).
+- [tested] A played state machine: `AddState`, `SetStateSequence` (a Sequence Player in a state's graph) and `AddTransitionOnVariable` (a Boolean-variable rule on each transition) build Idle and Walk with no node errors. At runtime the state name reads Idle, Walk, Idle, and the bone pose follows the state.
+- [tested] A 2D Blend Space: written from Python and resampled by `ResampleBlendSpace`, it plays one clip at each corner sample and blends all three clips at an interior point.
+- [tested] Linked layers: an interface with one layer, a host and a guest that implement it, and a Linked Anim Layer node in the host build and compile clean. At runtime the host swaps to the guest's layer after `LinkAnimClassLayers` and back to its own after `LinkAnimClassLayers` with no class. Not run: a guest on a separate skeleton, and montage slot groups other than the default.
+- Details: [anim_bridge README](../../../examples/unreal/anim_bridge/README.md) (the runtime phase is `anim_runtime.mjs`; 13 of 13 checks pass).
 
 ## Add a skeletal-control node: AnimDynamics
 
@@ -35,7 +35,7 @@ Settings that mattered:
 - [documented] Joint limits. `FAnimPhys::ConstrainAngularRangeInternal` always adds a twist lock and reads the min/max vectors by the twist axis: with twist Z only the X and Y entries are used and Z is ignored. Make the chain axis the twist axis and put one limit on each other axis.
 - [documented] Planar limit. `FAnimPhys::ConstrainPlanar` keeps a body on the +Z side of the plane (`FAnimPhysPlanarLimit::PlaneTransform`, relative to `DrivingBone` when one is set). Build the plane rotation with `FRotationMatrix::MakeFromZ` from the side the body may be on.
 - [general] Values that held for a five-body ribbon: linear damping 0.25, critical angular damping, swing limits of 30 and 12 degrees, 12 solver iterations before the update and 4 after, acceleration scale 1, velocity scale 2.5 per second. Four variants were replayed with the same scripted input and the smoothest in a jump kept.
-- Not verified: other skeletal-control nodes through the same route, a chain with branches, 5.7, and the cost against a cloth asset ([Cloth Asset from code](unreal-chaos-cloth-from-code.md)).
+- Not verified: other skeletal-control nodes through the same route, a chain with branches, and the cost against a cloth asset ([Cloth Asset from code](unreal-chaos-cloth-from-code.md)).
 
 ## Two Bone IK and foot planting
 

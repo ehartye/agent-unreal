@@ -1,12 +1,12 @@
 # Gameplay Effect components added from C++ on Unreal 5.8: what each one does
 
-Target: Unreal Engine 5.8, Windows. Companion of [GAS in C++](unreal-gas-native-effects.md). Headers are under `Engine/Plugins/Runtime/GameplayAbilities/Source/GameplayAbilities/Public/GameplayEffectComponents/`. `examples/unreal/gas_native/` ran 44 cases over the components the install ships, headless in one throwaway project with no map, on 5.8.4: each case on its own actor, each component with a control (the same effect without it), and the expectation for every case written from engine source before the run (`gas-native-cases.mjs`).
+Target: Unreal Engine 5.8, Windows. Companion of [GAS in C++](unreal-gas-native-effects.md). Headers are under `Engine/Plugins/Runtime/GameplayAbilities/Source/GameplayAbilities/Public/GameplayEffectComponents/`. `examples/unreal/gas_native/` ran 44 cases over the components the install ships, headless in one throwaway project with no map: each case on its own actor, each component with a control (the same effect without it), and the expectation for every case written from engine source before the run (`gas-native-cases.mjs`).
 
 ## Use it when
 
 - [general] An effect needs more than tags and a duration: a gate, a block, an immunity, a follow-up effect, a chance of applying, or a granted ability, all set in code.
 
-## What held on 5.8.4
+## What held
 
 Every asserted case observed what its expectation said. Each bullet names the calls the cases made.
 

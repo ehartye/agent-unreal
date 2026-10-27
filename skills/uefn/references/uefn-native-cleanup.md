@@ -1,10 +1,10 @@
 # UEFN disposable proof asset cleanup
 
-Read this before deleting proof assets an experiment created. Observed in one consuming UEFN project on UEFN 42.30; not reproduced in this repo. Every claim is labelled `[general]` for that reason. Inspect the installed schemas after upgrades; these observations are not an API contract for every project. Use the [authoring reference](uefn-authoring.md) for connection setup.
+Read this before deleting proof assets an experiment created. Observed in one consuming UEFN project on an earlier UEFN build; not reproduced in this repo. Every claim is labelled `[general]` for that reason. Inspect the installed schemas after upgrades; these observations are not an API contract for every project. Use the [authoring reference](uefn-authoring.md) for connection setup.
 
 ## Delete only reconciled disposable proof assets
 
-**[general] Observed on 42.30:** immediate deletion failed while proof assets
+**[general] Observed on an earlier UEFN build:** immediate deletion failed while proof assets
 remained in use. Closing owned asset editors returned zero; Unreal GC alone did
 not release the assets. Python `gc.collect()` followed by
 `unreal.SystemLibrary.collect_garbage()` allowed the remaining disposable

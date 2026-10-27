@@ -2,7 +2,7 @@
 
 Backs [Chaos destruction from C++](../../../skills/unreal-effects/references/unreal-chaos-destruction-native.md). Unreal Engine 5.8, Windows, Visual Studio 2022 Build Tools.
 
-**Status:** Run 2026-10-26 on Unreal 5.8.2 (Windows, Visual Studio 2022 toolset 14.44): 11 of 11 counted checks pass, with the default flags and with `--render`. The first run found two probe faults, fixed here: the ticker handle type in the subsystem (`FTSTicker::FDelegateHandle`, not `FDelegateHandle`), and a spawn height of 5000 cm that let the no-strain control reach the floor and break from the impact (now 100000 cm). Rerun on Unreal 5.8.4 with the same counts: the default flags 11 of 11, and, in a session with no desktop, `--material project --render` 11 of 11, with the same break-event counts as the 5.8.2 run (below). Not rerun on 5.8.4: the plain `--render` without `--material project`. Not run: `--sizes`, an interactive editor.
+**Status:** Run 2026-10-26 (Windows, Visual Studio 2022 toolset 14.44): 11 of 11 counted checks pass, with the default flags, with `--render`, with `--sizes` and, in a session with no desktop, with `--material project --render`, and the break-event counts are the same in the default and `--material project --render` runs (below); the `--render` and `--sizes` runs were judged 11 of 11 only. The first run found two probe faults, fixed here: the ticker handle type in the subsystem (`FTSTicker::FDelegateHandle`, not `FDelegateHandle`), and a spawn height of 5000 cm that let the no-strain control reach the floor and break from the impact (now 100000 cm). Not run: an interactive editor.
 
 The question: does a collection built from a static mesh with `AppendStaticMesh`, `VoronoiFracture` and the convex hull step break in a running game, how many pieces separate, and does the check fail for a collection that loads, renders and never breaks?
 
@@ -19,7 +19,7 @@ The question: does a collection built from a static mesh with `AppendStaticMesh`
 node examples/unreal/chaos_break/chaos_break.mjs --engine "<UE_5.8 folder>" [--sizes] [--material engine|project] [--render] [--keep] [--compiler <x.y.z>] [--sdk <10.0.n.n>]
 ```
 
-`--sizes` adds the fine-spacing asset. `--material project` builds a project material with the Geometry Collections usage flag; `--render` starts the game with a renderer, offscreen (`-RenderOffScreen`), so the engine's material usage warning can appear (no warning appeared in a null-RHI run or in an offscreen render run with the engine's basic shape material on 5.8.2, or in the verbose run with a project material carrying the Geometry Collections usage flag, rendered offscreen, on 5.8.4; the cause is not established). Exit code 0 when every counted check passes; observations print as INFO and never fail.
+`--sizes` adds the fine-spacing asset. `--material project` builds a project material with the Geometry Collections usage flag; `--render` starts the game with a renderer, offscreen (`-RenderOffScreen`), so the engine's material usage warning can appear (no warning appeared in a null-RHI run, in the verbose run of an offscreen render with the engine's basic shape material, or in the verbose run with a project material carrying the Geometry Collections usage flag, rendered offscreen; the cause is not established). Exit code 0 when every counted check passes; observations print as INFO and never fail.
 
 ## What it checks
 
@@ -31,7 +31,7 @@ Observations: the late `SetRestCollection` order, the `update_hulls` and `simdat
 
 Each engine call in the modules carries a `source:` comment with the install-relative header. `UE_LOG` with `Verbose` is compiled out when `NO_LOGGING` is on, and `Engine/Source/Runtime/Core/Public/Misc/Build.h` sets `NO_LOGGING` to `!USE_LOGGING_IN_SHIPPING` for the Test and Shipping configurations (default 0), so the verbose lines this probe reads are not expected in those builds; this probe does not build them.
 
-## Observed on the 5.8.2 run (the default-flag counts were the same on 5.8.4)
+## Observed on the first run (the default-flag counts were the same on the rerun)
 
 - A collection of a 100 cm cube and 24 Voronoi sites: 25 transforms, 24 with one convex hull each (the root cluster has none), a 0.25 MB asset. The strain alone broke all 24 pieces (24 distinct indices) before the crumble call.
 - Without the hull step the same collection logs `GeometryCollection Transform N has no geometry` for transforms 1 to 24 and `tried to create 24 particles with no geometry` naming the actor, and produces no break event. Neither line appears without `LogChaos Verbose`. `-ExecCmds="log LogChaos Verbose"` printed both lines as well.
@@ -39,12 +39,12 @@ Each engine call in the modules carries a `source:` comment with the install-rel
 - `update_hulls` (`UpdateGeometryDependentProperties`) gave 25 hulls (the root too) and broke 24 pieces. `SetRestCollection` after `FinishSpawning` also broke 24 pieces.
 - Spawned 5000 cm up, an untouched collection reached the floor about 2.7 s later and broke from the impact (first break at height 18 cm, moving up at 1018 cm/s); the control must start far above where the run lasts.
 
-## Observed on the 5.8.4 run (`--material project --render`)
+## Observed on the `--material project --render` run
 
 - The same 11 counted checks passed with the same break-event counts: the healthy collection gave 24 break events after the strain and 24 after the crumble; the control gave 0; the no-hull control gave 0 with the log line `tried to create particles with no geometry`; a component with no physics proxy stayed silent; normal verbosity printed nothing and `-LogCmds` turned the lines on.
-- Observations (5.8.4 numbers): late `SetRestCollection` gave 24 break events (24 distinct); the healthy asset was 0.25 MB; `update_hulls` gave 25 transforms with hulls of 25, 0.25 MB, simulation data dirty false and 24 break events; `simdata_first` gave 24 transforms with hulls of 25, 0.23 MB and 0 break events.
+- Observations (numbers from this run): late `SetRestCollection` gave 24 break events (24 distinct); the healthy asset was 0.25 MB; `update_hulls` gave 25 transforms with hulls of 25, 0.25 MB, simulation data dirty false and 24 break events; `simdata_first` gave 24 transforms with hulls of 25, 0.23 MB and 0 break events.
 - The material usage warning did not appear in the verbose run, with a project material that carries the Geometry Collections usage flag. The cause is not established.
 
 ## Not verified
 
-The `fine_spacing` file size (`--sizes`), a radial velocity field (`ApplyPhysicsField`) and its direction, an interactive editor, and any 5.8 version other than 5.8.2 and 5.8.4. The material usage warning did not appear in any run, so what triggers it is not shown. The break-event count equalled the number of leaf pieces here; that it is a good proxy on a larger asset is not shown.
+The `fine_spacing` file size (`--sizes` ran 11 of 11, but this README records no value for it), a radial velocity field (`ApplyPhysicsField`) and its direction, and an interactive editor. The material usage warning did not appear in any run, so what triggers it is not shown. The break-event count equalled the number of leaf pieces here; that it is a good proxy on a larger asset is not shown.

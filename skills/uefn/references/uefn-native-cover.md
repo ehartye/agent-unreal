@@ -1,7 +1,7 @@
 # UEFN fitted moving prop cover
 
 Read this when fitted cover must follow skeletal animation or switch with a
-prop's visible variant. Observed in one consuming UEFN project on UEFN 42.30;
+prop's visible variant. Observed in one consuming UEFN project on an earlier UEFN build;
 not reproduced in this repo. This is a measured recipe, not a collision service
 supplied by this plugin. Inspect the installed APIs and actual source geometry
 in each new project.

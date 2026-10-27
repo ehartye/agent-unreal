@@ -665,6 +665,15 @@ test('the command line prints install-relative forward-slash paths only, results
   assert.match(cli('w.Nothing.Here').stderr, /--root/);
 });
 
+test('an engine that is not the pinned build gets the pin note, as a note only: the result and the exit code are unchanged', async () => {
+  const r = await find('w.Widget.Blend');
+  assert.ok(r.found);
+  assert.equal(r.notes.filter((n) => /^NOTE: not the pinned build/.test(n)).length, 1, r.notes.join(' | '));
+  const cli = spawnSync(process.execPath, [SCRIPT, '--engine', root, 'w.Widget.Blend'], { encoding: 'utf8' });
+  assert.equal(cli.status, 0);
+  assert.match(cli.stderr, /^NOTE: not the pinned build \(pin: \d+\.\d+\.\d+, changelist \d+\); claims in this repo were verified on the pin and results here are at your own risk$/m);
+});
+
 test('the command line exits 2 on bad usage', () => {
   const run2 = (...args) => spawnSync(process.execPath, [SCRIPT, ...args], { encoding: 'utf8' }).status;
   assert.equal(run2('--engine', root), 2, 'no query');

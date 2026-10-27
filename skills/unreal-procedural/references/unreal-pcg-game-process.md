@@ -1,6 +1,6 @@
 # PCG in a running game: what a game process needs that the editor supplies
 
-Target: Unreal Engine 5.8.4, Windows. A game process here is the editor binary started with `-game` ([run modes](../../unreal-editor-scripting/references/unreal-editor-python.md)). A cooked Development game, `GENERATE_AT_RUNTIME` and partitioned runtime generation, run on 5.8.4: [PCG in a cooked game](unreal-pcg-cooked-game.md). `[tested]` marks a result of [`examples/unreal/pcg_game`](../../../examples/unreal/pcg_game/README.md); `[documented]` marks the engine install (paths under `Engine/Plugins/PCG/Source/PCG/` unless they start with `Source/`). Node choice and graph building: [PCG](unreal-pcg.md).
+Target: Unreal Engine 5.8, Windows (the build pinned in `engine-version.json`). A game process here is the editor binary started with `-game` ([run modes](../../unreal-editor-scripting/references/unreal-editor-python.md)). A cooked Development game, `GENERATE_AT_RUNTIME` and partitioned runtime generation, were run too: [PCG in a cooked game](unreal-pcg-cooked-game.md). `[tested]` marks a result of [`examples/unreal/pcg_game`](../../../examples/unreal/pcg_game/README.md); `[documented]` marks the engine install (paths under `Engine/Plugins/PCG/Source/PCG/` unless they start with `Source/`). Node choice and graph building: [PCG](unreal-pcg.md).
 
 ## Before a game process generates
 
@@ -73,9 +73,9 @@ Read points with `unreal.PCGDataFunctionLibrary.get_typed_inputs(collection, unr
 
 ## Not verified
 
-- The material fallback in Play-In-Editor was not run. The cooked game, `GENERATE_AT_RUNTIME` and a partitioned map were run on 5.8.4 and are in [PCG in a cooked game](unreal-pcg-cooked-game.md); the Landscape cache rules above were not repeated in a cooked game. A later Landscape graph gave 0 points in `-nullrhi` editors and 1209 in a rendering editor on 5.8.4, on a Landscape from an editor module; the Perlin counts above come from `-nullrhi` editors on 5.8.4 with a copied engine sample Landscape. The cause of the difference is not isolated ([World Partition Landscape](unreal-world-partition-landscape.md)).
+- The material fallback in Play-In-Editor was not run. The cooked game, `GENERATE_AT_RUNTIME` and a partitioned map were run and are in [PCG in a cooked game](unreal-pcg-cooked-game.md); the Landscape cache rules above were not repeated in a cooked game. A later Landscape graph gave 0 points in `-nullrhi` editors and 1209 in a rendering editor, on a Landscape from an editor module; the Perlin counts above come from `-nullrhi` editors with a copied engine sample Landscape. The cause of the difference is not isolated ([World Partition Landscape](unreal-world-partition-landscape.md)).
 
 ## Sources
 
 - Epic: [Using PCG Generation Modes](https://dev.epicgames.com/documentation/en-us/unreal-engine/using-pcg-generation-modes-in-unreal-engine).
-- The PCG plugin and Engine sources named above, UE 5.8.2.
+- The PCG plugin and Engine sources named above, read in the installed engine.

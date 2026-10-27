@@ -1,6 +1,6 @@
 # Editor probes: read back what was saved
 
-Three small editor-Python scripts and a headless launcher. Each script reads something the editor holds and writes one JSON report, so a build is judged by what was saved and not by what the log said. They back the "Read back what was saved" step in [Editor Python](../../../skills/unreal-editor-scripting/references/unreal-editor-python.md). Unreal Engine 5.8.2, Windows.
+Three small editor-Python scripts and a headless launcher. Each script reads something the editor holds and writes one JSON report, so a build is judged by what was saved and not by what the log said. They back the "Read back what was saved" step in [Editor Python](../../../skills/unreal-editor-scripting/references/unreal-editor-python.md). Unreal Engine 5.8, Windows.
 
 | Probe | Script | Input (environment variable) | Use it |
 |---|---|---|---|
@@ -27,9 +27,19 @@ The project needs PythonScriptPlugin and EditorScriptingUtilities; `system` also
 
 It also takes `--timeout <ms>` (default 600000). The pure logic (arguments, report shape, failure message) is in `probe-checks.mjs`, and `probe-checks.test.mjs` tests it with no Unreal; the test runs in `node scripts/check.mjs`. The editor runs are a manual lane.
 
+## One command: judge the values
+
+**Status:** Run: `probes_validate.mjs` passed 21 of 21 asserted checks and recorded 5 observations on its first run (70 s). Its judge is also tested with canned reports.
+
+```text
+node examples/unreal/editor_probes/probes_validate.mjs --engine "C:/Program Files/Epic Games/UE_5.8" [--keep]
+```
+
+It makes a throwaway project in the OS temp folder (PythonScriptPlugin, EditorScriptingUtilities, Niagara, NiagaraToolsets) and builds the fixture with `probes_fixture.py` in a headless commandlet: two copies of the engine cube (one with Nanite saved on), a masked two-sided material with the sprite flag and an `Opacity` parameter, an instance of it, and a Niagara system `NS_Probe` made through the toolset with emitters `Dust` and `Motes` (Motes' `Lifetime Min` written as 2.5, its sprite renderer pointed at the material). It then runs `probe.mjs` for `doc`, `system` and `asset`, and once more from a copy of the launcher beside a `doc_probe.py` that does not parse. `probes-validate-checks.mjs` judges 21 values from the section below, and `probes-validate.test.mjs` runs the judge on canned reports with passing and failing cases; the test is part of `node scripts/check.mjs`, the editor runs are not. Five more values are observations: they are recorded and never fail the run (the template `Lifetime` input, the script stack names, the system's `problems` list, the `nearby` names and the launcher seconds). Exit code 0 when every asserted check passes. A passing run deletes the project; `--keep` (or a failing run) keeps it with the reports in `Saved` and the editor logs in `Saved/Logs`. Takes about five minutes.
+
 ## Opt-in: the launcher under a time limit
 
-**Status:** Prepared and first run 2026-10-26 on Unreal 5.8.2: `probe_timeout.mjs` passed 7 of 7 checks in 108 s with no change to the probe. Rerun on 5.8.4 with the same result (7 of 7). The three probes above and their launcher runs are unchanged.
+**Status:** Prepared and first run 2026-10-26: `probe_timeout.mjs` passed 7 of 7 checks in 108 s (the first run) with no change to the probe. Rerun with the same result (7 of 7). The three probes above and their launcher runs are unchanged.
 
 ```text
 node examples/unreal/editor_probes/probe_timeout.mjs --engine "C:/Program Files/Epic Games/UE_5.8" [--timeout-ms 60000] [--keep]
@@ -52,7 +62,7 @@ One object keyed by each name you asked for. Each entry has `status`: `found`, `
 - `system`: `summary`, `system_data`, `emitters` (each with its summary, property values, module names per script stack and renderer property values), `modules` (key `Emitter:Script:Module`, `inputs` as the toolset returns them) and `problems`, the errors behind any `"unavailable"` part.
 - `asset`: by class. `StaticMesh`: `material_slots`, `bounds`, `nanite_enabled`. `Material`: `blend_mode`, `shading_model`, `two_sided`, `used_with_nanite`, `used_with_niagara_sprites`, `used_with_niagara_ribbons`, `used_with_niagara_mesh_particles`. `MaterialInstanceConstant`: `parent`, `scalar_parameters`. Other classes are `unavailable`.
 
-## What a run showed (Unreal 5.8.2, throwaway project)
+## What a run showed (throwaway project)
 
 - Each launcher run took 14 to 18 s once the editor had started once (the first took about 60 to 80 s) and the editor exited by itself with code 0.
 - `doc`: the docstring of `GeometryScript_Primitives.append_disc` begins `X.append_disc(target_mesh, primitive_options, transform, radius=50.000000, angle_steps=16, ...) -> DynamicMesh` and lists each parameter with its type. `EditorAssetLibrary.save_asset` begins `X.save_asset(asset_to_save, only_if_is_dirty=True) -> bool`. The class docstring of `EditorAssetLibrary` is a description with no signature. `EditorAssetLibrary.save_assets` is `missing` and `nearby` names `save_asset`.

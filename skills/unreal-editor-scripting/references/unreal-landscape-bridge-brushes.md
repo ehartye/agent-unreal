@@ -1,6 +1,6 @@
 # Landscape bridge brushes: attach a Landmass brush from Python
 
-Target: Unreal Engine 5.8.4, Windows. Five more statics on the `LandscapeBridge` module of [Python to C++ bridge](unreal-python-cpp-bridge.md). `[tested]` marks a result of [`examples/unreal/landscape_bridge`](../../../examples/unreal/landscape_bridge/README.md) (`landscape_world.mjs`): one throwaway project, one Landscape from the bridge (505 by 505 vertices, 4 by 4 components, one default edit layer named `Layer`), a `-nullrhi` editor run and a `-RenderOffScreen` run. `[documented]` marks the engine install. What attaching showed for Landmass, including heights: [Landmass](../../unreal-procedural/references/unreal-landmass.md).
+Target: Unreal Engine 5.8, Windows (the build pinned in `engine-version.json`). Five more statics on the `LandscapeBridge` module of [Python to C++ bridge](unreal-python-cpp-bridge.md). `[tested]` marks a result of [`examples/unreal/landscape_bridge`](../../../examples/unreal/landscape_bridge/README.md) (`landscape_world.mjs`): one throwaway project, one Landscape from the bridge (505 by 505 vertices, 4 by 4 components, one default edit layer named `Layer`), a `-nullrhi` editor run and a `-RenderOffScreen` run. `[documented]` marks the engine install. What attaching showed for Landmass, including heights: [Landmass](../../unreal-procedural/references/unreal-landmass.md).
 
 ## Why a bridge function
 
@@ -23,7 +23,7 @@ The parameters are `ALandscape*` and `ALandscapeBlueprintBrushBase*`.
 
 ## What the runs showed
 
-- [tested] The module compiled with the five functions in 36 s on the Editor target, with the four dependencies of the original bridge.
+- [tested] The module compiled with the five functions on the Editor target, with the four dependencies of the original bridge.
 - [tested] Before any attach the manager read layer index -1, brush counts `[0]` and owner None. `attach_brush_to_layer(landscape, 0, manager)` returned True, layer 0 then held 1 brush and the brush owner was the Landscape; `detach_brush` returned True and the manager read -1, `[0]` and None again. Both modes.
 - [tested] Python's `get_landscape()` printed the written Landscape after a write of `detail_panel_landscape` while the manager was on no layer.
 - [general] Read attachment through `get_brush_layer_index` or the layer count, not `get_landscape()` alone.

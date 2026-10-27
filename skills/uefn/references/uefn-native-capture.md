@@ -1,6 +1,6 @@
 # UEFN editor and client capture
 
-Read this when viewport screenshots stall or a Fortnite client window must be captured. Observed in one consuming UEFN project on UEFN 42.30; not reproduced in this repo. Every claim is labelled `[general]` for that reason. Inspect the installed schemas after upgrades; these observations are not an API contract for every project. Use the [authoring reference](uefn-authoring.md) for connection setup.
+Read this when viewport screenshots stall or a Fortnite client window must be captured. Observed in one consuming UEFN project on an earlier UEFN build; not reproduced in this repo. Every claim is labelled `[general]` for that reason. Inspect the installed schemas after upgrades; these observations are not an API contract for every project. Use the [authoring reference](uefn-authoring.md) for connection setup.
 
 ## Bounded editor screenshots when viewport capture stalls
 

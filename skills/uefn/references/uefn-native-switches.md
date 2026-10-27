@@ -1,10 +1,10 @@
 # UEFN native Button switches
 
-Read this when a native Fortnite Button must be oriented, compacted or retired. Observed in one consuming UEFN project on UEFN 42.30; not reproduced in this repo. Every claim is labelled `[general]` for that reason. Inspect the installed schemas after upgrades; these observations are not an API contract for every project. Use the [authoring reference](uefn-authoring.md) for connection setup.
+Read this when a native Fortnite Button must be oriented, compacted or retired. Observed in one consuming UEFN project on an earlier UEFN build; not reproduced in this repo. Every claim is labelled `[general]` for that reason. Inspect the installed schemas after upgrades; these observations are not an API contract for every project. Use the [authoring reference](uefn-authoring.md) for connection setup.
 
 ## Name rotation axes and check the visible component
 
-**[general] Observed on UEFN 42.30:** `unreal.Rotator(0, 90, 0)` produced
+**[general] Observed on an earlier UEFN build:** `unreal.Rotator(0, 90, 0)` produced
 `pitch=90, yaw=0, roll=0` in the installed native Python API. A repair that
 treated the middle argument as yaw left some switches lying flat and others
 upside down. Do not infer this constructor's positional order from a displayed
@@ -58,7 +58,7 @@ independent native readback. A visible mesh about 45.94 cm tall became about
 4.59 cm. Other components expanded actor bounds to 128 cm; those bounds did not
 measure the visible switch.
 
-**[general] Button component reconstruction (42.30):** a nested MCP write such as
+**[general] Button component reconstruction (earlier UEFN build):** a nested MCP write such as
 `{"relativeScale3D":{"x":0.1,"y":0.1,"z":0.1}}` returned true but changed
 only the first supplied axis on the native Fortnite Button's `ButtonMesh`.
 Fresh unequal-axis fixtures reproduced this; changing JSON member order changed

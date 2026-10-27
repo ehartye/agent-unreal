@@ -1,6 +1,6 @@
 # Native material cook and UV validation
 
-Observed in one consuming Unreal 5.8.2 CL56702186 project on Windows; not reproduced in this repo. Preserve failed native logs alongside successful receipts; saved graph assets and process exit codes alone do not establish usable runtime shaders.
+Observed in one consuming project on an earlier engine build; not reproduced in this repo. Preserve failed native logs alongside successful receipts; saved graph assets and process exit codes alone do not establish usable runtime shaders.
 
 ## A zero-exit cook can substitute DefaultMaterial
 

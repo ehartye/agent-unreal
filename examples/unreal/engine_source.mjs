@@ -32,7 +32,7 @@ import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { readEngineVersion } from './engine-version.mjs';
+import { readEngineVersion, readPin, pinNote } from './engine-version.mjs';
 
 export const DEFAULT_ROOTS = ['Engine/Source/Runtime', 'Engine/Source/Editor', 'Engine/Plugins/FX', 'Engine/Plugins/Runtime', 'Engine/Plugins/Experimental'];
 // Generated copies (Intermediate), build output, vendored libraries and assets. Folders named Resources or Documentation are not on
@@ -546,13 +546,14 @@ function normaliseRoot(engineDir, root) {
   return rel;
 }
 
-/** The install's version for the summary line, plus warnings when the version files disagree with the editor executable. */
+/** The install's version for the summary line, plus the warnings when the version files disagree with the editor executable and the pin note when it is not the pinned build. */
 function engineVersion(engineDir) {
   const info = readEngineVersion(engineDir);
-  if (info.major === null && info.changelist === null) return { text: null, warnings: [] };
+  const note = pinNote(info, readPin());
+  if (info.major === null && info.changelist === null) return { text: null, warnings: [], pinNote: note };
   const numbers = info.major === null ? 'version unreadable' : `${info.major}.${info.minor}.${info.patch}`;
   const stale = info.warnings.length > 0;
-  return { text: `${numbers}${stale ? ' (version file)' : ''} (CL ${info.changelist ?? 'unknown'}${stale ? ', editor executable' : ''})`, warnings: info.warnings };
+  return { text: `${numbers}${stale ? ' (version file)' : ''} (CL ${info.changelist ?? 'unknown'}${stale ? ', editor executable' : ''})`, warnings: info.warnings, pinNote: note };
 }
 
 function nearestUplugin(engineDir, buildRel) {
@@ -677,6 +678,7 @@ export async function run({ engine, query, kind = 'auto', roots = [], max, concu
       + 'Pass --root <folder under Engine> (for example --root Engine/Plugins/PCG) to search another folder, or one of the skipped folders itself.';
   const version = engineVersion(engineDir);
   notes.push(...version.warnings.map((w) => `WARNING: ${w}`));
+  if (version.pinNote) notes.push(version.pinNote);
   return { kind: chosen, query, found, results, more, notes, roots: { searched: walked.present, absent: walked.absent }, miss, stats, engineVersion: version.text };
 }
 

@@ -1,6 +1,6 @@
 # C++ automation test, run headless
 
-Backs [Writing and running a C++ automation test](../../../skills/unreal-native/references/unreal-native-automation-tests.md). Unreal Engine 5.8.4, Windows, Visual Studio 2022 Build Tools.
+Backs [Writing and running a C++ automation test](../../../skills/unreal-native/references/unreal-native-automation-tests.md). Unreal Engine 5.8, Windows, Visual Studio 2022 Build Tools.
 
 ## Files
 
@@ -18,7 +18,7 @@ node examples/unreal/automation_test/automation_report.mjs <report folder>/index
 
 The runner takes about three to five minutes. Both engine binaries start hidden with `-nullrhi`.
 
-## What it checks (9 checks, all passed on 5.8.4)
+## What it checks (9 checks, all passed)
 
 - The test module compiles; the removed `EAutomationTestFlags::Type` style, a missing filter flag and a missing context flag are rejected with the messages quoted in the reference.
 - `UnrealEditor-Cmd.exe -ExecCmds="Automation RunTests AgentUnrealProbe.Passing; Quit"` writes a report with `succeeded: 1`; the process exits 0.
@@ -28,7 +28,7 @@ The runner takes about three to five minutes. Both engine binaries start hidden 
 
 ## Reference commands (opt-in)
 
-**Status:** Prepared and first run 2026-10-26 on Unreal 5.8.2: `automation_reference.mjs` passed 7 of 7 checks in 152 s with no change to the probe; `headless_routes.mjs` reads the install and ran without an engine. Rerun on 5.8.4 with the same result (7 of 7); `headless_routes.mjs` also ran there.
+**Status:** Prepared and first run 2026-10-26: `automation_reference.mjs` passed 7 of 7 checks in 152 s (the first run) with no change to the probe; `headless_routes.mjs` reads the install and ran without an engine. Rerun with the same result (7 of 7); `headless_routes.mjs` also ran there.
 
 Backs [Headless runs, reports and lanes](../../../skills/unreal-quality/references/unreal-quality-lanes.md). The run above uses `Automation RunTests` with a space after the semicolon; this phase uses the command shape the lanes reference gives, so a reader can paste it:
 
@@ -39,6 +39,6 @@ node examples/unreal/automation_test/headless_routes.mjs --engine "<UE_5.8 folde
 
 - `automation_reference.mjs` builds the same `AutomationProbe` module and runs `UnrealEditor-Cmd.exe <project> -Unattended -NullRHI -ExecCmds="Automation RunTest <filter>;Quit" -ReportExportPath=<dir>` for the passing and the failing test, then a `Group:<Name>` run for two groups defined in the project's `DefaultEngine.ini` (section `/Script/AutomationController.AutomationControllerSettings`, as the engine source declares it), a group that does not exist, and a `+ExcludeTest` run (section `AutomationTestExcludelist`; the exclusion is written last because it would otherwise skip the failing test in every earlier run). The Data Validation commandlet (`-run=DataValidation`) runs once as an observation: a project with no assets gives it nothing to fail on.
 - `automation-reference-checks.mjs` judges the runs: the report through `automation_report.mjs`, the log lines `Test Started.`, `Test Completed. Result={...}` and `**** TEST COMPLETE. EXIT CODE: <n> ****` (formats from the engine source), the process exit code, the tests a group selects, the `No matching group named` error, and a skipped test with its reason. `automation-reference.test.mjs` tests it with hand-built reports (it runs in `node scripts/check.mjs`). The skipped-test report shape is an assumption until the first run.
-- `headless_routes.mjs` reads an install and says whether a headless route exists for the commands that are not an Automation run. Low-Level Tests: `RunUAT BuildGraph -Script="Engine/Build/LowLevelTests.xml"` needs that script and the generated `Engine/Build/LowLevelTests` metadata folder; the 5.8.2 installed (Launcher) build read here has `RunUAT.bat`, the LowLevelTests AutomationTool script binaries and the `LowLevelTestsRunner` module source, but neither the script nor the metadata folder, so the command needs a source-built engine. Content tools: the Asset Manager editor module registers five console commands (`AssetManager.AssetAudit`, `FindDepChain`, `FindDepClasses`, `DumpAssetRegistry`, `DumpAssetDependencies`), only when the editor is not running a commandlet; none opens or dumps the Reference Viewer or Size Map, so those are editor UI only, and `AssetManager.AssetAudit` logs statistics rather than driving the Asset Audit window or its CSV export. Its node test runs in the merge lane.
+- `headless_routes.mjs` reads an install and says whether a headless route exists for the commands that are not an Automation run. Low-Level Tests: `RunUAT BuildGraph -Script="Engine/Build/LowLevelTests.xml"` needs that script and the generated `Engine/Build/LowLevelTests` metadata folder; the installed (Launcher) build read here has `RunUAT.bat`, the LowLevelTests AutomationTool script binaries and the `LowLevelTestsRunner` module source, but neither the script nor the metadata folder, so the command needs a source-built engine. Content tools: the Asset Manager editor module registers five console commands (`AssetManager.AssetAudit`, `FindDepChain`, `FindDepClasses`, `DumpAssetRegistry`, `DumpAssetDependencies`), only when the editor is not running a commandlet; none opens or dumps the Reference Viewer or Size Map, so those are editor UI only, and `AssetManager.AssetAudit` logs statistics rather than driving the Asset Audit window or its CSV export. Its node test runs in the merge lane.
 
 Not prepared: a Low-Level Tests run, a Reference Viewer, Size Map or Audit Assets capture, and a failing Data Validation run (it needs a validator class).

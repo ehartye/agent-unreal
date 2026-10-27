@@ -1,6 +1,6 @@
 # Profiling measurements: ablation, per-item costs and fix results from one native game
 
-The numbers behind the method in [native profiling](unreal-native-profiling.md), from one consuming Unreal **5.8.2 CL56702186** project on Windows (packaged Development build, 1920x1080 for rendered runs); not reproduced in this repo. Every number is from one project and some are interim; use them to see the method, not as targets. Route, scene and switch names are placeholders. Exactness proofs, engine-source facts and tooling traps: [profiling facts](unreal-native-profiling-facts.md).
+The numbers behind the method in [native profiling](unreal-native-profiling.md), from one consuming project on an earlier engine build (packaged Development build, 1920x1080 for rendered runs); not reproduced in this repo. Every number is from one project and some are interim; use them to see the method, not as targets. Route, scene and switch names are placeholders. Exactness proofs, engine-source facts and tooling traps: [profiling facts](unreal-native-profiling-facts.md).
 
 ## What the ablation showed (heaviest scene, headless, four repeats each)
 

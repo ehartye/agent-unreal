@@ -1,6 +1,6 @@
 # Niagara: generated assets, a flipbook, a mesh and a frame parameter
 
-Written for Unreal 5.8. A [tested] line ran in [`nts_probe.mjs`](../../../examples/unreal/niagara_toolsets/README.md) (`--only wire` passed 7 of 8 checks with the built-in cube, 4 of 8 on the first run; `--only frame` passed 3 of 5) on a throwaway project: it shows one project and one scene, not a general rule. The probes were rerun on 5.8.4 with the same counts, the same two `frame` checks and the same `wire` check failing; the rerun used a generated stand-in atlas of the same grid, so the pixel counts and index readings below are from the first run. A [documented] line names Epic's documentation or a file under the engine's `Engine` folder. Call shapes are in [Author Niagara systems from Python](unreal-niagara-toolsets.md); the rest of the Niagara routes are in [Niagara](unreal-niagara.md).
+Written for Unreal 5.8. A [tested] line ran in [`nts_probe.mjs`](../../../examples/unreal/niagara_toolsets/README.md) (`--only wire` passed 7 of 8 checks with the built-in cube, 4 of 8 on the first run; `--only frame` passed 3 of 5) on a throwaway project: it shows one project and one scene, not a general rule. The probes were rerun with the same counts, the same two `frame` checks and the same `wire` check failing; the rerun used a generated stand-in atlas of the same grid, so the pixel counts and index readings below are from the first run. A [documented] line names Epic's documentation or a file under the engine's `Engine` folder. Call shapes are in [Author Niagara systems from Python](unreal-niagara-toolsets.md); the rest of the Niagara routes are in [Niagara](unreal-niagara.md).
 
 ## Sprite atlas to a flipbook
 
@@ -12,16 +12,17 @@ Written for Unreal 5.8. A [tested] line ran in [`nts_probe.mjs`](../../../exampl
 
 - [tested] The build worked every time: `AddUserVariables` added and `GetUserVariables` listed `User.FrameIndex` (float); SubUV Animation Mode was set to Direct Index without error; `SetStackInputData` linked Direct Frame Index, read back as `NiagaraExt_StackInputData_Linked` naming `User.FrameIndex`. The saved asset, re-read in a new process, showed the mode `Direct Index` (a visible, editable static switch) and the Linked value, and `GetSystemCompileState` read `UpToDate`.
 - [tested] The link did not drive the frame. `set_variable_float` on `User.FrameIndex` to 2, then 9 (30 frames cached each): `Particles.SubImageIndex` read 3.82 and 5.86 (two runs) at 2 and 11.49 and 13.5 at 9. Particle values in one cache differed from each other by about 1.0 (7.67, 8.67, 11.49, 1.0), which is age-driven, and the numbers varied from run to run. The screenshots at 2 and 9 were byte-identical (5,102 changed pixels each against the hidden-actor baseline).
-- [tested] The control: a constant 5.0 written into Direct Frame Index with no link made every particle read 5, and the picture differed (9,745 changed pixels), in this one scene.
-- [tested] These link variants left the result unchanged (still age-driven, same values): setting the parameter by its short name `FrameIndex`; a user-parameter default of 5.0 with no set; writing the mode again after the link; linking Direct Frame Index to `Emitter.Age` instead of the user parameter.
+- [general] The control: a constant 5.0 written into Direct Frame Index with no link made every particle read 5, and the picture differed (9,745 changed pixels), in this one scene. Observed on an earlier engine build; not repeated on the pinned build.
+- [general] These link variants left the result unchanged (still age-driven, same values), observed on an earlier engine build and not repeated on the pinned build: setting the parameter by its short name `FrameIndex`; a user-parameter default of 5.0 with no set; writing the mode again after the link; linking Direct Frame Index to `Emitter.Age` instead of the user parameter.
 - [general] The cause is not determined, and no other variant was tried ([drawn looks](unreal-niagara.md)).
 
 ## Mesh renderer
 
 - [general] A mesh renderer takes a static mesh from the system or a user parameter (`override_system_user_variable_static_mesh`); the Static Mesh data interface also binds an actor or component. The Audio Player data interface plays a `SoundBase` from particle data.
-- [tested] A rigged GLB (a fox) imported through Interchange with the default pipeline gave 1 skeletal mesh and no static mesh (19 assets), so there was no static mesh for the renderer. The built-in cube imported as one static mesh, `.../StaticMeshes/cube.cube` (2 assets).
+- [general] A rigged GLB (a fox) imported through Interchange with the default pipeline gave 1 skeletal mesh and no static mesh (19 assets), so there was no static mesh for the renderer; observed on an earlier engine build, not repeated on the pinned build.
+- [tested] The built-in cube imported as one static mesh, `.../StaticMeshes/cube.cube` (2 assets).
 - [tested] `GetRendererData` of a mesh renderer lists nested struct fields in lower camel case (`mesh`, `lODBias`, `lODMode`). A mesh written under the key `Mesh` returned no error and the read-back still had no mesh; written under `mesh` the read-back held the same asset path ([renderers](unreal-niagara-toolset-renderers.md)).
-- [tested] On 5.8.4, a mesh emitter added to a template-made system started dead and emitted after a write of the system's `Loop Duration`: see [Emitters added to a template-made system start dead](unreal-niagara-toolsets.md).
+- [tested] A mesh emitter added to a template-made system started dead and emitted after a write of the system's `Loop Duration`: see [Emitters added to a template-made system start dead](unreal-niagara-toolsets.md).
 
 ## Static Mesh user parameter
 
