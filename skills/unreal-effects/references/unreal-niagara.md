@@ -52,7 +52,8 @@ Choose by what must stay drawn. [`stylized_validate.mjs`](../../../examples/unre
 - Stepped light on an unlit particle: quantize a light term, `floor(term x N) / (N - 1)`, into a Lerp. [tested] It drew flat bands next to a smooth control.
 - [tested] The Dynamic Material Parameters module's Index 0 Param 1 (3) reached the material's Dynamic Parameter node (default 4): three bands rendered.
 - Lit toon on a particle: [tested] Substrate Toon works on sprites ([Substrate](../../unreal-rendering/references/unreal-substrate.md)).
-- [tested] In one throwaway project and one scene with a float user parameter, Direct Frame Index linked to that parameter did not drive the frame (3 of 5 `frame` checks, the sprite sub-image index did not follow the parameter). In the first runs (separate diagnostic runs) the link read back and the mode was Direct Index, but the frame stayed age-driven, and a constant written into Direct Frame Index did take effect. The link variants run are listed in the generated-assets reference, and the cause is not determined ([the runs and the control](unreal-niagara-generated-assets.md)).
+- [tested] In one throwaway project and one scene with a float user parameter, Direct Frame Index linked to that parameter did not drive the frame (3 of 5 `frame` checks: the sprite sub-image index did not follow the parameter). The cause is not determined.
+- [general] In earlier diagnostic runs on an earlier engine build, not repeated on the pinned build, the link read back and the mode was Direct Index but the frame stayed age-driven, and a constant written into Direct Frame Index did take effect; the link variants tried are in [the generated-assets reference](unreal-niagara-generated-assets.md).
 
 ## Fluids
 
