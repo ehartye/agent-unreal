@@ -153,6 +153,15 @@ def link_other():
     return {"set_error": written["error"], "read": read["value"]}
 
 
+def diagnostics():
+    """What the emitter holds after the link: its scripts and modules (so a second SubUV module or a later writer of SubImageIndex would show), and the two SubUV inputs read back."""
+    topology = c.call("GetEmitterTopology", {"emitterRef": {"system": c.ref(SYSTEM), "emitterName": "Sprite"}})
+    mode = c.get_input(c.at(SYSTEM, "Sprite", "ParticleUpdateScript", "SubUVAnimation", ["SubUV Animation Mode"]))
+    frame = c.get_input(c.at(SYSTEM, "Sprite", "ParticleUpdateScript", "SubUVAnimation", ["Direct Frame Index"]))
+    return {"topology_error": topology["error"], "topology": json.dumps(topology["value"])[:3500], "mode_error": mode["error"], "mode": json.dumps(mode["value"])[:600],
+            "frame_error": frame["error"], "frame": json.dumps(frame["value"])[:600]}
+
+
 try:
     unreal.AssetRegistryHelpers.get_asset_registry().search_all_assets(True)
     eal.make_directory(FOLDER)
@@ -163,6 +172,7 @@ except Exception as exc:
 steps = (("texture", texture), ("material", material), ("system", system), ("user_variable", user_variable), ("link", link) if VARIANT in ("link", "modelast") else ("link_other", link_other) if VARIANT == "emitterage" else ("const", lambda: c.set_float(c.at(SYSTEM, "Sprite", "ParticleUpdateScript", "SubUVAnimation", ["Direct Frame Index"]), 5.0)))
 if VARIANT == "modelast":   # the mode is written again after the link, to see whether the order decides the compiled behaviour
     steps += (("mode_again", lambda: {"error": c.call("SetStackInputData", {"stackInputRef": c.at(SYSTEM, "Sprite", "ParticleUpdateScript", "SubUVAnimation", ["SubUV Animation Mode"]), "inputData": ENUM_DIRECT})["error"]}),)
+steps += (("diagnostics", diagnostics),)
 for name, fn in steps:
     probe.guarded(name, fn)
 probe.guarded("save", lambda: {"system": bool(eal.save_asset(SYSTEM))})
