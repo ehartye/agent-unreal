@@ -1,7 +1,7 @@
 # Unreal production stack for visual polish
 
 Public Epic pages below were read as UE 5.8 documentation on 2026-10-16/17.
-Installed 5.8.2 was the research context; only the "Materials tested on Unreal 5.8.4" bullet below was run (first on 5.8.2, rerun on 5.8.4 with the same result).
+Only the "Materials tested" bullet below was run.
 Check the consuming project's installed APIs, renderer and active runtime settings;
 public version labels and older experimental wording do not establish local support.
 
@@ -12,11 +12,11 @@ public version labels and older experimental wording do not establish local supp
 - [documented] DBuffer decals modify material channels that the receiver must consume. Verify the receiver response and actual rendered result, especially with a custom Unlit/Emissive road. A bounded mesh strip or explicit receiver mask may suit transient marks better; keep durable wear in surface authoring. [Epic: Decal Materials](https://dev.epicgames.com/documentation/en-us/unreal-engine/decal-materials-in-unreal-engine)
 - [documented] Depth/normal outlines depend on post-process location relative to temporal AA; late passes can jitter. Inspect the current graph and compare moving output before relocating a finish/palette pass. [Epic: Post Process Materials](https://dev.epicgames.com/documentation/en-us/unreal-engine/post-process-materials-in-unreal-engine)
 
-## Niagara families, scalability and the Niagara facts tested on 5.8.2
+## Niagara families, scalability and the Niagara facts tested
 
 See [Niagara families and stock content](../../unreal-effects/references/unreal-niagara-stock-content.md).
 
-## Materials tested on Unreal 5.8.4
+## Materials tested
 
 - [tested] A Custom material node body is one function body: a `#define` macro compiles; a helper function logs `function definition is not allowed here` and the material falls back to the default. Instanced static meshes need `used_with_instanced_static_meshes`: `False` on a Python-made material and in a commandlet, set when a rendering editor draws instances or for a list by `allow_instancing` ([editor Python maps](../../unreal-editor-scripting/references/unreal-editor-python-maps.md)).
 

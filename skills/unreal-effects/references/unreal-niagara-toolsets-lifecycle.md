@@ -1,6 +1,6 @@
 # Niagara toolsets: delete and recreate a system, and the start-up log
 
-Written for Unreal 5.8.2 and rerun on 5.8.4 with the same result. [`nts_validate.mjs`](../../../examples/unreal/niagara_toolsets/README.md) runs each [tested] line on a throwaway project; [documented] lines name a file under the engine's `Engine` folder. Call shapes and the worked example are in [Author Niagara systems from Python](unreal-niagara-toolsets.md).
+Written for Unreal 5.8. [`nts_validate.mjs`](../../../examples/unreal/niagara_toolsets/README.md) runs each [tested] line on a throwaway project; [documented] lines name a file under the engine's `Engine` folder. Call shapes and the worked example are in [Author Niagara systems from Python](unreal-niagara-toolsets.md).
 
 ## Delete and recreate a system
 
@@ -14,9 +14,10 @@ Written for Unreal 5.8.2 and rerun on 5.8.4 with the same result. [`nts_validate
 - [documented] `NiagaraToolsets/Content/Python/init_unreal.py` imports seven modules under `skills/`. Each declares a class that derives from `unreal.AgentSkill` and registers it with `toolset_registry.agent_skill.agent_skill` (`ToolsetRegistry/Content/Python/toolset_registry/agent_skill.py`). `AgentSkill` is the Python name of `UAgentSkill` in `ToolsetRegistry/Source/ToolsetRegistry/Public/ToolsetRegistry/AgentSkill.h`: a description and an instructions string for AI assistants.
 - [tested] With the plugin enabled the seven skills are listed by `ToolsetRegistry.AgentSkillToolset` `ListSkills`; the C++ toolsets log `Registering Toolset NiagaraToolsets.NiagaraToolset_System` before the Python start-up scripts run, so they do not depend on those skills.
 - [tested] A start-up script that raises is logged as `LogPython: Error: Traceback ...` ending in `AttributeError: module 'unreal' has no attribute '<name>'`. The other `init_unreal.py` files and your script still run, the toolset registers and answers, and a commandlet exits with 1 because an error was logged.
+- [tested] In a `-game` run (the arena self-test of [`showcase_validate.mjs`](../../../examples/unreal/niagara-showcase/README.md)) the log shows two tracebacks at start-up from Epic's own experimental plugins: `NiagaraToolsets/.../init_unreal.py` (`from skills import blueprint_interop`, `AttributeError: module 'unreal' has no attribute 'AgentSkill'`) and `ToolsetRegistry/.../init_unreal.py` (`unreal.PythonTestRunner.create`, `AttributeError: module 'unreal' has no attribute 'PythonTestRunner'`). They do not stop the toolsets: the same toolset calls work in the editor runs. The validator records them as an observation and fails only for a traceback from the showcase scripts.
 - [general] Judge the plugin by `unreal.ToolsetRegistry.is_toolset_registered("NiagaraToolsets.NiagaraToolset_System")` and a successful `GetSystemSummary`, not by the start-up log.
 
 ## Not verified
 
-- [general] A start-up traceback naming `unreal.AgentSkill` did not appear in any 5.8.2 run (commandlet, offscreen editor, `-ExecutePythonScript`, plugin alone or with `AllToolsets` and `ModelContextProtocol`), so its cause is not established.
+- [general] Observed on an earlier engine build, not repeated on the pinned build: no start-up traceback naming `unreal.AgentSkill` appeared in a commandlet, offscreen editor or `-ExecutePythonScript` run (plugin alone or with `AllToolsets` and `ModelContextProtocol`). Why a game run logs it is not established.
 - [general] Why `delete_asset` leaves the file of a system loaded from disk; a Material in the same position was removed.

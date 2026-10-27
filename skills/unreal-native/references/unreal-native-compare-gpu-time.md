@@ -1,6 +1,6 @@
 # GPU time next to wall time in the comparison scene
 
-The `perf` block of the [comparison scene](unreal-native-compare-scene.md) records wall, game thread, render thread and GPU frame time for each candidate. Scope of every [tested] line here: Unreal 5.8.4, Windows, a Development build packaged from one throwaway native C++ project, the `perf` set, one machine class. The rendered mode was run once and rerun with the same result; the headless output was judged twice (see below) and the first Editor build failed. The perf table is from the rerun; the timings, compiler and headless figures are from the first run. A different engine version, GPU, resolution or project can read differently; use the numbers to see what the block shows, not as targets.
+The `perf` block of the [comparison scene](unreal-native-compare-scene.md) records wall, game thread, render thread and GPU frame time for each candidate. Scope of every [tested] line here: the pinned engine build, Windows, a Development build packaged from one throwaway native C++ project, the `perf` set, one machine class. The rendered mode was run once and rerun with the same result; the headless output was judged twice (see below). The perf table is from the rerun; the timings, compiler and headless figures are from the first run. A different engine version, GPU, resolution or project can read differently; use the numbers to see what the block shows, not as targets.
 
 ## Reproduce it
 
@@ -10,7 +10,7 @@ The `perf` block of the [comparison scene](unreal-native-compare-scene.md) recor
 ## What the run showed
 
 - [tested] The run found compiler 14.44.35223 and SDK 10.0.26100.0. In the first run the second attempt built the Editor target (exit 0, 40 s), wrote `CompareStage.umap` with the map commandlet (exit 0, 11 s), built the Game target (39 s), packaged with `RunUAT BuildCookRun` (exit 0, 91 s, not blocked), and ran `compare.ps1 -Set perf` rendered (exit 0, 17 s) and headless (exit 0, 15 s); these timings are first-run figures.
-- [tested] The first Editor build failed to link (exit 6): `AECompare.cpp` uses `EKeys` and the module had no `InputCore`. Module dependencies that built: `InputCore`, `Json`, `RHI`, `RenderCore`, `Niagara`.
+- [general] Observed on an earlier engine build; not repeated on the pinned build: the first Editor build failed to link (exit 6) because `AECompare.cpp` uses `EKeys` and the module had no `InputCore`. Module dependencies that built: `InputCore`, `Json`, `RHI`, `RenderCore`, `Niagara`.
 - [tested] The rendered run used `-RenderOffScreen`, which `compare.ps1` passes. `compare_perf.mjs` passed 7 of 7 in both runs. Perf block, milliseconds per candidate:
 
 | Candidate | GPU | Game thread | Render thread | Wall |
@@ -27,7 +27,7 @@ The `perf` block of the [comparison scene](unreal-native-compare-scene.md) recor
 - [documented] The engine assigns `GGameThreadTime` in `FViewport::Draw` (`Engine/Source/Runtime/Engine/Private/UnrealClient.cpp`) and is assigned only there. Why the game and render thread series read 0 in the headless run was not traced.
 - [tested] The receipt carries the GPU adapter name (`rhi_adapter`).
 - [general] Strip `rhi_adapter` before publishing a receipt.
-- [tested] The receipt's engine string read `++UE5+Release-5.8-CL-58902052` while the install's `Build.version` read changelist 58210709. Both came from the same install, updated through the Launcher: the update can leave `Build.version` stale, and the executable's changelist is the one that matches the binaries.
+- [tested] The receipt's engine string comes from the running executable and can differ from the install's `Build.version`: a Launcher update can leave `Build.version` stale, and the executable's changelist is the one that matches the binaries.
 
 ## Not shown
 

@@ -1,11 +1,11 @@
 # Native Mass without the MassGameplay plugin in Unreal 5.8: a hand-run pipeline from C++
 
-Target: Unreal Engine 5.8, Windows. Paths are install-relative under `Engine/Source/Runtime/` and were read in a 5.8.2 install. The recipe was used once on 5.8.3 for a crowd of tens of thousands of simple entities in a native C++ project, with no simulation phases, LOD, avoidance, movement, replication or representation. No run in this repository covers it, so no line here is `[tested]`.
+Target: Unreal Engine 5.8, Windows. Paths are install-relative under `Engine/Source/Runtime/` and were read in the installed engine source. The recipe was used once on an earlier engine build for a crowd of tens of thousands of simple entities in a native C++ project, with no simulation phases, LOD, avoidance, movement, replication or representation. No run in this repository covers it, so no line here is `[tested]`.
 
 ## Enable it
 
 - [documented] No plugin entry. `MassEntity` and `MassCore` are engine modules (`MassEntity/MassEntity.Build.cs`, `Mass/MassCore/MassCore.Build.cs`). `MassGameplay`, `MassAI`, `MassCrowd` and `ZoneGraph` stay experimental plugins ([AI](unreal-ai-behavior.md)).
-- [documented] List `MassEntity` and `MassCore` in the game module's dependencies. `FMassFragment`, `FMassTag` and `FMassElement` are defined in MassCore (`Mass/MassCore/Public/Mass/EntityElementTypes.h`). [general] A link failure with only `MassEntity` listed was reported once on 5.8.3. The 5.8.2 `MassEntity.Build.cs` already lists MassCore as a public dependency, so the cause is unconfirmed; the extra entry costs nothing.
+- [documented] List `MassEntity` and `MassCore` in the game module's dependencies. `FMassFragment`, `FMassTag` and `FMassElement` are defined in MassCore (`Mass/MassCore/Public/Mass/EntityElementTypes.h`). [general] A link failure with only `MassEntity` listed was reported once on an earlier engine build. The installed `MassEntity.Build.cs` already lists MassCore as a public dependency, so the cause is unconfirmed; the extra entry costs nothing.
 
 ## Recipe
 
@@ -26,7 +26,7 @@ Target: Unreal Engine 5.8, Windows. Paths are install-relative under `Engine/Sou
 
 ## A cost data point, with its limits
 
-[general] Observed once on 5.8.3: one machine with a high-end GPU and an 8-core CPU at 1920 x 1080, entities with one body fragment and one mind fragment, six processors of which two run with `ParallelForEachEntityChunk`, drawn as one instanced mesh with three custom floats each. Each row is a 3 s mean.
+[general] Observed once on an earlier engine build: one machine with a high-end GPU and an 8-core CPU at 1920 x 1080, entities with one body fragment and one mind fragment, six processors of which two run with `ParallelForEachEntityChunk`, drawn as one instanced mesh with three custom floats each. Each row is a 3 s mean.
 
 | Entities | Processors, ms | Frame, ms | GPU, ms |
 |---|---|---|---|

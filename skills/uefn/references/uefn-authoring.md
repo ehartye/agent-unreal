@@ -1,6 +1,6 @@
 # UEFN authoring beyond MCP
 
-Use this when UEFN MCP lacks an operation, animation controls need exact Reset, audio needs importing, or authoring in regular Unreal and porting is proposed. Observed in one consuming UEFN project on UEFN 42.30 and UE 5.8.3; not reproduced in this repo. Re-discover capabilities after upgrades.
+Use this when UEFN MCP lacks an operation, animation controls need exact Reset, audio needs importing, or authoring in regular Unreal and porting is proposed. Observed in one consuming UEFN project on earlier UEFN and Unreal builds; not reproduced in this repo. Re-discover capabilities after upgrades.
 
 ## Read next
 
@@ -28,7 +28,7 @@ a recommendation from one consuming project, not a requirement to reject other w
 
 [general] UEFN exposes MCP wrappers `list_toolsets`, `describe_toolset`
 and `call_tool`. Discover the live schemas; regular UE tool names and argument
-shapes are not a UEFN contract. With AllToolsets mounted in the observed 42.30 build,
+shapes are not a UEFN contract. With AllToolsets mounted in the observed build,
 Sequencer and Sequencer Keyframing toolsets were absent. Audio import was also
 absent. Do not send the user searching for an unverified toggle after this check.
 
@@ -58,7 +58,7 @@ Agent Beeps supplies rendered WAVs; its browser synth is not the Fortnite audio
 runtime. [Native UEFN import](https://dev.epicgames.com/documentation/en-us/fortnite/importing-custom-audio-in-unreal-editor-for-fortnite)
 supports WAV through Import or Content Browser drag/drop. Use Sound Wave/Sound Cue
 and Audio Player as appropriate; verify looping and volume in the target session.
-[general] In 42.30, SoundFactory plus AssetImportTask imported approved WAVs,
+[general] On an earlier build, SoundFactory plus AssetImportTask imported approved WAVs,
 created their direct looping Wave Player Cues and saved only the new packages.
 The [native-audio reference](uefn-native-audio.md) covers the source checks,
 pending receipts, task-result omission and independent metadata/package verification.

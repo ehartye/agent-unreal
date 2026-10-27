@@ -1,6 +1,6 @@
 # Building a Chaos Cloth Asset from Python and C++ in Unreal 5.8: the Dataflow route and what draws the default grid
 
-Target: Unreal Engine 5.8, Windows. Route for a Cloth Asset made from a script instead of by hand in the Dataflow editor; the editor workflow is in [Cloth and flesh](unreal-chaos-cloth-and-flesh.md). Names were read in the 5.8 install. `[general]` lines were observed once in a native C++ project on 5.8.x (a scarf panel pinned along one row, followed through a scripted run, strafe and jump) and have not been run from this repo.
+Target: Unreal Engine 5.8, Windows. Route for a Cloth Asset made from a script instead of by hand in the Dataflow editor; the editor workflow is in [Cloth and flesh](unreal-chaos-cloth-and-flesh.md). Names were read in the 5.8 install. `[general]` lines were observed once in a consuming native C++ project on an earlier engine build (a scarf panel pinned along one row, followed through a scripted run, strafe and jump) and have not been run from this repo.
 
 ## Enable it
 
@@ -18,7 +18,7 @@ Target: Unreal Engine 5.8, Windows. Route for a Cloth Asset made from a script i
 - [general] Properties set: import node `StaticMesh` (asset path) and `UVChannel`; selection node `Indices` and `OutputName` (`'(StringValue="Pinned")'`); skin-weights node `SkeletalMesh`; max-distance node `InKinematic` (the selection's name) and `MaxDistance` (`'(bIsAnimatable=False,Low=150.0,High=150.0,WeightMap="")'`). Pinning is a selection fed to `InKinematic`.
 - [general] Pins: every node's input and output is named `Collection`; the terminal's input is `CollectionLods[0]` (the terminal's `CollectionLods` is an array). The script tried `"CollectionLods[0]"`, `"Collection Lods[0]"`, `"CollectionLods"` and `"Collection"` in turn and kept the first that `connect_dataflow_nodes` accepted, which returns false for a missing node or pin.
 - [documented] `DataflowBlueprintLibrary.regenerate_asset_from_dataflow(asset, False)` rebuilds the asset. `evaluate_dataflow(graph, asset)` returns true when an error was logged, the opposite of its header comment (`DataflowBlueprintLibrary.cpp`). Do not treat it as a success flag.
-- [general] Establish the build by reading the asset back: its render material, the pinned set, the weight values. On 5.8.3 a 210-vertex panel imported with reordered simulation IDs: source IDs 0 to 6 selected a triangular patch across three rows. Read `SimPosition3D` after a provisional regeneration to find the true seven-vertex edge, rebuild the selection, then check the final kinematic indices and skin weights.
+- [general] Establish the build by reading the asset back: its render material, the pinned set, the weight values. On an earlier engine build a 210-vertex panel imported with reordered simulation IDs: source IDs 0 to 6 selected a triangular patch across three rows. Read `SimPosition3D` after a provisional regeneration to find the true seven-vertex edge, rebuild the selection, then check the final kinematic indices and skin weights.
 - [general] Python did not expose the collection, the physics shapes or the weight-map edit surface; a small editor C++ bridge supplied them. Weight values went in through `FDataflowVertexAttributeEditableNode::SetVertexAttributeValues` with an engine context, which creates the topology snapshots the modern weight-map node needs, in preference to writing the obsolete `VertexWeights` field. The snapshot requirement is unchecked in source.
 
 ## Why the game drew the wrong thing
@@ -34,7 +34,7 @@ Target: Unreal Engine 5.8, Windows. Route for a Cloth Asset made from a script i
 - [documented] A collision source holds its physics asset as a `TWeakObjectPtr` (`ChaosClothAssetEngine/Private/ChaosClothAsset/CollisionSources.h`). [general] A separately loaded contact asset needs a reflected strong owner (a transient `UPROPERTY` on the character); a forced-GC run lost it in three checks until one held it. Test real object liveness, not a setup flag.
 - [general] Imported collision can be much larger than the authored body and include hidden fallback geometry: read the shapes, compare them in the bone or component frame, and prefer a separate collision-only asset to changing gameplay body physics.
 - [general] Measure completed particles through `FClothSimulData::Transform` into the mesh frame, allowing for display scale. Component bounds mix render, simulation and conservative caching and cannot show a flat rest shape.
-- Not verified: 5.7, separate render and simulation meshes, wind authoring, other skeletons, cost against an AnimDynamics chain ([AnimGraph from C++](unreal-animgraph-from-cpp.md)).
+- Not verified: separate render and simulation meshes, wind authoring, other skeletons, cost against an AnimDynamics chain ([AnimGraph from C++](unreal-animgraph-from-cpp.md)).
 
 ## Sources
 

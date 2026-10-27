@@ -1,6 +1,6 @@
 # UEFN native operations
 
-Read this to choose a native UEFN operation and the evidence that proves it, or to wire Verse references and run runtime QA. Observed in one consuming UEFN project on UEFN 42.30; not reproduced in this repo. Every claim is labelled `[general]` for that reason. Inspect the installed schemas after upgrades; these observations are not an API contract for every project. Use the [authoring reference](uefn-authoring.md) for connection setup.
+Read this to choose a native UEFN operation and the evidence that proves it, or to wire Verse references and run runtime QA. Observed in one consuming UEFN project on an earlier UEFN build; not reproduced in this repo. Every claim is labelled `[general]` for that reason. Inspect the installed schemas after upgrades; these observations are not an API contract for every project. Use the [authoring reference](uefn-authoring.md) for connection setup.
 
 ## Choose the operation and its proof
 

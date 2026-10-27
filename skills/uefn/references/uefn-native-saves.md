@@ -1,6 +1,6 @@
 # UEFN scoped saves
 
-Read this when native UEFN edits must be saved without Save All: external actor packages, and an extra ActorFolder package that appears after an actor save. Observed in one consuming UEFN project on UEFN 42.30; not reproduced in this repo. Every claim is labelled `[general]` for that reason. Inspect the installed schemas after upgrades; these observations are not an API contract for every project. Use the [authoring reference](uefn-authoring.md) for connection setup.
+Read this when native UEFN edits must be saved without Save All: external actor packages, and an extra ActorFolder package that appears after an actor save. Observed in one consuming UEFN project on an earlier UEFN build; not reproduced in this repo. Every claim is labelled `[general]` for that reason. Inspect the installed schemas after upgrades; these observations are not an API contract for every project. Use the [authoring reference](uefn-authoring.md) for connection setup.
 
 ## Save only owned external actor packages
 

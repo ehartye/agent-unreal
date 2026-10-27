@@ -1,6 +1,6 @@
 # Editor Python scene: build a map, materials and meshes from scripts
 
-Helpers and a validating scene for the practices in [Scripting the Unreal editor from Python: maps](../../../skills/unreal-editor-scripting/references/unreal-editor-python-maps.md) and the plane-cut note in [Geometry Scripting](../../../skills/unreal-procedural/references/unreal-geometry-scripting.md). Verified on Unreal Engine 5.8.4, Windows. Nothing here needs a project of yours: the validator makes a throwaway project in the OS temp folder.
+Helpers and a validating scene for the practices in [Scripting the Unreal editor from Python: maps](../../../skills/unreal-editor-scripting/references/unreal-editor-python-maps.md) and the plane-cut note in [Geometry Scripting](../../../skills/unreal-procedural/references/unreal-geometry-scripting.md). Verified on Unreal Engine 5.8, Windows. Nothing here needs a project of yours: the validator makes a throwaway project in the OS temp folder.
 
 ## Run
 
@@ -22,7 +22,7 @@ It takes a few minutes and is not part of `node scripts/check.mjs`; the pure che
 | `ep_ground.py` | rendering editor | traces ground height on the Landscape, compares a fixed-Z camera with `place_above_ground`, exports two pictures |
 | `ep-validate-checks.mjs`, `ep-validate.test.mjs` | Node | one check per claim; the test changes one fact at a time and expects the matching check to fail |
 
-## What it showed (5.8.4)
+## What it showed
 
 - Deleting a level that is open returns `False` and keeps the `.umap`; `new_level` then fails with `NewLevel. Failed to validate the destination. An asset already exists at this location.` The working order is: open `/Engine/Maps/Entry`, `delete_asset`, remove the file, `AssetRegistry.scan_paths_synchronous`, `new_level`. `recreate_map` does it.
 - Property names fail with `<Class>: Failed to find property 'x' for attribute 'x' on '<Class>'`. `enable_volumetric_fog` and `fog_inscattering_luminance` exist on `ExponentialHeightFogComponent`, not on the fog actor or the post-process volume; post-process values go through the `settings` struct. `soft_set` turns a wrong name into a warning line.

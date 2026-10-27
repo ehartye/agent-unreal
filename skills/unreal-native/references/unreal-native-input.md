@@ -1,6 +1,6 @@
 # Native Unreal input replay
 
-Observed in one consuming Unreal 5.8.2 CL56702186 project on Windows; not reproduced in this repo. Engine source inspection and executed behaviour are labelled separately. Simulated mapped events do not establish human controller acceptance.
+Observed in one consuming project on an earlier engine build; not reproduced in this repo. Engine source inspection and executed behaviour are labelled separately. Simulated mapped events do not establish human controller acceptance.
 
 - [documented] Installed-source inspection: `UPlayerInput` adds analog samples within one processing frame (`PlayerInput.cpp:331–332`) and retains trigger state without a new sample (`1345–1395`). A press sample of 1 followed by 0 in the same frame sums to 1. Replay one complete trigger state per frame, including zero values after release; avoid transition-frame duplicates.
 - [general] A first controller replay retained the right trigger at 1 during left-trigger braking and failed reverse. `-NoGamepad` alone did not fix it. After correcting the sample schedule, the native suite passed all its checks, including brake-to-reverse. The suite drove simulated events through production mappings.

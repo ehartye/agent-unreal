@@ -1,14 +1,13 @@
 # Native UEFN audio import
 
 Read this when a UEFN project needs rendered WAVs but MCP exposes no audio importer.
-Observed in one consuming UEFN project on UEFN 42.30; not reproduced in this repo.
+Observed in one consuming UEFN project on an earlier UEFN build; not reproduced in this repo.
 Native editor Python is a separate route from the MCP script sandbox. A missing
 MCP operation does not require manual dragging or a second Unreal project.
 
 ## Evidence and limits
 
-**[general] Observed on 2026-10-03:** UEFN 42.30, engine
-`6.0.0-58557680+++Fortnite+Release-42.30`, imported five approved masters
+**[general] Observed on 2026-10-03 on an earlier UEFN build:** the native route imported five approved masters
 into five Sound Waves and five direct looping Sound Cues. Sources were stereo
 48 kHz PCM16, each 72 seconds. Those are observed inputs, not universal format limits.
 Exact source hashes, editor metadata, Cue graphs, explicit scoped saves, clean
@@ -87,7 +86,7 @@ for key, value in {
 After the project preflight and pending receipt, the mutation is
 `unreal.AssetToolsHelpers.get_asset_tools().import_asset_tasks([task])`.
 [SoundFactory documentation](https://dev.epicgames.com/documentation/en-us/unreal-engine/python-api/class/SoundFactory?application_version=5.1)
-[documented] describes the auto-cue options; the installed 42.30 implementation was
+[documented] describes the auto-cue options; the installed implementation was
 inspected before applying them.
 
 ## Inspect the actual graph, then save only the new assets
@@ -135,7 +134,7 @@ check. Do not claim listening or multiplayer acceptance from editor metadata.
 
 If the installed native APIs or connection are unavailable, use one native editor
 import exemplar via [Content Browser Import](https://dev.epicgames.com/documentation/en-us/fortnite/importing-custom-audio-in-unreal-editor-for-fortnite).
-[general] Auto Reimport created nothing in an earlier 42.20 WAV test. Repeating that
+[general] Auto Reimport created nothing in an earlier WAV test on an earlier UEFN build. Repeating that
 failed route or building the whole project in UE is not a prerequisite for audio import.
 
 Time is one capability probe and pilot before batching. Risk is overwriting

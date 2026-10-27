@@ -2,7 +2,7 @@
 
 Read this after the collision is read back: circular decks, editor trace checks and
 reimport. Coordinates and simple collision are in [UEFN FBX coordinates and
-collision](uefn-native-fbx.md). Observed in one consuming UEFN project on UEFN 42.30;
+collision](uefn-native-fbx.md). Observed in one consuming UEFN project on an earlier UEFN build;
 not reproduced in this repo.
 
 ## Match circular decks instead of using square covers

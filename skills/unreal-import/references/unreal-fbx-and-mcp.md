@@ -1,8 +1,8 @@
-# FBX clips and Epic's MCP server (Unreal 5.8.3 and UEFN)
+# FBX clips and Epic's MCP server (Unreal and UEFN)
 
-## FBX into Unreal and UEFN: clips need frame-aligned lengths (tested)
+## FBX into Unreal and UEFN: clips need frame-aligned lengths (general)
 
-Tested on Unreal 5.8.3 and UEFN 42.20. A mesh import tool that only takes FBX (see the next section) means a GLB
+Observed on an earlier Unreal 5.8 build and an earlier UEFN build; not repeated on the pinned builds. A mesh import tool that only takes FBX (see the next section) means a GLB
 has to be converted first, and the clips can vanish in the conversion.
 
 - Symptom: the mesh, skeleton and materials import, no AnimSequence appears with `import_animations` true, and the
@@ -23,10 +23,10 @@ has to be converted first, and the clips can vanish in the conversion.
   swallows Blender's console output, so check that the output file was rewritten. A leftover Blender process stalls
   the next launch.
 
-## Epic's MCP server on Unreal 5.8.3 and UEFN (tested)
+## Epic's MCP server on Unreal and UEFN (general)
 
 Epic's `ModelContextProtocol` plugin (Experimental, off by default) ships with 5.8 and is the same plugin family UEFN
-uses. Tested 2026-10-01; details and sources are in the project wiki.
+uses. Observed on earlier builds, not repeated on the pinned builds; details and sources are in the project wiki.
 
 - Enable `ModelContextProtocol`, `ToolsetRegistry`, `EditorToolset` and `AllToolsets` in the `.uproject`. Launch with
   `-RenderOffScreen -unattended -ModelContextProtocolStartServer -ModelContextProtocolPort=<port>`; the server
@@ -41,7 +41,7 @@ uses. Tested 2026-10-01; details and sources are in the project wiki.
   kilometres away). It did not: import audio (no tool in either toolset list), accept a GLB ("FbxFactory does not
   support .glb. Allowed: fbx, obj."), or run Python with the `unreal` module (the script tool allows only `json`,
   `re`, `math`, `copy`, `time`, `datetime`).
-- Argument shapes differ from UEFN's on 5.8.3: `find_assets` needs `name` (empty string for all),
+- Argument shapes differ from UEFN's in Unreal: `find_assets` needs `name` (empty string for all),
   `add_to_scene_from_asset` needs an `xform`, and `CaptureViewport` needs both `captureTransform` and `annotations`.
 - Pair it with the headless Python route above for GLB and audio. Epic's 20 built-in agent skills are domain guidance
   (PCG, Niagara, editor, Dataflow); none covers import.

@@ -2,8 +2,8 @@
 
 Read this when rerunning a native editor script still produces the old layout,
 an edited helper seems ignored, or a reloaded module's imported function stays
-old. Observed in one consuming UEFN project on UEFN 42.30 with embedded Python
-3.11.8; not reproduced in this repo. The probe source and its recorded receipt
+old. Observed in one consuming UEFN project on an earlier UEFN build with embedded Python
+3.11.8; not reproduced in this repo and not yet verified on the pinned UEFN build. The probe source and its recorded receipt
 are in `examples/uefn`.
 
 ## What the local experiment established
@@ -13,7 +13,7 @@ placement helper but retained the earlier coordinates. Fresh actor readback
 caught the discrepancy before save. Explicitly reloading that project-owned
 helper then applied the intended translation.
 
-[tested] A separate disposable probe in the same editor isolated the Python
+[general] A separate disposable probe in the same editor isolated the Python
 behavior (`python_helper_freshness_probe.py`, recorded in the receipt below):
 
 | Step | Observed result |
@@ -26,14 +26,14 @@ behavior (`python_helper_freshness_probe.py`, recorded in the receipt below):
 | Bind the function from the module after reload | Returned the new literal |
 | Inspect a name removed from the new helper source | Old name remained in the module dictionary |
 
-[tested] The probe also rejected a mismatched source path before reload, restored
+[general] The probe also rejected a mismatched source path before reload, restored
 `sys.path`, removed its unique fixture module and temporary directory, and
 preserved actor identities/transforms, the `.uasset` file set, selection and
 clean package state. It created no Unreal actors or assets and sent no input.
 The experiment executed two entrypoint versions inside one interpreter; it does
 not establish that every remote command mode creates a fresh namespace.
 
-[tested] Source and recorded output are
+[general] Source and recorded output are
 [`python_helper_freshness_probe.py`](../../../examples/uefn/python_helper_freshness_probe.py)
 and [`helper-freshness-receipt.json`](../../../examples/uefn/helper-freshness-receipt.json).
 The receipt binds the probe source hash and before/after protected-state digests.
@@ -52,7 +52,7 @@ The receipt binds the probe source hash and before/after protected-state digests
    code. Check the next resolution, not only the cached module's old origin.
    Keep layout helpers
    free of actor edits, imports of assets, saves and callback registration.
-4. [tested] Reload only that helper, then obtain its function from the returned module.
+4. [general] Reload only that helper, then obtain its function from the returned module.
    Repeating the old `from helper import function` binding *before* reload leaves
    the caller with an old object. Call `helper.function(...)` or rebind afterward.
 5. [general] Check a pure output against the intended source change, then independently
@@ -98,7 +98,7 @@ build_plan = helper.build_plan  # bind AFTER reload
 # Inspect build_plan(...) before any native edit; retain mutation receipt guards.
 ```
 
-[tested] The native probe exercised the import/reload and origin-check behavior.
+[general] The native probe exercised the import/reload and origin-check behavior.
 [general] A separate host Python 3.13 run of this excerpt with temporary
 helpers (not part of this repo) rejected a shadowing path and custom finder before
 helper code ran, while the intended reload/rebind succeeded. The standard-finder constraint

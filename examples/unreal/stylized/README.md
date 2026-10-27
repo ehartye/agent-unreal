@@ -6,9 +6,9 @@
 node examples/unreal/stylized/stylized_validate.mjs --engine "C:/Program Files/Epic Games/UE_5.8" [--keep] [--shots <folder>]
 ```
 
-It makes a project in the OS temp folder with `r.Substrate=True` and the Blendable GBuffer, plus a bare project, and runs five scripts: `stylized_cvar.py` (what a bare project gets), `stylized_build.py` (commandlet: procedural 4x4 ink-blob flipbook PNG, Toon Profile, Toon and unlit materials, six Niagara systems authored through the toolsets, the level), `stylized_render.py` (offscreen Play-In-Editor, one engine screenshot per look, a simulation-cache read of `SubImageIndex`, compile states) and `stylized_persist.py` twice (write, then read in a new process). About 2.5 minutes on 5.8.2; exit code 0 when all 17 checks pass. Pass `--shots` to copy nine screenshots out. The run is manual; `node scripts/check.mjs` runs only the pure part: `png-tools.mjs` (a small PNG reader, luminance bands, colour counts), `stylized-measure.mjs`, `stylized-validate-checks.mjs` and `stylized-validate.test.mjs`.
+It makes a project in the OS temp folder with `r.Substrate=True` and the Blendable GBuffer, plus a bare project, and runs five scripts: `stylized_cvar.py` (what a bare project gets), `stylized_build.py` (commandlet: procedural 4x4 ink-blob flipbook PNG, Toon Profile, Toon and unlit materials, six Niagara systems authored through the toolsets, the level), `stylized_render.py` (offscreen Play-In-Editor, one engine screenshot per look, a simulation-cache read of `SubImageIndex`, compile states) and `stylized_persist.py` twice (write, then read in a new process). About 2.5 minutes (first run); exit code 0 when all 17 checks pass. Pass `--shots` to copy nine screenshots out. The run is manual; `node scripts/check.mjs` runs only the pure part: `png-tools.mjs` (a small PNG reader, luminance bands, colour counts), `stylized-measure.mjs`, `stylized-validate-checks.mjs` and `stylized-validate.test.mjs`.
 
-Stations and what they showed on 5.8.4:
+Stations and what they showed:
 
 | Station | Check | Measured |
 |---|---|---|

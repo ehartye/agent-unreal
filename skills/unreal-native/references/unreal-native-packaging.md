@@ -1,11 +1,11 @@
 # Native Windows packaging without a UAT project-discovery assembly
 
-Observed in one consuming Unreal 5.8.2 CL56702186 project on Windows; not reproduced in this repo. Engine source inspection and executed behaviour are labelled separately. This complements the [native game loop](unreal-native-game.md). A real packaged executable was run; no final-game or visual-parity claim follows.
+Observed in one consuming project on an earlier engine build; not reproduced in this repo. Engine source inspection and executed behaviour are labelled separately. This complements the [native game loop](unreal-native-game.md). A real packaged executable was run; no final-game or visual-parity claim follows.
 
 ## The exact UAT failure
 
 - [general] Installed `RunUAT.bat BuildCookRun -noP4` parsed the project, compiler and staging arguments, then failed **before build/cook** with `System.IO.FileLoadException`, **0x800711C7**: Windows Application Control blocked its dynamically generated `Temp/UAT/.../Rules/UATRules-*.dll`. A subsequently rebuilt Editor module was also denied loading under the same policy family (GetLastError 4551). This is a host trust boundary, not a C++ syntax failure.
-- [tested] `RunUAT BuildCookRun` was not blocked in the comparison-scene GPU run on 5.8.4 (a throwaway C++ project, Development build, exit 0; 91 s in the first run). That run says nothing about the host above or what its policy covers. See [GPU time in the comparison scene](unreal-native-compare-gpu-time.md).
+- [tested] `RunUAT BuildCookRun` was not blocked in the comparison-scene GPU run (a throwaway C++ project, Development build, exit 0; 91 s in the first run). That run says nothing about the host above or what its policy covers. See [GPU time in the comparison scene](unreal-native-compare-gpu-time.md).
 - [documented] Installed `AutomationUtils/ProjectUtils.cs` chooses Temp/UAT for installed-engine target discovery and dynamically compiles/loads target scripts. Supplying a client target does not skip the initial project-detection call. Repeatedly changing the blocked file's name/location is not a packaging solution.
 - [general] No security policy was changed or disabled; the blocked DLL was not moved/reloaded to evade the decision. The successful alternative used separate supported native engine tools and never loaded that UAT-generated assembly.
 
@@ -40,7 +40,7 @@ Check each process exit and fresh cook logs before continuing; the shell snippet
 ## Assets loaded only by path
 
 - [documented] A folder that nothing references is cooked only if it is listed. `DirectoriesToAlwaysCook` ("Additional Asset Directories to Cook", Packaging, Advanced) names directories cooked "regardless of whether they're referenced by anything" (`Engine/Source/Developer/DeveloperToolSettings/Classes/Settings/ProjectPackagingSettings.h`); `CookCommandlet.cpp` adds each unless `NoGameAlwaysCookPackages` is set.
-- [tested] In one 5.8.4 throwaway project cooked with only `MapsToCook`, a mesh, a material and a PCG graph that the map and graph referenced loaded by object path in the packaged game, and an unreferenced copy of the mesh did not ([PCG in a cooked game](../../unreal-procedural/references/unreal-pcg-cooked-game.md)). That run did not set `DirectoriesToAlwaysCook`.
+- [tested] In one throwaway project cooked with only `MapsToCook`, a mesh, a material and a PCG graph that the map and graph referenced loaded by object path in the packaged game, and an unreferenced copy of the mesh did not ([PCG in a cooked game](../../unreal-procedural/references/unreal-pcg-cooked-game.md)). That run did not set `DirectoriesToAlwaysCook`.
 - [general] `Config/DefaultGame.ini`: `[/Script/UnrealEd.ProjectPackagingSettings]` (the class now lives in the DeveloperToolSettings module; the engine redirects the old name, which project templates still use; not run here) then `+DirectoriesToAlwaysCook=(Path="/Game/Art")`. Code that loads by path (a string-built soft path, a run-time name lookup) needs its folder listed. The failure is silent; see the [packaged smoke run](unreal-native-packaged-smoke.md).
 
 Receipt staging, native UnrealPak and the actual packaged runtime proof: [packaging staging](unreal-native-packaging-staging.md).

@@ -1,6 +1,6 @@
 # Niagara toolsets scene: author a system from Python and check the call shapes
 
-Backs [Author Niagara systems from Python with the Niagara toolsets](../../../skills/unreal-effects/references/unreal-niagara-toolsets.md) and its companions on [delete and recreate](../../../skills/unreal-effects/references/unreal-niagara-toolsets-lifecycle.md), [inputs](../../../skills/unreal-effects/references/unreal-niagara-toolset-inputs.md) and [renderers](../../../skills/unreal-effects/references/unreal-niagara-toolset-renderers.md). Verified on Unreal Engine 5.8.4 (the validator and the opt-in groups; the first runs were on 5.8.2 and, for `frame`, `wire` and `gradient`, 5.8.3). Windows. Nothing here needs a project of yours: the validator makes a throwaway project (PythonScriptPlugin, EditorScriptingUtilities, Niagara, NiagaraToolsets) in the OS temp folder.
+Backs [Author Niagara systems from Python with the Niagara toolsets](../../../skills/unreal-effects/references/unreal-niagara-toolsets.md) and its companions on [delete and recreate](../../../skills/unreal-effects/references/unreal-niagara-toolsets-lifecycle.md), [inputs](../../../skills/unreal-effects/references/unreal-niagara-toolset-inputs.md) and [renderers](../../../skills/unreal-effects/references/unreal-niagara-toolset-renderers.md). Verified on Unreal Engine 5.8 (the validator and the opt-in groups). Windows. Nothing here needs a project of yours: the validator makes a throwaway project (PythonScriptPlugin, EditorScriptingUtilities, Niagara, NiagaraToolsets) in the OS temp folder.
 
 ## Run
 
@@ -16,7 +16,7 @@ It starts eight hidden headless commandlets and one hidden editor (the stack-iss
 
 ## Opt-in probes
 
-Status: Prepared 2026-10-26. Rerun on Unreal 5.8.4 with the same counts as the first runs: the default validator passed 25 of 25 (134 s on the first run) and `nts_validate.mjs --only author` ran its phase (44 s on the first run); the `renderers` group passed 6 of 6, the `emit` group 8 of 8 (after fixes on the first run, see "What the emit probe showed") and the `gradient` group 3 of 3. From a session with no desktop (one engine process at a time) the default validator passed 25 of 25 and its two intentional crash phases exited 3 as before; the `wire` group passed 7 of 8 with the built-in cube (4 of 8 on its first run), and the `frame` group 3 of 5 (see "What the frame, wire and gradient probes showed").
+Status: Prepared 2026-10-26. Rerun with the same counts as the first runs: the default validator passed 25 of 25 (134 s on the first run) and `nts_validate.mjs --only author` ran its phase (44 s on the first run); the `renderers` group passed 6 of 6, the `emit` group 8 of 8 (after fixes on the first run, see "What the emit probe showed") and the `gradient` group 3 of 3. From a session with no desktop (one engine process at a time) the default validator passed 25 of 25 and its two intentional crash phases exited 3 as before; the `wire` group passed 7 of 8 with the built-in cube (4 of 8 on its first run), and the `frame` group 3 of 5 (see "What the frame, wire and gradient probes showed").
 
 `nts_probe.mjs` runs probes for questions the validator above does not answer. It is separate from `nts_validate.mjs`: the default run is unchanged, and no validator file refers to the probes (a test checks that). It is not part of `node scripts/check.mjs`; the pure checks have node tests (`nts-probe.test.mjs`) in the merge lane.
 
@@ -72,9 +72,9 @@ Not prepared: whether the Light renderer's MegaLights switches change what is dr
 | `nts_startup.py` | with a project `init_unreal.py` that raises, shows the toolset still registers and answers |
 | `nts-validate-checks.mjs`, `nts-validate.test.mjs` | one check per claim; the command-line options and phase list, the report lines of a partial run, the `--keep` note and the flushed-line writer; the test changes one fact at a time and expects the matching check to fail, and takes the number of checks from the code |
 
-## What the emit probe showed (5.8.4)
+## What the emit probe showed
 
-Run on 5.8.4, 8 of 8 checks; the numbers are particle counts in a simulation cache after 40 frames.
+Run, 8 of 8 checks; the numbers are particle counts in a simulation cache after 40 frames.
 
 - A system made with `NiagaraSystemFactoryNew` emits with an emitter added and nothing written (Fountain 145, SimpleSpriteBurst 1). A system made with `CreateNiagaraSystem` and a template system does not: an emitter added to it with `AddEmitter` is dead until a stack input is written with a different value afterwards. The template emitters it came with keep emitting (380 in the control).
 - Dead means two things. With the template emitters kept, the cache is valid, lists the added emitter and reads 0 for it. With the template emitters removed the added emitter is the only one, the system completes at once, and the capture is refused (the log line is `SimCache Error: System already completed its simulation`; the Python call returns `None` on all 40 frames). `GetSystemCompileState` reads UpToDate for every one of these systems, so a compile state does not show that a system emits.
@@ -86,7 +86,7 @@ Run on 5.8.4, 8 of 8 checks; the numbers are particle counts in a simulation cac
 
 Workaround until the cause is known: after the last `AddEmitter` on a system made from a template system, write one Float or Int stack input to a different value (the emitter's own `SpawnRate`, say) before saving, and check the count in a simulation cache.
 
-## What it showed (5.8.4)
+## What it showed
 
 - Tool arguments are the C++ parameter names in lower camel case; asset refs are `{"refPath": "/Package/Path.Name"}`; a stack-input ref is `{system, emitterName, scriptName, moduleName, inputNameStack}`. `GetStackInputData` returns `{"struct": {"refPath": "/Script/Niagara.NiagaraFloat"}, "value": {"value": 5}}` for a float, `LinearColor` for a color and `NiagaraExt_StackInputData_Enum` (`enum`, `enumName`, `displayName`) for an enum. Writing the changed object back with `SetStackInputData` stores it; an unknown input name returns an error naming the full path.
 - `SetRendererData` takes `propertyValues` as a JSON string and changes only the properties it names (`Material`, `SubImageSize`). The same payload with an object in place of the string returns no error and changes nothing.
@@ -98,9 +98,9 @@ Workaround until the cause is known: after the last `AddEmitter` on a system mad
 - `NiagaraToolsets/Content/Python/init_unreal.py` registers seven instruction-text skills (`ToolsetRegistry.AgentSkillToolset` `ListSkills`). The C++ toolsets log `Registering Toolset ...` before the Python start-up scripts run. A start-up script that raises is logged as `LogPython: Error: Traceback ...`, the other start-up scripts and the commandlet script still run, and the commandlet exits with 1 because an error was logged.
 - `AddRenderer` takes `newRendererLocation` and `rendererClass` (read from the toolset schema) and returns `{rendererIndex, rendererClass}`. On an emitter that holds one sprite renderer (the `renderers` group also ran an emitter with two), a Light renderer is appended (returned index 1, order Sprite then Light) when the location leaves `rendererIndex` out and when it is `-1`, and is moved to the front (returned index 0, order Light then Sprite) when it is `0`. With `5` on that one-renderer emitter it is appended (2 renderers) and the returned index is still 5; `GetRendererData` on that ref returns `Renderer index 5 is out of bounds for emitter ... (has 2 renderers)`. The schema lists every field of the location as required, yet a location with only `system` and `emitterName` is accepted. The order is `renderers` in `GetEmitterTopology` (index and class of each). `bAllowMegaLights` and `bMegaLightsCastShadows` read `false` on a new Light renderer, and `SetRendererData` through the returned ref stores `true` for both.
 
-## What the frame, wire and gradient probes showed (first runs; rerun on 5.8.4 with the same pass counts)
+## What the frame, wire and gradient probes showed (first runs; rerun with the same pass counts)
 
-Rerun on 5.8.4 with the same checks passing and failing (`frame` 3 of 5, `wire` 7 of 8, `gradient` 3 of 3). The `wire` and `frame` rerun used the built-in cube and a generated stand-in atlas (a 128 by 160 PNG, 8 by 10 cells of 16 px, with an Aseprite-style JSON), because the earlier atlas files were no longer available; the figures below are from the first runs.
+Rerun with the same checks passing and failing (`frame` 3 of 5, `wire` 7 of 8, `gradient` 3 of 3). The `wire` and `frame` rerun used the built-in cube and a generated stand-in atlas (a 128 by 160 PNG, 8 by 10 cells of 16 px, with an Aseprite-style JSON), because the earlier atlas files were no longer available; the figures below are from the first runs.
 
 **`frame`: the Direct Frame Index user parameter did not drive the index (3 of 5).**
 
@@ -120,9 +120,9 @@ Rerun on 5.8.4 with the same checks passing and failing (`frame` 3 of 5, `wire` 
 
 ## Not verified
 
-- A start-up traceback naming `unreal.AgentSkill`: it did not appear in any 5.8.2 run (commandlet, offscreen editor, `-ExecutePythonScript`; the plugin alone, or with `AllToolsets` and `ModelContextProtocol`). `unreal.AgentSkill` exists and `is_toolset_registered` is `True` in every run.
+- A start-up traceback naming `unreal.AgentSkill` appears in a game (`-game`) run, the Niagara showcase self-test: Epic's `NiagaraToolsets` (`init_unreal.py`, `from skills import blueprint_interop`) and `ToolsetRegistry` (`unreal.PythonTestRunner` missing) log it at start-up, and it does not stop the toolsets (the same calls work in the editor runs). It did not appear in the commandlet, offscreen editor or `-ExecutePythonScript` runs here (the plugin alone, or with `AllToolsets` and `ModelContextProtocol`). `unreal.AgentSkill` exists and `is_toolset_registered` is `True` in every editor run. The cause was not traced.
 - Why `delete_asset` leaves the file of a Niagara system loaded from disk; the same call removed a Material.
-- Whether the empty-link result is the same on other 5.8 versions (the validator's check for it passed on 5.8.4), and whether a gradient or colour-curve input behaves like the float case when a link or a key is edited (the `gradient` group wrote one as a whole and read it back changed; only float lifetime and beam width were run for the link).
+- Whether the empty-link result is the same on other engine builds (the validator's check for it passed), and whether a gradient or colour-curve input behaves like the float case when a link or a key is edited (the `gradient` group wrote one as a whole and read it back changed; only float lifetime and beam width were run for the link).
 - The `missing usage flag NiagaraRibbons!` log line itself; it needs a game or Play-In-Editor session that draws the renderer.
-- `AddRenderer` on other 5.8 versions (the validator's check for it passed on 5.8.4). The MegaLights switches were read back, not rendered.
-- The `renderers` group (6 of 6 on 5.8.4) ran the positions between renderers, the six renderer kinds, and a second Sprite renderer: `renderers` read [Sprite, Sprite] and `rendererClasses` [Sprite]. `rendererClasses` is a de-duplicated list (`NiagaraExternalSystemEditorUtilities.h` 902-904; `.cpp` 1527 and 1542, `AddUnique`) [documented], so it cannot show the order and the scripts read `renderers`.
+- `AddRenderer` on other engine builds (the validator's check for it passed). The MegaLights switches were read back, not rendered.
+- The `renderers` group (6 of 6) ran the positions between renderers, the six renderer kinds, and a second Sprite renderer: `renderers` read [Sprite, Sprite] and `rendererClasses` [Sprite]. `rendererClasses` is a de-duplicated list (`NiagaraExternalSystemEditorUtilities.h` 902-904; `.cpp` 1527 and 1542, `AddUnique`) [documented], so it cannot show the order and the scripts read `renderers`.

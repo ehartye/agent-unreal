@@ -1,6 +1,6 @@
 # Smart Objects at run time from C++ in Unreal 5.8: a definition and objects made in code
 
-Target: Unreal Engine 5.8, Windows. Headers were read in a 5.8.2 install under `Engine/Plugins/Runtime/SmartObjects/`. The recipe was used once on 5.8.2 and 5.8.3 in a native C++ project with no authored assets. No run in this repository covers it, so no line here is `[tested]`. For the editor route (a SmartObjectDefinition asset and a Smart Object Component) see [AI](unreal-ai-behavior.md).
+Target: Unreal Engine 5.8, Windows. Headers were read in the installed engine source under `Engine/Plugins/Runtime/SmartObjects/`. The recipe was used once on earlier engine builds in a native C++ project with no authored assets. No run in this repository covers it, so no line here is `[tested]`. For the editor route (a SmartObjectDefinition asset and a Smart Object Component) see [AI](unreal-ai-behavior.md).
 
 ## Enable it
 

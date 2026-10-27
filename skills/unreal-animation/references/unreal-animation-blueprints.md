@@ -49,7 +49,7 @@ Animation Blueprints are part of the engine; no plugin is needed. Plugins:
 - [tested] Python builds a slot-only Animation Blueprint: `AnimBlueprintFactory`, then `BlueprintGraphEditor.get_graph_editor(graph).create_node_from_name("Animation|Montage|Slot'DefaultSlot'", ...)`, `try_create_connection` to the Root pin and `compile_blueprint` (`BS_UP_TO_DATE`, no errors). `list_available_nodes([])` lists other names, such as `Animation|StateMachines|StateMachine` and `Animation|BlendSpaces|BlendspacePlayer`.
 - [tested] A `UAnimInstance` subclass whose `UFUNCTION` calls `PlaySlotAnimationAsDynamicMontage` (`AnimInstance.h` line 590) played two clips through that slot in Play-In-Editor; the keyed bone moved 80 cm and returned to rest when the montage ended.
 - [tested] Python cannot add states or transitions, and a Blend Space it writes plays the reference pose until C++ resamples it; the bridge, other AnimGraph nodes and foot-planting IK are in [AnimGraph from C++](unreal-animgraph-from-cpp.md).
-- [tested] On 5.8.4 the bridge's state machine changes state at runtime and the pose follows it, a resampled 2D Blend Space plays its corner clips and blends the interior, and linked layers swap at runtime (13 of 13 checks; details in [AnimGraph from C++](unreal-animgraph-from-cpp.md)).
+- [tested] The bridge's state machine changes state at runtime and the pose follows it, a resampled 2D Blend Space plays its corner clips and blends the interior, and linked layers swap at runtime (13 of 13 checks; details in [AnimGraph from C++](unreal-animgraph-from-cpp.md)).
 
 ## Workflow
 

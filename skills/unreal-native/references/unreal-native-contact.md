@@ -1,6 +1,6 @@
 # Native procedural road contact
 
-Observed in one consuming Unreal 5.8.2 CL56702186 project on Windows; not reproduced in this repo. This is a consuming-project case study, not a universal collision prescription. Source, actual physics trajectories and rendered bodywork answer different questions.
+Observed in one consuming project on an earlier engine build; not reproduced in this repo. This is a consuming-project case study, not a universal collision prescription. Source, actual physics trajectories and rendered bodywork answer different questions.
 
 ## Reproduce and separate the mechanisms
 
@@ -16,7 +16,7 @@ Observed in one consuming Unreal 5.8.2 CL56702186 project on Windows; not reprod
 
 ## A sweep can need the complex triangles
 
-- [general] Observed once on 5.8.x: a probe that finds a wall to kick off found nothing as a simple line trace on the Visibility channel against a Nanite mesh whose collision complexity was Use Complex Collision As Simple (`ECollisionTraceFlag::CTF_UseComplexAsSimple`). A sphere sweep on the pawn channel with `FCollisionQueryParams::bTraceComplex` set ("Whether we should trace against complex collision", `CollisionQueryParams.h`), reaching a metre past the capsule, hit it. The cause was not isolated in source. Check the mesh's collision complexity before debugging the probe, and read a diagnostic field (is a wall near) before debugging the mechanic through its replay.
+- [general] Observed once in a consuming project on an earlier engine build: a probe that finds a wall to kick off found nothing as a simple line trace on the Visibility channel against a Nanite mesh whose collision complexity was Use Complex Collision As Simple (`ECollisionTraceFlag::CTF_UseComplexAsSimple`). A sphere sweep on the pawn channel with `FCollisionQueryParams::bTraceComplex` set ("Whether we should trace against complex collision", `CollisionQueryParams.h`), reaching a metre past the capsule, hit it. The cause was not isolated in source. Check the mesh's collision complexity before debugging the probe, and read a diagnostic field (is a wall near) before debugging the mechanic through its replay.
 
 ## Preserve the evidence contract
 

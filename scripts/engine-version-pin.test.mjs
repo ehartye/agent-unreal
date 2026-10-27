@@ -197,7 +197,8 @@ test('a tree with none of the folders or files scans clean', () => {
 
 // --- the real tree -----------------------------------------------------------------------------------------------------------
 
-// Reports the findings without failing until the version sweep lands. To enforce it, delete the options argument ({ todo: ... }) below.
-test('the skills, READMEs and docs name no patch version, UEFN version or changelist outside the allowlist', { todo: 'until the version sweep lands' }, () => {
+// The skills, READMEs and docs carry no engine version: the pin in engine-version.json is the one place. Add a justified entry to
+// engine-version-allowlist.json only for text that must name a version (for example a citation of an Epic page).
+test('the skills, READMEs and docs name no patch version, UEFN version or changelist outside the allowlist', () => {
   assert.deepEqual(scanVersionStrings(ROOT, { allow: loadAllowlist() }), []);
 });

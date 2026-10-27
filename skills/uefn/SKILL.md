@@ -6,7 +6,7 @@ when_to_use: "Use when working in UEFN or on a Fortnite island: missing MCP tool
 
 # UEFN
 
-UEFN 42.20 and 42.30, partly tested. Say which statements were run and which were read in documentation.
+Partly observed on earlier builds; nothing is verified on the pinned UEFN build yet. Say which statements were run and which were read in documentation.
 Other engines' imports are in `engine-asset-import` (agent-engine); the FBX frame-rate
 fix and Epic's MCP server are in FBX clips and MCP (`unreal-import` skill).
 
@@ -28,13 +28,15 @@ fix and Epic's MCP server are in FBX clips and MCP (`unreal-import` skill).
 | Fix mirrored native FBX architecture, reversed glyphs or missing UCX and deck collision | [UEFN FBX coordinates and collision](references/uefn-native-fbx.md) |
 | Match circular decks, check editor physics after an FBX import or decide on a reimport | [FBX decks and verification](references/uefn-native-fbx-verification.md) |
 
-## What was tested
+## What was observed
 
-- Tested through the MCP server in a real project: textures import; the fox imports as a skeletal mesh with a
+Observed on earlier UEFN builds; not yet verified on the pinned build.
+
+- [general] Through the MCP server in a real project: textures import; the fox imports as a skeletal mesh with a
   skeleton and 48 materials from the converted FBX. The 30 fps fix was re-run: both clips were saved and verified
   through registry duration/frame counts. An Animated Mesh device renders it in the editor; runtime is unverified.
-- Audio: no MCP import tool in the tested configuration. Auto Reimport created nothing from dropped WAVs across
-  two 42.20 restarts. Native Python imported and saved five Wave/Cue pairs in 42.30; use the audio reference above.
+- [general] Audio: no MCP import tool in the observed configuration. Auto Reimport created nothing from dropped WAVs across
+  two restarts. Native Python imported and saved five Wave/Cue pairs on a later build; use the audio reference above.
   Content Browser Import remains a fallback. Audible playback and a full UEFN sample-scene pass remain unverified.
-- Documented versus tested: Epic's pages say GLB and glTF import in the editor; the MCP mesh tool accepts only FBX
+- [documented] Epic's pages say GLB and glTF import in the editor; [general] the MCP mesh tool accepted only FBX
   and OBJ. Say which one you mean.

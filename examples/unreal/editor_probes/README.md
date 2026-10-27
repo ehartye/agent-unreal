@@ -1,6 +1,6 @@
 # Editor probes: read back what was saved
 
-Three small editor-Python scripts and a headless launcher. Each script reads something the editor holds and writes one JSON report, so a build is judged by what was saved and not by what the log said. They back the "Read back what was saved" step in [Editor Python](../../../skills/unreal-editor-scripting/references/unreal-editor-python.md). Unreal Engine 5.8.2, Windows.
+Three small editor-Python scripts and a headless launcher. Each script reads something the editor holds and writes one JSON report, so a build is judged by what was saved and not by what the log said. They back the "Read back what was saved" step in [Editor Python](../../../skills/unreal-editor-scripting/references/unreal-editor-python.md). Unreal Engine 5.8, Windows.
 
 | Probe | Script | Input (environment variable) | Use it |
 |---|---|---|---|
@@ -29,7 +29,7 @@ It also takes `--timeout <ms>` (default 600000). The pure logic (arguments, repo
 
 ## One command: judge the values
 
-**Status:** Prepared, not yet run on an engine. `probes_validate.mjs` and its judge exist and are tested with canned reports; a later step records the first run.
+**Status:** Run: `probes_validate.mjs` passed 21 of 21 asserted checks and recorded 5 observations on its first run (70 s). Its judge is also tested with canned reports.
 
 ```text
 node examples/unreal/editor_probes/probes_validate.mjs --engine "C:/Program Files/Epic Games/UE_5.8" [--keep]
@@ -39,7 +39,7 @@ It makes a throwaway project in the OS temp folder (PythonScriptPlugin, EditorSc
 
 ## Opt-in: the launcher under a time limit
 
-**Status:** Prepared and first run 2026-10-26 on Unreal 5.8.2: `probe_timeout.mjs` passed 7 of 7 checks in 108 s with no change to the probe. Rerun on 5.8.4 with the same result (7 of 7). The three probes above and their launcher runs are unchanged.
+**Status:** Prepared and first run 2026-10-26: `probe_timeout.mjs` passed 7 of 7 checks in 108 s (the first run) with no change to the probe. Rerun with the same result (7 of 7). The three probes above and their launcher runs are unchanged.
 
 ```text
 node examples/unreal/editor_probes/probe_timeout.mjs --engine "C:/Program Files/Epic Games/UE_5.8" [--timeout-ms 60000] [--keep]
@@ -62,7 +62,7 @@ One object keyed by each name you asked for. Each entry has `status`: `found`, `
 - `system`: `summary`, `system_data`, `emitters` (each with its summary, property values, module names per script stack and renderer property values), `modules` (key `Emitter:Script:Module`, `inputs` as the toolset returns them) and `problems`, the errors behind any `"unavailable"` part.
 - `asset`: by class. `StaticMesh`: `material_slots`, `bounds`, `nanite_enabled`. `Material`: `blend_mode`, `shading_model`, `two_sided`, `used_with_nanite`, `used_with_niagara_sprites`, `used_with_niagara_ribbons`, `used_with_niagara_mesh_particles`. `MaterialInstanceConstant`: `parent`, `scalar_parameters`. Other classes are `unavailable`.
 
-## What a run showed (Unreal 5.8.2, throwaway project)
+## What a run showed (throwaway project)
 
 - Each launcher run took 14 to 18 s once the editor had started once (the first took about 60 to 80 s) and the editor exited by itself with code 0.
 - `doc`: the docstring of `GeometryScript_Primitives.append_disc` begins `X.append_disc(target_mesh, primitive_options, transform, radius=50.000000, angle_steps=16, ...) -> DynamicMesh` and lists each parameter with its type. `EditorAssetLibrary.save_asset` begins `X.save_asset(asset_to_save, only_if_is_dirty=True) -> bool`. The class docstring of `EditorAssetLibrary` is a description with no signature. `EditorAssetLibrary.save_assets` is `missing` and `nearby` names `save_asset`.

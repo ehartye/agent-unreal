@@ -1,6 +1,6 @@
 # UEFN fitted cover verification
 
-Read this after fitting moving prop cover, to check its collision, variant state and geometry independently. Observed in one consuming UEFN project on UEFN 42.30; not reproduced in this repo. The recipe is in [fitted moving prop cover](uefn-native-cover.md).
+Read this after fitting moving prop cover, to check its collision, variant state and geometry independently. Observed in one consuming UEFN project on an earlier UEFN build; not reproduced in this repo. The recipe is in [fitted moving prop cover](uefn-native-cover.md).
 
 ## Check semantic collision and variant state
 

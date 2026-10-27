@@ -17,17 +17,17 @@ repository is marked as tested.
 Early (0.17.1). Eleven skills.
 
 The skills moved here from agent-engine 0.14.0, where their history up to that tag lives; `unreal-import` and its importer scripts followed in 0.2.0. The scripts in `examples/`
-were run on Windows against Unreal 5.7.3, 5.8.2 and 5.8.3, and the engine probes reran on 5.8.4 with the same counts, as each README states; other platforms were not run.
+were run on Windows against the engine build pinned in `engine-version.json`, as each README states; other platforms were not run.
 
-[`docs/sample-scene.md`](docs/sample-scene.md) records what Unreal 5.7, Unreal 5.8 and UEFN passed of the cross-engine
+[`docs/sample-scene.md`](docs/sample-scene.md) records what Unreal 5.8 and UEFN passed of the cross-engine
 sample scene. Its spec stays in agent-engine, which also holds the Godot, Unity and web builds.
 
 ## Verification status
 
-Epic's MCP plugin was tried on Unreal 5.8.3 and UEFN 42.20: it drives the editor and returns screenshots, but has no
-audio import and rejects GLB.
+Epic's MCP plugin was tried on an earlier Unreal build and an earlier UEFN build: it drives the editor and returns screenshots, but has no
+audio import and rejects GLB. This was not repeated on the pinned builds.
 
-One consuming UEFN 42.30 project additionally reported native Python authoring,
+One consuming UEFN project on an earlier UEFN build additionally reported native Python authoring,
 scoped actor saves, editor captures, automatic timeline playback and server controller-method
 results, and native Python imports of Wave/Cue pairs with per-player playback settings (observed there, not
 reproduced in this repo). A launch reached server cook but ended without a connected
@@ -57,14 +57,14 @@ records stale imports in a running editor, source identity checks and binding
 functions after an owned helper reload, backed by a disposable native probe.
 
 The [native Unreal game recipe](skills/unreal-native/references/unreal-native-game.md)
-records a separate 5.8.2 C++ build and actual offscreen game-camera loop, with fresh automation JSON checks
+records a separate C++ build and actual offscreen game-camera loop, observed on an earlier engine build, with fresh automation JSON checks
 because failed tests can exit zero. Its [presentation companion](skills/unreal-native/references/unreal-native-presentation.md)
 covers the measured font/Slate commandlet crash, crisp Canvas glyph sizing and Canvas text drawing; its [exposure and vertex colour companion](skills/unreal-native/references/unreal-native-exposure-and-vertex-color.md) covers physical camera exposure and HDR palette traps.
 The [Windows packaging reference](skills/unreal-native/references/unreal-native-packaging.md)
 records an actual staged Game EXE separately from Editor-game evidence, including the UAT Application Control failure.
 The [content pipeline](skills/unreal-native/references/unreal-native-content-pipeline.md)
 records the tested content-only bake/native Game split, short-path cook fix and recipe/hash validation.
-The [World Partition reference](skills/unreal-procedural/references/unreal-world-partition.md) covers making a partitioned map and large Water setups; its [Landscape](skills/unreal-procedural/references/unreal-world-partition-landscape.md) and [commandlet](skills/unreal-procedural/references/unreal-world-partition-commandlets.md) companions cover the Landscape proxy grid, converting a map and the builder commandlets, with scenes run on 5.8.4. [PCG in a running game](skills/unreal-procedural/references/unreal-pcg-game-process.md) lists what a game process needs that the editor supplies. The [Python to C++ bridge](skills/unreal-editor-scripting/references/unreal-python-cpp-bridge.md) shows an editor module that creates a Landscape from a height array, and [automation tests](skills/unreal-native/references/unreal-native-automation-tests.md) shows how to write, run and read a 5.8 C++ test.
+The [World Partition reference](skills/unreal-procedural/references/unreal-world-partition.md) covers making a partitioned map and large Water setups; its [Landscape](skills/unreal-procedural/references/unreal-world-partition-landscape.md) and [commandlet](skills/unreal-procedural/references/unreal-world-partition-commandlets.md) companions cover the Landscape proxy grid, converting a map and the builder commandlets, with scenes run in this repo. [PCG in a running game](skills/unreal-procedural/references/unreal-pcg-game-process.md) lists what a game process needs that the editor supplies. The [Python to C++ bridge](skills/unreal-editor-scripting/references/unreal-python-cpp-bridge.md) shows an editor module that creates a Landscape from a height array, and [automation tests](skills/unreal-native/references/unreal-native-automation-tests.md) shows how to write, run and read a 5.8 C++ test.
 The [comparison scene reference](skills/unreal-native/references/unreal-native-compare-scene.md) and its [example](examples/unreal/compare-scene/README.md)
 set several implementations of one visible thing side by side in a native game, film them and time each alone.
 
@@ -87,7 +87,7 @@ from current Fortnite cook, navigation and performance acceptance.
 | `unreal-native` | Build, run, verify, package and profile a native C++ Unreal game from an agent: the build and capture loop, content pipeline, presentation, input replay, material and UV validation, cooking, frame-time profiling against a budget and side-by-side comparison scenes. |
 | `unreal-architecture` | Audit and plan a project's code and project structure against Epic's 5.8 documentation: modules, plugins and dependency direction, where state and rules live, Game Features, hard and soft references, lifecycle and object pointers, targets, configuration and layout, with an ownership map, ranked findings and a remediation plan. |
 | `unreal-quality` | Audit and plan a project's testing strategy and performance measurement against Epic's 5.8 documentation: which Automation, CQTest, Spec, Functional or Low-Level test fits which behaviour, deterministic tests, headless runs and lanes, and trustworthy frame-time, memory and shader-hitch measurement, with ranked findings and a remediation plan whose steps each have a check. |
-| `unreal-import` | Import agent-sprites atlases, agent-meshes GLBs and agent-beeps WAVs into an Unreal 5.7 or 5.8 project from a script: Interchange and Paper2D notes, FBX clips and Epic's MCP server, a per-mesh import policy read back from the saved asset, guarded reuse and regenerated projects. The importer scripts are in the skill. |
+| `unreal-import` | Import agent-sprites atlases, agent-meshes GLBs and agent-beeps WAVs into an Unreal 5.8 project from a script: Interchange and Paper2D notes, FBX clips and Epic's MCP server, a per-mesh import policy read back from the saved asset, guarded reuse and regenerated projects. The importer scripts are in the skill. |
 | `uefn` | Author and import into UEFN from an agent: Epic's MCP tools and their gaps, native Python and Sequence authoring, WAV and FBX import, saved controls and capture, with the evidence behind each claim. |
 
 ## Examples
