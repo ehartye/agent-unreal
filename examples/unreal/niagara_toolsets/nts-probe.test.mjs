@@ -74,7 +74,7 @@ const wireReport = () => ({
     { step: 'mesh_sample', id: 'sample', returned: true, assets: 52, static_meshes: [], skeletal_meshes: 1, error: 'the import produced no static mesh (1 skeletal)' },
     { step: 'mesh_builtin', id: 'builtin', returned: true, assets: 3, static_meshes: [CUBE], skeletal_meshes: 0, mesh_path: CUBE, set_error: '', mesh_after: CUBE, lifetime_error: '' },
     { step: 'atlas', returned: true, texture: '/Game/Probe/Wire/Atlas/campfire.campfire', grid: [4, 2], set_error: '', sub_image_size: { x: 4, y: 2 }, material: '/Game/Probe/Wire/M_Atlas.M_Atlas' },
-    { step: 'user_variable', add_error: '', names: ['User.Mesh'], saved: true },
+    { step: 'user_variable', add_error: '', names: ['User.MeshObj'], variants: [{ variant: 'di_class', listed: false }, { variant: 'object', listed: true }, { variant: 'di_instance', listed: false }], saved: true },
   ] },
   sim: { probe: 'sim', samples: {
     Mesh_builtin: { steps: { base: { shot: 'nts_wire_Mesh_builtin_base.png' }, on: { ...run(80), shot: 'nts_wire_Mesh_builtin_on.png' } } },
@@ -237,8 +237,8 @@ test('wire: each claim has a failing case', () => {
   assert.deepEqual(mutate('wire', (r) => { r.sim.samples.Atlas.steps.late.attributes.Sprite.SubImageIndex = [0.6]; }), ['the flipbook emits and its frame index advances']);
   assert.deepEqual(mutate('wire', (r) => { r.sim.samples.Atlas.steps.late.metric_max = 0; }), ['the flipbook emits and its frame index advances']);
   assert.deepEqual(mutate('wire', (r) => { r.images['nts_wire_Atlas_on.png'] = solid(100, 100); }), ['the flipbook is visible in a screenshot']);
-  assert.deepEqual(mutate('wire', (r) => { step(r.build, 'user_variable').names = []; }), ['a Static Mesh user parameter is added and the runtime override call runs']);
-  assert.deepEqual(mutate('wire', (r) => { r.sim.samples.MeshUser.steps.override.error = 'TypeError'; }), ['a Static Mesh user parameter is added and the runtime override call runs']);
+  assert.deepEqual(mutate('wire', (r) => { step(r.build, 'user_variable').names = []; }), ['a Static Mesh user parameter is added from the toolsets (as an object parameter) and the runtime override call runs']);
+  assert.deepEqual(mutate('wire', (r) => { r.sim.samples.MeshUser.steps.override.error = 'TypeError'; }), ['a Static Mesh user parameter is added from the toolsets (as an object parameter) and the runtime override call runs']);
 });
 
 test('wire: no sample model given is fine, and a skeletal-only sample does not stop the built-in cube carrying the chain', () => {

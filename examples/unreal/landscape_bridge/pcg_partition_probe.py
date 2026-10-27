@@ -2,7 +2,9 @@
 
   UnrealEditor.exe Project.uproject -nullrhi -ExecCmds="py <absolute-path-to-this-file>" -unattended -nosplash -nosound -notraceserver
       (in Git Bash set MSYS_NO_PATHCONV=1 or /Game/... is rewritten; -RenderOffScreen instead of -nullrhi runs the same script in a rendering editor)
-Environment: LW_REPORT (JSON path). Needs the LandscapeBridge module (landscape_world.mjs builds it) and the PCG plugin.
+Environment: LW_REPORT (JSON path); LW_PCG_MODE (full by default; prepare: build the map, force the edit-layer update, wait, run only the control
+volume and save the map, in a rendering editor; sample: open that saved map and run only the control volume, in a -nullrhi editor; landscape_world.mjs
+--only pcgmerge runs the two in turn). Needs the LandscapeBridge module (landscape_world.mjs builds it) and the PCG plugin.
 
 The fixture is a World Partition map made with new_level(path, True) and a bridge Landscape of 16 components in 4 streaming proxies
 (grid size 2), the same map landscape_bridge.mjs checks. It is saved before any PCG work, so wp_unload_probe.py can open the clean map.
@@ -36,6 +38,8 @@ MAP = os.environ.get("LW_MAP", "/Game/Maps/LandscapeWp2")
 HALF_XY, HALF_Z = 25000.0, 4000.0       # the volume covers the Landscape (half side 25200 cm) and its height range (+-2000 cm)
 POINTS_PER_M2 = 0.005                   # about 1270 sampler points over the 504 m square
 Z_SAMPLE = 400                          # points checked against the input surface per measurement
+MODE = os.environ.get("LW_PCG_MODE", "full")   # full | prepare | sample
+MERGE_WAIT_SECONDS = 120                # prepare: how long the edit-layer update gets before the control volume is generated
 
 
 def partition_actors():
@@ -137,13 +141,36 @@ def cell_row(pa, original):
     return row
 
 
+def attempt(fn):
+    try:
+        value = fn()
+        return {"ok": True, "value": None if value is None else str(value)[:200]}
+    except Exception as exc:
+        return {"ok": False, "error": str(exc)[:300]}
+
+
 def stages():
     yield 30
-    landscape = fx.ensure_wp2_map(MAP, report)
-    report["bridge_members"] = fx.bridge_members()
-    if landscape is None:
-        report["errors"].append({"step": "fixture", "error": "map or Landscape was not created (module missing or new_level failed)"})
-        return
+    report["mode"] = MODE
+    if MODE == "sample":
+        wpl = unreal.WorldPartitionBlueprintLibrary
+        report["load_map"] = attempt(lambda: unreal.EditorLoadingAndSavingUtils.load_map(MAP))
+        yield 60
+        guids = [d.guid for d in wpl.get_actor_descs() if "LandscapeStreamingProxy" in str(d.native_class)]
+        loaded = len(fx.loaded_landscapes()[1])
+        report["proxies_loaded_after_open"] = {"descriptors": len(guids), "loaded": loaded}
+        if loaded < len(guids):
+            report["load_actors"] = attempt(lambda: wpl.load_actors(guids))
+            yield 60
+    else:
+        landscape = fx.ensure_wp2_map(MAP, report)
+        report["bridge_members"] = fx.bridge_members()
+        if landscape is None:
+            report["errors"].append({"step": "fixture", "error": "map or Landscape was not created (module missing or new_level failed)"})
+            return
+        if MODE == "prepare":
+            report["force_layers_full_update"] = attempt(lambda: landscape.force_layers_full_update())
+            yield from pc.wait_for(lambda: False, MERGE_WAIT_SECONDS)
     yield 60
     lands, proxies = fx.snapshot_world(report, "fixture")
     report["fixture"]["proxies_in_descs"] = len([d for d in unreal.WorldPartitionBlueprintLibrary.get_actor_descs() if "LandscapeStreamingProxy" in str(d.native_class)])
@@ -167,6 +194,12 @@ def stages():
     report.flush()
     EL.destroy_actor(vol)
     yield 30
+    if MODE != "full":
+        if MODE == "prepare":
+            report["saved"] = {"level": attempt(lambda: unreal.get_editor_subsystem(unreal.LevelEditorSubsystem).save_current_level()),
+                               "dirty_packages": attempt(lambda: unreal.EditorLoadingAndSavingUtils.save_dirty_packages(True, True))}
+        report.flush()
+        return
 
     # partitioned
     vol, comp = pc.spawn_volume("PcgPartitioned", centre, HALF_XY, HALF_XY, HALF_Z, graph)

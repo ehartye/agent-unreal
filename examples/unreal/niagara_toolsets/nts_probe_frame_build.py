@@ -35,7 +35,7 @@ VARIANT = os.environ.get("NTS_FRAME_VARIANT", "link")   # "const": write 5.0 int
 USER_DEFAULT = float(os.environ.get("NTS_FRAME_DEFAULT", "0"))   # the user parameter default; a non-zero default shows whether the link is read at all
 SET_NAME = os.environ.get("NTS_FRAME_SETNAME", VARIABLE)   # the name the sim passes to set_variable_float
 SHORT_NAME = "FrameIndex"
-VALUES = (2.0, 9.0)
+VALUES = (0.0, 2.0, 9.0)   # 0 is the user parameter default: the sim values at 0, 2 and 9 show whether they move with the parameter or with the particle age
 GRID, CELL = 4, 128
 ENUM_DIRECT = {"struct": {"refPath": "/Script/NiagaraEditor.NiagaraExt_StackInputData_Enum"},
                "value": {"enum": {"refPath": "/Niagara/Enums/ENiagara_SubUVLookupModeV2.ENiagara_SubUVLookupModeV2"}, "enumName": "ENiagara_SubUVLookupModeV2::NewEnumerator5", "displayName": "Direct Index"}}   # as stylized_build.py (a 5.8.2 value)
@@ -153,6 +153,26 @@ def link_other():
     return {"set_error": written["error"], "read": read["value"]}
 
 
+def diagnostics():
+    """What the emitter holds after the link: the modules of each script in order (so a second SubUV module or a later writer of SubImageIndex would show),
+    the inputs of the SubUV module with their visible, editable and static switch flags, and the two SubUV inputs read back."""
+    topology = c.call("GetEmitterTopology", {"emitterRef": {"system": c.ref(SYSTEM), "emitterName": "Sprite"}})
+    value = topology["value"] or {}
+    scripts = {}
+    subuv_inputs = []
+    for key, script in value.items():
+        if isinstance(script, dict) and "modules" in script:
+            scripts[key] = [("%s%s" % (m.get("moduleName"), "" if m.get("enabled", True) else " (disabled)")) for m in script["modules"]]
+            for m in script["modules"]:
+                if "SubUV" in str(m.get("moduleName")):
+                    subuv_inputs += [{"script": key, "module": m.get("moduleName"), "input": i.get("name"), "visible": i.get("bIsVisible"), "editable": i.get("bIsEditable"),
+                                      "dynamic": i.get("bIsDynamic"), "static_switch": i.get("bIsStaticSwitch")} for i in m.get("inputs", [])]
+    mode = c.get_input(c.at(SYSTEM, "Sprite", "ParticleUpdateScript", "SubUVAnimation", ["SubUV Animation Mode"]))
+    frame = c.get_input(c.at(SYSTEM, "Sprite", "ParticleUpdateScript", "SubUVAnimation", ["Direct Frame Index"]))
+    return {"topology_error": topology["error"], "scripts": scripts, "subuv_inputs": subuv_inputs, "mode_error": mode["error"], "mode": json.dumps(mode["value"])[:600],
+            "frame_error": frame["error"], "frame": json.dumps(frame["value"])[:600]}
+
+
 try:
     unreal.AssetRegistryHelpers.get_asset_registry().search_all_assets(True)
     eal.make_directory(FOLDER)
@@ -163,6 +183,7 @@ except Exception as exc:
 steps = (("texture", texture), ("material", material), ("system", system), ("user_variable", user_variable), ("link", link) if VARIANT in ("link", "modelast") else ("link_other", link_other) if VARIANT == "emitterage" else ("const", lambda: c.set_float(c.at(SYSTEM, "Sprite", "ParticleUpdateScript", "SubUVAnimation", ["Direct Frame Index"]), 5.0)))
 if VARIANT == "modelast":   # the mode is written again after the link, to see whether the order decides the compiled behaviour
     steps += (("mode_again", lambda: {"error": c.call("SetStackInputData", {"stackInputRef": c.at(SYSTEM, "Sprite", "ParticleUpdateScript", "SubUVAnimation", ["SubUV Animation Mode"]), "inputData": ENUM_DIRECT})["error"]}),)
+steps += (("diagnostics", diagnostics),)
 for name, fn in steps:
     probe.guarded(name, fn)
 probe.guarded("save", lambda: {"system": bool(eal.save_asset(SYSTEM))})
@@ -171,7 +192,7 @@ probe.write()
 probe.manifest.update({"map": MAP, "settle_seconds": 8, "systems": [{"id": "Flip", "asset": SYSTEM}], "samples": [{
     "id": "Flip", "actor": "Fx_Flip", "camera": "Cam_Flip", "metric_emitter": "Sprite",
     "sequence": [{"name": "base", "hidden": True, "shot": "base", "live_seconds": 0.5}] + [
-        {"name": "v%d" % int(v), "frames": 30, "attributes": ["SubImageIndex"], "set": [{"type": "float", "name": SET_NAME, "value": v}], "shot": "v%d" % int(v), "live_seconds": 1.5}
+        {"name": "v%d" % int(v), "frames": 30, "attributes": ["SubImageIndex", "NormalizedAge"], "set": [{"type": "float", "name": SET_NAME, "value": v}], "shot": "v%d" % int(v), "live_seconds": 1.5}
         for v in VALUES]}]})
 probe.guarded("level", lambda: c.build_level(MAP, [{"id": "Flip", "asset": SYSTEM, "location": (0, 0, 100)}]))
 probe.write()

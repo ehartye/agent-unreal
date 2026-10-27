@@ -1,10 +1,12 @@
-// node landscape_world.mjs --engine "C:/Program Files/Epic Games/UE_5.8" [--only landmass|pcg|unload] [--rendering] [--keep] [--compiler 14.44.35228] [--sdk 10.0.26100.0]
+// node landscape_world.mjs --engine "C:/Program Files/Epic Games/UE_5.8" [--only landmass|pcg|unload|pcgmerge] [--rendering] [--keep] [--compiler 14.44.35228] [--sdk 10.0.26100.0]
 // Ran on Unreal 5.8.4: rendering editor 18 of 18 checks, -nullrhi editor 16 of 18. Engine probes for three rows of the procedural-world references:
 //   landmass  Can Python put a Landmass brush manager on a Landscape edit layer? (landmass_probe.py: a ladder of rungs, a negative control
 //             and the bridge's attach_brush_to_layer; heights read in a rendering editor.)
 //   pcg       Does a PCG graph with a Landscape input and a Surface Sampler produce points across the proxies of a partitioned Landscape in
 //             the editor? (pcg_partition_probe.py: a non-partitioned control, then the partitioned volume, counts per grid actor.)
 //   unload    Does any Python route leave a Landscape streaming proxy unloaded in the editor? (wp_unload_probe.py: recorded, not asserted.)
+//   pcgmerge  Does a saved Landscape, after the edit-layer update ran in a rendering editor, give a -nullrhi editor the same PCG points? (pcg_partition_probe.py in
+//             prepare mode in a rendering editor, then in sample mode in a -nullrhi editor; only when asked for, regardless of --rendering.)
 // It writes a throwaway code project in the OS temp folder with the LandscapeBridge module (module/LandscapeBridge, which now also holds the
 // brush functions), the Landmass and PCG plugins, builds the Editor target, and starts one editor per phase. The map made by the pcg phase is
 // the one the unload phase opens, so run them in this order (the default), or run unload alone and it makes the map itself.
@@ -25,8 +27,8 @@ const keep = args.includes('--keep');
 const rendering = args.includes('--rendering');
 const only = flag('--only');
 const engine = flag('--engine') || process.env.UE_ROOT;
-if (!engine || (only && !['landmass', 'pcg', 'unload'].includes(only))) {
-  console.error('usage: node landscape_world.mjs --engine <UE_5.8 folder> [--only landmass|pcg|unload] [--rendering] [--keep] [--compiler <x.y.z>] [--sdk <10.0.n.n>]');
+if (!engine || (only && !['landmass', 'pcg', 'unload', 'pcgmerge'].includes(only))) {
+  console.error('usage: node landscape_world.mjs --engine <UE_5.8 folder> [--only landmass|pcg|unload|pcgmerge] [--rendering] [--keep] [--compiler <x.y.z>] [--sdk <10.0.n.n>]');
   process.exit(2);
 }
 const editor = join(engine, 'Engine', 'Binaries', 'Win64', 'UnrealEditor.exe');
@@ -38,7 +40,7 @@ const root = mkdtempSync(join(tmpdir(), 'landscape-world-'));
 mkdirSync(join(root, 'Saved', 'Logs'), { recursive: true });
 const readText = (p) => (existsSync(p) ? readFileSync(p, 'utf8') : '');
 const readJson = (p) => (existsSync(p) ? JSON.parse(readText(p)) : undefined);
-const wanted = (phase) => !only || only === phase;
+const wanted = (phase) => (!only && phase !== 'pcgmerge') || only === phase;
 
 console.log(`Landscape world probes in ${root} (${rendering ? 'rendering editor, -RenderOffScreen' : '-nullrhi'})`);
 const toolchain = discoverToolchain({ compiler: flag('--compiler'), sdk: flag('--sdk') });
@@ -50,11 +52,11 @@ const built = await buildEditor({ engine, uproject, name, toolchain, logPath: bu
 console.log(`  build: exit ${built.exit}, ${built.seconds} s${built.timedOut ? ' (timed out)' : ''}`);
 const build = { ...built, log: readText(buildLog) };
 
-function phase(label, script, timeoutSeconds) {
+function phase(label, script, timeoutSeconds, { render = rendering, mode } = {}) {
   const report = join(root, 'Saved', `${label}.json`);
-  const env = { ...process.env, LW_REPORT: report, LW_RENDER: rendering ? '1' : '0', MSYS_NO_PATHCONV: '1' };
+  const env = { ...process.env, LW_REPORT: report, LW_RENDER: render ? '1' : '0', MSYS_NO_PATHCONV: '1', ...(mode ? { LW_PCG_MODE: mode } : {}) };
   const started = Date.now();
-  const result = spawnSync(editor, [uproject, rendering ? '-RenderOffScreen' : '-nullrhi', `-ExecCmds=py ${resolve(here, script)}`,
+  const result = spawnSync(editor, [uproject, render ? '-RenderOffScreen' : '-nullrhi', `-ExecCmds=py ${resolve(here, script)}`,
     `-abslog=${join(root, 'Saved', 'Logs', `${label}.log`)}`, '-unattended', '-nosplash', '-nosound', '-notraceserver'],
   { env, stdio: 'ignore', timeout: timeoutSeconds * 1000, windowsHide: true });
   console.log(`  ${label}: exit ${result.status}${result.error ? ` (${result.error.message})` : ''}, ${Math.round((Date.now() - started) / 1000)} s`);
@@ -64,6 +66,10 @@ const reports = built.exit === 0 ? {
   landmass: wanted('landmass') ? phase('landmass', 'landmass_probe.py', rendering ? 2700 : 900) : undefined,
   pcg: wanted('pcg') ? phase('pcg', 'pcg_partition_probe.py', 1200) : undefined,
   unload: wanted('unload') ? phase('unload', 'wp_unload_probe.py', 900) : undefined,
+  pcgmerge: wanted('pcgmerge') ? (() => {
+    const prepare = phase('pcg_prepare', 'pcg_partition_probe.py', 1500, { render: true, mode: 'prepare' });
+    return { prepare, sample: phase('pcg_sample', 'pcg_partition_probe.py', 900, { render: false, mode: 'sample' }) };
+  })() : undefined,
 } : {};
 
 const checks = evaluate({ build, ...reports, only });
