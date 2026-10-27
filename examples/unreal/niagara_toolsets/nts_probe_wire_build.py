@@ -209,16 +209,47 @@ probe.guarded("level", lambda: c.build_level(MAP, [{"id": sid, "asset": path, "l
 probe.write()
 probe.write_manifest()
 
-# last, because an unconfirmed payload may take the editor down: the Static Mesh data-interface user parameter on the copy
+# last, because an unconfirmed payload may take the editor down: Static Mesh user parameters on the copy, one attempt per shape, riskiest last.
+# Each attempt gets its own name and is listed back; the report keeps every result. The first attempt is the default shape that listed nothing before.
 if user_system:
-    def add_user_variable():
-        di = "/Script/Niagara.NiagaraDataInterfaceStaticMesh"   # source: Engine/Plugins/FX/Niagara/Source/Niagara/Internal/DataInterface/NiagaraDataInterfaceStaticMesh.h
+    DI = "/Script/Niagara.NiagaraDataInterfaceStaticMesh"   # source: Engine/Plugins/FX/Niagara/Source/Niagara/Internal/DataInterface/NiagaraDataInterfaceStaticMesh.h
+    VALUE = "/Script/NiagaraEditor.NiagaraExt_VariableValue_"   # source: NiagaraExternalSystemEditorUtilities.h FNiagaraExt_VariableValue_DataInterface and _Object
+    CUBE = "/Engine/BasicShapes/Cube.Cube"
+
+    def attempt_of(name, type_path, struct, value):
         added = c.call("AddUserVariables", {"system": c.ref(user_system), "variablesToAdd": [{
-            "name": "User.Mesh", "type": {"classStructOrEnum": {"refPath": di}},
-            "defaultValue": {"struct": {"refPath": "/Script/NiagaraEditor.NiagaraExt_VariableValue_DataInterface"}, "value": {"dataInterfaceClass": {"refPath": di}}},
-            "description": "Mesh chosen from Python"}]})
+            "name": name, "type": {"classStructOrEnum": {"refPath": type_path}},
+            "defaultValue": {"struct": {"refPath": VALUE + struct}, "value": value}, "description": "Mesh chosen from Python"}]})
         listed = c.call("GetUserVariables", {"system": c.ref(user_system)})
+        names = [v.get("name") for v in ((listed["value"] or {}).get("userVariables") or [])]
+        return {"name": name, "type": type_path, "struct": struct, "add_error": added["error"], "add_value": str(added["value"])[:300],
+                "list_error": listed["error"], "listed": name in names}
+
+    def di_instance_value():
+        # a Static Mesh data interface object owned by the system, so the default can carry an instance and not only the class
+        instance = unreal.new_object(unreal.NiagaraDataInterfaceStaticMesh, outer=unreal.load_asset(user_system))
+        return {"dataInterfaceClass": {"refPath": DI}, "dataInterface": {"refPath": instance.get_path_name()}}
+
+    ATTEMPTS = [
+        ("di_class", "User.Mesh", DI, "DataInterface", lambda: {"dataInterfaceClass": {"refPath": DI}}),
+        ("object", "User.MeshObj", "/Script/Engine.StaticMesh", "Object", lambda: {"objectClass": {"refPath": "/Script/Engine.StaticMesh"}, "object": {"refPath": CUBE}}),
+        ("di_instance", "User.MeshDi", DI, "DataInterface", di_instance_value),
+    ]
+    results = []
+
+    def add_user_variables():
+        for key, name, type_path, struct, value in ATTEMPTS:
+            try:
+                row = attempt_of(name, type_path, struct, value())
+            except Exception as exc:
+                row = {"name": name, "type": type_path, "struct": struct, "exception": str(exc)[:300]}
+            row["variant"] = key
+            results.append(row)
+            probe.step("user_variable_" + key, **{("variable" if k == "name" else k): v for k, v in row.items()})
+            probe.write()
+        lead = next((r for r in results if r.get("listed")), results[0])
         saved = eal.save_asset(user_system)
-        return {"add_error": added["error"], "add_value": str(added["value"])[:300], "list_error": listed["error"], "names": [v.get("name") for v in ((listed["value"] or {}).get("userVariables") or [])], "saved": bool(saved)}
-    probe.guarded("user_variable", add_user_variable)
+        return {"variants": results, "lead": lead["variant"], "add_error": lead.get("add_error", lead.get("exception", "")), "add_value": lead.get("add_value", ""),
+                "list_error": lead.get("list_error", ""), "names": [r["name"] for r in results if r.get("listed")], "saved": bool(saved)}
+    probe.guarded("user_variable", add_user_variables)
     probe.write()
