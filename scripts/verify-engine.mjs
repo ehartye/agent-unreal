@@ -1,18 +1,21 @@
-// The engine for verify_all.mjs: parse a probe's output, judge it against the manifest, run the entries one at a time and write a report.
-// No dependencies; Node 20.11+. Nothing here refuses to run, or exits non-zero, because the engine is not the pinned build: the pin note is
-// printed and recorded in the report, and the result is judged only against the manifest.
+// node scripts/verify-engine.mjs --engine "<UE_5.8 folder>" [--class headless,render,package] [--only name,name] [--skip name,name] [--report <path>] [--stop-on-fail] [--list]
+// Plugin development tooling: re-verifies an engine build by running every probe and validator in verify-engine-manifest.mjs one at a time,
+// judging each against its expected count, printing a table and writing a JSON report; scripts/pin-engine.mjs reads the reports.
+// Exit code 0 when everything that ran passed or failed as expected, 1 on a mismatch or error, 2 on usage. No dependencies; Node 20.11+.
+// Nothing here refuses to run, or exits non-zero, because the engine is not the pinned build: the pin note is printed and recorded in the
+// report, and the result is judged only against the manifest.
 import { spawn, spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
-import { MANIFEST, CLASSES } from './manifest.mjs';
-import { readEngineVersion, describeEngine, pinNote, readPin } from '../engine-version.mjs';
-import { encodePng } from '../niagara_toolsets/nts-probe-assets.mjs';
+import { fileURLToPath, pathToFileURL } from 'node:url';
+import { MANIFEST, CLASSES } from './verify-engine-manifest.mjs';
+import { readEngineVersion, describeEngine, pinNote, readPin } from '../examples/unreal/engine-version.mjs';
+import { encodePng } from '../examples/unreal/niagara_toolsets/nts-probe-assets.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
-export const EXAMPLES_DIR = resolve(HERE, '..');
-export const REPO_ROOT = resolve(HERE, '..', '..', '..');
+export const REPO_ROOT = resolve(HERE, '..');
+export const BASE_DIR = REPO_ROOT;
 
 export const STATUSES = Object.freeze(['pass', 'as-expected', 'mismatch', 'error', 'skipped']);
 
@@ -212,7 +215,7 @@ export function formatRow(index, count, row) {
  *   manifest      default: the repo's manifest
  *   select        { classes, only, skip } (see selectEntries)
  *   stopOnFail    leave the rest of the run out after the first mismatch or error
- *   examplesDir   where the entries' scripts are (default: examples/unreal); cwd is the repo root
+ *   baseDir   what the entries' scripts are relative to (default: the repo root); cwd is the repo root
  *   exec          replaces execEntry (tests)
  *   print         where the progress goes (default: console.log)
  *   now           () => Date (default: new Date)
@@ -220,7 +223,7 @@ export function formatRow(index, count, row) {
  *   readVersion   replaces readEngineVersion
  * code is 0 when every entry that ran is pass or as-expected, 1 when any is a mismatch or error. The pin note never changes it.
  */
-export async function runAll({ engine, manifest = MANIFEST, select = {}, stopOnFail = false, examplesDir = EXAMPLES_DIR, cwd = REPO_ROOT, exec = execEntry, print = console.log, now = () => new Date(), pin, readVersion = readEngineVersion }) {
+export async function runAll({ engine, manifest = MANIFEST, select = {}, stopOnFail = false, baseDir = BASE_DIR, cwd = REPO_ROOT, exec = execEntry, print = console.log, now = () => new Date(), pin, readVersion = readEngineVersion }) {
   const selection = selectEntries(manifest, select);
   const toRun = selection.filter((s) => !s.skip);
   const info = readVersion(engine);
@@ -235,7 +238,7 @@ export async function runAll({ engine, manifest = MANIFEST, select = {}, stopOnF
   let stopped = false;
   try {
     if (needsAtlas(toRun.map((s) => s.entry))) {
-      tempDir = mkdtempSync(join(tmpdir(), 'verify-all-'));
+      tempDir = mkdtempSync(join(tmpdir(), 'verify-engine-'));
       assets = writeStandInAtlas(tempDir);
     }
     let n = 0;
@@ -247,7 +250,7 @@ export async function runAll({ engine, manifest = MANIFEST, select = {}, stopOnF
       }
       n++;
       const argv = ['--engine', engine, ...expandArgs(entry.args, assets)];
-      const run = await exec({ script: resolve(examplesDir, entry.script), argv, cwd, timeoutMs: entry.timeoutMs, entry });
+      const run = await exec({ script: resolve(baseDir, entry.script), argv, cwd, timeoutMs: entry.timeoutMs, entry });
       const verdict = judge(entry, run);
       const row = { ...base, status: verdict.status, passed: verdict.passed, total: verdict.total, seconds: run.seconds ?? null, exitCode: run.code ?? null, detail: verdict.detail };
       if (verdict.failing.length) row.failing = verdict.failing;
@@ -272,7 +275,7 @@ export async function runAll({ engine, manifest = MANIFEST, select = {}, stopOnF
   }
   if (note) print('(the pin note above does not change the result)');
   const report = {
-    schema: 'verify-all/1',
+    schema: 'verify-engine/1',
     generatedAt: now().toISOString(),
     engine: { path: engine, major: info.major, minor: info.minor, patch: info.patch, changelist: info.changelist, source: info.source, warnings: info.warnings },
     pin: thePin ? thePin.unreal : null,
@@ -289,7 +292,7 @@ export async function runAll({ engine, manifest = MANIFEST, select = {}, stopOnF
 
 // --- the command line --------------------------------------------------------------------------------------------------------
 
-export const USAGE = `usage: node verify_all.mjs --engine <UE_5.8 folder> [--class headless,render,package] [--only name,name] [--skip name,name]
+export const USAGE = `usage: node scripts/verify-engine.mjs --engine <UE_5.8 folder> [--class headless,render,package] [--only name,name] [--skip name,name]
                          [--report <path>] [--stop-on-fail] [--list]
   Runs the manifest's probes and validators one at a time against an installed engine, judges each against its expected count,
   prints a table and writes a JSON report (default: a file in the system temp folder). The classes are headless (no GPU), render,
@@ -327,7 +330,7 @@ export function listText(manifest = MANIFEST) {
 }
 
 /**
- * The command line, returning the exit code. io: { print, error, now, exec, pin, readVersion, examplesDir, cwd, manifest }.
+ * The command line, returning the exit code. io: { print, error, now, exec, pin, readVersion, baseDir, cwd, manifest }.
  */
 export async function main(argv, io = {}) {
   const print = io.print ?? console.log, error = io.error ?? console.error;
@@ -341,10 +344,10 @@ export async function main(argv, io = {}) {
   let selection;
   try { selection = selectEntries(manifest, { classes: args.classes, only: args.only, skip: args.skip }); } catch (e) { error(`${e.message}\n${USAGE}`); return 2; }
   if (selection.every((s) => s.skip)) { error('no entry is selected\n' + USAGE); return 2; }
-  const reportPath = args.report ? resolve(args.report) : join(tmpdir(), `verify-all-report-${(io.now ?? (() => new Date()))().toISOString().replace(/[:.]/g, '-')}.json`);
+  const reportPath = args.report ? resolve(args.report) : join(tmpdir(), `verify-engine-report-${(io.now ?? (() => new Date()))().toISOString().replace(/[:.]/g, '-')}.json`);
   const { report, code } = await runAll({
     engine: args.engine, manifest, select: { classes: args.classes, only: args.only, skip: args.skip }, stopOnFail: args.stopOnFail, print,
-    ...(io.examplesDir ? { examplesDir: io.examplesDir } : {}), ...(io.cwd ? { cwd: io.cwd } : {}), ...(io.exec ? { exec: io.exec } : {}),
+    ...(io.baseDir ? { baseDir: io.baseDir } : {}), ...(io.cwd ? { cwd: io.cwd } : {}), ...(io.exec ? { exec: io.exec } : {}),
     ...(io.now ? { now: io.now } : {}), ...(io.pin !== undefined ? { pin: io.pin } : {}), ...(io.readVersion ? { readVersion: io.readVersion } : {}),
   });
   try {
@@ -354,3 +357,5 @@ export async function main(argv, io = {}) {
   } catch (e) { error(`could not write the report to ${reportPath}: ${e.message}`); return code === 0 ? 1 : code; }
   return code;
 }
+
+if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) process.exitCode = await main(process.argv.slice(2));

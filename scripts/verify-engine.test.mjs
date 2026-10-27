@@ -1,4 +1,4 @@
-// node --test examples/unreal/verify/verify.test.mjs  (no Unreal, no dependencies; the fake probes are tiny Node scripts in a temp folder)
+// node --test scripts/verify-engine.test.mjs  (no Unreal, no dependencies; the fake probes are tiny Node scripts in a temp folder)
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
@@ -6,11 +6,11 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
   parseSummary, parseFailures, judge, selectEntries, runAll, main, parseArgs, listText, execEntry, writeStandInAtlas, expandArgs, needsAtlas, lastLines,
-} from './verify-lib.mjs';
-import { MANIFEST } from './manifest.mjs';
-import { decodePng } from '../niagara_toolsets/nts-probe-assets.mjs';
+} from './verify-engine.mjs';
+import { MANIFEST } from './verify-engine-manifest.mjs';
+import { decodePng } from '../examples/unreal/niagara_toolsets/nts-probe-assets.mjs';
 
-const tempDir = (label) => mkdtempSync(join(tmpdir(), `verify-all-${label}-`));
+const tempDir = (label) => mkdtempSync(join(tmpdir(), `verify-engine-${label}-`));
 const cleanup = (...dirs) => dirs.forEach((d) => rmSync(d, { recursive: true, force: true }));
 
 const PIN = { unreal: { version: '5.8.4', changelist: 58902052, verifiedOn: '2026-10-26' }, uefn: { version: '42.40', build: '59343437', verifiedOn: null } };
@@ -343,7 +343,7 @@ test('main: a pass, a mismatch, an unparseable output and a timeout against real
     ];
     const { lines, print } = quiet();
     const reportPath = join(reportDir, 'nested', 'report.json');
-    const code = await main(['--engine', engine, '--report', reportPath], { manifest, examplesDir: dir, cwd: dir, print, error: print, pin: PIN, readVersion: otherVersion });
+    const code = await main(['--engine', engine, '--report', reportPath], { manifest, baseDir: dir, cwd: dir, print, error: print, pin: PIN, readVersion: otherVersion });
     assert.equal(code, 1);
     const report = JSON.parse(readFileSync(reportPath, 'utf8'));
     assert.deepEqual(report.entries.map((r) => [r.name, r.status]), [['ok', 'pass'], ['short', 'mismatch'], ['garbage', 'error'], ['hang', 'error'], ['owner', 'skipped']]);
@@ -354,7 +354,7 @@ test('main: a pass, a mismatch, an unparseable output and a timeout against real
     assert.ok(lines.some((l) => l.startsWith('report: ')));
     assert.ok(lines.some((l) => /^NOTE: not the pinned build/.test(l)));
 
-    const again = await main(['--engine', engine, '--only', 'ok,owner', '--report', reportPath], { manifest, examplesDir: dir, cwd: dir, print: () => {}, error: () => {}, pin: PIN, readVersion: otherVersion });
+    const again = await main(['--engine', engine, '--only', 'ok,owner', '--report', reportPath], { manifest, baseDir: dir, cwd: dir, print: () => {}, error: () => {}, pin: PIN, readVersion: otherVersion });
     assert.equal(again, 0, 'a different build is a note, not a failure');
     assert.deepEqual(JSON.parse(readFileSync(reportPath, 'utf8')).summary, { pass: 2, 'as-expected': 0, mismatch: 0, error: 0, skipped: 3 });
   } finally { cleanup(dir, engine, reportDir); }

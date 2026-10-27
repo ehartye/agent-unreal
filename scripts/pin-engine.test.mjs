@@ -6,7 +6,7 @@ import { spawnSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { parseArgs, planPin, run, formatPin, localDate, readReports, DEFAULT_PIN_FILE } from './pin-engine.mjs';
-import { MANIFEST } from '../examples/unreal/verify/manifest.mjs';
+import { MANIFEST } from './verify-engine-manifest.mjs';
 import { validatePin } from '../examples/unreal/engine-version.mjs';
 
 const SCRIPT = resolve(import.meta.dirname, 'pin-engine.mjs');
@@ -33,8 +33,8 @@ function workspace(pin = OLD_PIN) {
   return { root, engine, pinFile, read: () => readFileSync(pinFile, 'utf8'), clean: () => rmSync(root, { recursive: true, force: true }) };
 }
 
-/** A verify_all-style report; every non-owner manifest entry passes unless `statuses` says otherwise. */
-function report(ws, name, { changelist = 58999999, statuses = {}, only = null, schema = 'verify-all/1' } = {}) {
+/** A verify-engine-style report; every non-owner manifest entry passes unless `statuses` says otherwise. */
+function report(ws, name, { changelist = 58999999, statuses = {}, only = null, schema = 'verify-engine/1' } = {}) {
   const entries = MANIFEST.filter((e) => e.class !== 'owner' && (!only || only.includes(e.name))).map((e) => ({ name: e.name, class: e.class, status: statuses[e.name] ?? 'pass' }));
   const path = join(ws.root, name);
   writeFileSync(path, JSON.stringify({ schema, engine: { changelist }, entries }));
@@ -75,7 +75,7 @@ test('a dry run without reports says --write would refuse, and still exits 0', (
   try {
     const result = drive(ws, []);
     assert.equal(result.code, 0);
-    assert.match(result.out, /would refuse without --force: no verify_all report was given/);
+    assert.match(result.out, /would refuse without --force: no verify-engine report was given/);
     assert.match(result.out, /--write would not update the pin yet/);
   } finally { ws.clean(); }
 });
@@ -101,10 +101,10 @@ test('--write refuses without green reports: none, red, another changelist, not 
     const bad = join(ws.root, 'bad.json');
     writeFileSync(bad, '{ not json');
     const cases = {
-      none: [[], /no verify_all report/],
+      none: [[], /no verify-engine report/],
       red: [[report(ws, 'red.json', { statuses: { nts_validate: 'mismatch', rp_rt_validate: 'error' } })], /not green \(nts_validate mismatch, rp_rt_validate error\)/],
       otherBuild: [[report(ws, 'other.json', { changelist: 58210709 })], /run on changelist 58210709, not 58999999/],
-      notReport: [[report(ws, 'schema.json', { schema: 'something/1' })], /not a verify_all\.mjs report/],
+      notReport: [[report(ws, 'schema.json', { schema: 'something/1' })], /not a verify-engine\.mjs report/],
       unreadable: [[bad], /cannot read the report/],
       missing: [[report(ws, 'partial.json', { only: ['nts_validate', 'rp_validate'] })], /do not cover \d+ manifest entries: .*pcg_packaged/],
     };
@@ -122,7 +122,7 @@ test('--force writes without the reports, and says what it went past', () => {
   try {
     const result = drive(ws, ['--write', '--force']);
     assert.equal(result.code, 0);
-    assert.match(result.out, /forcing past: no verify_all report/);
+    assert.match(result.out, /forcing past: no verify-engine report/);
     assert.equal(JSON.parse(ws.read()).unreal.changelist, 58999999);
   } finally { ws.clean(); }
 });
@@ -214,7 +214,7 @@ test('planPin and readReports are pure: the same input gives the same plan and n
   assert.deepEqual(plan.newPin.unreal, { version: '5.8.5', changelist: 58999999, verifiedOn: '2026-11-02' });
   assert.deepEqual(plan.identify, []);
   assert.equal(plan.evidence.length, 1);
-  const { problems, covered } = readReports(['x.json'], { changelist: 1, readFile: () => JSON.stringify({ schema: 'verify-all/1', engine: { changelist: 1 }, entries: [{ name: 'a', status: 'as-expected' }, { name: 'b', status: 'skipped' }] }) });
+  const { problems, covered } = readReports(['x.json'], { changelist: 1, readFile: () => JSON.stringify({ schema: 'verify-engine/1', engine: { changelist: 1 }, entries: [{ name: 'a', status: 'as-expected' }, { name: 'b', status: 'skipped' }] }) });
   assert.deepEqual([problems, [...covered]], [[], ['a']]);
 });
 

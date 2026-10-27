@@ -1,19 +1,19 @@
 // node scripts/pin-engine.mjs --engine "<UE_5.8 folder>" [--version X.Y.Z] [--report <verify-report.json>]... [--write] [--force]
-// Writes the engine pin (engine-version.json) from an installed engine once examples/unreal/verify_all.mjs has passed on it.
+// Writes the engine pin (engine-version.json) from an installed engine once scripts/verify-engine.mjs has passed on it.
 // Dry run by default: prints the pin it would write and what stands in the way. Dependency free; Node 20.11+.
 //
 // The changelist comes from the editor executable (through examples/unreal/engine-version.mjs), the version from Build.version or --version.
 // After a launcher update Build.version can be stale while the binaries are new; then the version numbers cannot be trusted, and the
 // tool refuses to write unless --version says what the build is. That is this tool's own safety against labelling a pin wrongly: nothing
 // else in the repo refuses to run on an engine because of the pin.
-// --write also needs green verify_all reports (--report, repeatable, one per machine class) that cover every entry of the manifest
+// --write also needs green verify-engine reports (--report, repeatable, one per machine class) that cover every entry of the manifest
 // except the owner entries and were run on this engine's changelist; --force writes without them. The uefn block is never touched.
 // Exit code 0 on a dry run or a write, 1 when --write refused, 2 on a usage error.
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { readEngineVersion, validatePin } from '../examples/unreal/engine-version.mjs';
-import { MANIFEST } from '../examples/unreal/verify/manifest.mjs';
+import { MANIFEST } from './verify-engine-manifest.mjs';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 export const DEFAULT_PIN_FILE = join(ROOT, 'engine-version.json');
@@ -21,7 +21,7 @@ export const DEFAULT_PIN_FILE = join(ROOT, 'engine-version.json');
 export const USAGE = `usage: node scripts/pin-engine.mjs --engine <UE_5.8 folder> [--version X.Y.Z] [--report <verify-report.json>]... [--write] [--force]
   Dry run: prints the pin that would be written from the engine.
   --version X.Y.Z  the version, when Build.version is stale or unreadable (the changelist still comes from the editor executable)
-  --report <file>  a verify_all.mjs report (repeatable: one per machine class); --write needs green reports that cover the manifest
+  --report <file>  a verify-engine.mjs report (repeatable: one per machine class); --write needs green reports that cover the manifest
   --write          update the unreal block of engine-version.json (verifiedOn is today); the uefn block is left alone
   --force          write without green reports (an unidentified build is still refused)`;
 
@@ -59,7 +59,7 @@ const inline = (value) => {
 export const formatPin = (pin) => `${inline(pin)}\n`;
 
 /**
- * What the reports say about a build: { problems, covered }. A report counts when it is a verify_all report, was run on `changelist`
+ * What the reports say about a build: { problems, covered }. A report counts when it is a verify-engine report, was run on `changelist`
  * and is green; covered lists the manifest entries that passed or failed as expected in the counted reports.
  */
 export function readReports(paths, { changelist, readFile = (p) => readFileSync(p, 'utf8') }) {
@@ -68,7 +68,7 @@ export function readReports(paths, { changelist, readFile = (p) => readFileSync(
   for (const path of paths) {
     let report;
     try { report = JSON.parse(readFile(path)); } catch (error) { problems.push(`${path}: cannot read the report (${error.message})`); continue; }
-    if (!report || report.schema !== 'verify-all/1' || !Array.isArray(report.entries)) { problems.push(`${path}: not a verify_all.mjs report`); continue; }
+    if (!report || report.schema !== 'verify-engine/1' || !Array.isArray(report.entries)) { problems.push(`${path}: not a verify-engine.mjs report`); continue; }
     const reportChangelist = report.engine && report.engine.changelist;
     if (reportChangelist !== changelist) { problems.push(`${path}: run on changelist ${reportChangelist ?? 'unknown'}, not ${changelist}`); continue; }
     const bad = report.entries.filter((e) => e.status === 'mismatch' || e.status === 'error');
@@ -101,7 +101,7 @@ export function planPin({ info, versionArg, pin, reports, manifest = MANIFEST, t
   if (info.warnings.length > 0 && versionArg) notes.push(...info.warnings);
   if (!pin) identify.push('engine-version.json is missing or invalid, so there is no pin to update');
 
-  if (reports.length === 0) evidence.push('no verify_all report was given (--report)');
+  if (reports.length === 0) evidence.push('no verify-engine report was given (--report)');
   else {
     const { problems, covered } = readReports(reports, { changelist, readFile });
     evidence.push(...problems);

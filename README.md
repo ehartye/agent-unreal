@@ -116,6 +116,8 @@ placeholders and evidence labels. `unreal-native` passes the strict rules, and `
 structure and size. `node scripts/check.mjs --skill <name>` (repeatable or comma-separated) lints only those skills with the gate's flags and skips the tests; `--no-tests` runs every lint without the test step. The gate runs every step even after a failure and prints all findings. Every folder under `skills/` is linted, and a new skill with no strictness-table entry in `scripts/check.mjs` gets the default rules and fails until it complies or earns an entry. Structural checks do not
 establish that a skill improves an agent's work.
 
+`[tested]` means a run in this repo on the engine pinned in `engine-version.json`; `[documented]` is Epic documentation or engine source; `[general]` is judgement or an observation not reproduced here. A different engine is not blocked; it is at your own risk.
+
 ## Install
 
 ```

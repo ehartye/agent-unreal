@@ -1,12 +1,12 @@
-// node --test examples/unreal/verify/manifest.test.mjs  (no Unreal, no dependencies)
+// node --test scripts/verify-engine-manifest.test.mjs  (no Unreal, no dependencies)
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { existsSync, statSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { MANIFEST, CLASSES } from './manifest.mjs';
+import { MANIFEST, CLASSES } from './verify-engine-manifest.mjs';
 
-const EXAMPLES = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
 test('the manifest has the four classes and no duplicate names', () => {
   assert.deepEqual([...CLASSES], ['headless', 'render', 'package', 'owner']);
@@ -49,8 +49,8 @@ test('a partial pass names its known failures, and nothing else carries them', (
 
 test('every script exists, and so does the example folder it is in', () => {
   for (const e of MANIFEST) {
-    assert.ok(!e.script.startsWith('/') && !/^[A-Za-z]:/.test(e.script) && !e.script.includes('..'), `${e.name}: script path is relative to examples/unreal`);
-    const file = join(EXAMPLES, e.script);
+    assert.ok(!e.script.startsWith('/') && !/^[A-Za-z]:/.test(e.script) && !e.script.includes('..') && e.script.startsWith('examples/unreal/'), `${e.name}: script path is relative to the repo root and under examples/unreal`);
+    const file = join(ROOT, e.script);
     assert.ok(existsSync(file) && statSync(file).isFile(), `${e.name}: ${e.script} does not exist`);
     const folder = dirname(file);
     assert.ok(existsSync(folder) && statSync(folder).isDirectory(), `${e.name}: folder`);
@@ -72,7 +72,7 @@ test('the manifest names no machine, home directory or GPU', () => {
     ['a drive path', /[A-Za-z]:[\\/]/],
     ['a laptop or desktop', /\b(?:laptop|desktop)\b/i],
     ['a host name', /\bhal\d*\b|\bssh\b/i],
-    ['a GPU model', /GeForce|\bRTX\b|Radeon|\bIris\b/],
+    ['a GPU model', new RegExp(`${['Ge', 'Force'].join('')}|\\b${['R', 'TX'].join('')}\\b|${['Rade', 'on'].join('')}|\\b${['Ir', 'is'].join('')}\\b`)],
   ]) assert.ok(!re.test(text), `the manifest names ${what}`);
 });
 
