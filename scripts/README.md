@@ -44,7 +44,7 @@ Write a citation in one of these forms; the name is lowercase and hyphenated, a 
 | --- | --- |
 | name `in` or `from` plugin | `` `engine-selection` in agent-engine `` |
 | name, plugin in parentheses | `` `engine-asset-import` (agent-engine) `` |
-| name `skill,` plugin | `` `phaser-verification` skill, agent-engine `` |
+| name `skill,` plugin | `` `phaser-verification` skill, agent-phaser `` |
 | plugin's names `skills` | `` the `agent-tests` plugin's test-strategy and test-audit skills `` |
 | `its` name `skill`, after the plugin in the same paragraph | `` agent-meshes ... (see its `mesh-build` skill) `` |
 | `whose` name, after the plugin in the same paragraph | `` agent-meshes, whose `mesh-tool-selection` decides `` |
@@ -54,7 +54,7 @@ How a name resolves: a name bound to a plugin must be in that plugin's list (the
 
 What it cannot see:
 
-- A skill that exists but no longer holds the cited content. A name check passed the stale pointer to `engine-phaser` after profiling moved to `phaser-verification`, because `engine-phaser` still exists. Re-read the target when its plugin releases a split.
+- A skill that exists but no longer holds the cited content. A name check passed the stale pointer to `engine-phaser` after profiling moved to `phaser-verification`, because `engine-phaser` still exists (both skills now belong to agent-phaser). Re-read the target when its plugin releases a split.
 - A citation written outside these forms, such as "use `x` from the other plugin" with no plugin name, or a name in a table cell with no plugin.
 - A snapshot that has gone stale. `sibling-skills.json` is committed and names only (plugin to sorted skill names, no paths or versions).
 

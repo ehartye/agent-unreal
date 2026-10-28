@@ -1,6 +1,6 @@
 # Unreal profiling: exactness proofs, engine-source facts and tooling traps
 
-Companion to [native profiling](unreal-native-profiling.md) (one consuming project on an earlier engine build; not reproduced in this repo). The method is in the profiling method (`phaser-verification` skill, agent-engine); measured costs are in [profiling measurements](unreal-native-profiling-measurements.md). Read an engine fact from the installed source before predicting a cost from it. Counts and timings are reported from one project; switch and counter names are placeholders.
+Companion to [native profiling](unreal-native-profiling.md) (one consuming project on an earlier engine build; not reproduced in this repo). The method is in the profiling method (`phaser-verification` skill, agent-phaser); measured costs are in [profiling measurements](unreal-native-profiling-measurements.md). Read an engine fact from the installed source before predicting a cost from it. Counts and timings are reported from one project; switch and counter names are placeholders.
 
 ## Exact versus behaviour-changing, and the shadow check
 

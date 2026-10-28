@@ -22,19 +22,9 @@
     "engine-asset-import",
     "engine-babylon",
     "engine-custom-shaders",
-    "engine-phaser",
     "engine-r3f",
     "engine-selection",
-    "engine-visual-polish",
-    "phaser-architecture",
-    "phaser-audio",
-    "phaser-input",
-    "phaser-motion",
-    "phaser-physics",
-    "phaser-pixel-ui",
-    "phaser-rendering",
-    "phaser-verification",
-    "phaser-worlds"
+    "engine-visual-polish"
   ],
   "agent-marketing": [
     "market-campaign",
@@ -56,6 +46,18 @@
     "mesh-rigging",
     "mesh-setup",
     "mesh-tool-selection"
+  ],
+  "agent-phaser": [
+    "engine-phaser",
+    "phaser-architecture",
+    "phaser-audio",
+    "phaser-input",
+    "phaser-motion",
+    "phaser-physics",
+    "phaser-pixel-ui",
+    "phaser-rendering",
+    "phaser-verification",
+    "phaser-worlds"
   ],
   "agent-prose": [
     "prose-annotate",

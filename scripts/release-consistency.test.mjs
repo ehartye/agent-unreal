@@ -167,8 +167,9 @@ test('the generic hygiene patterns catch a home path, a GPU model, a non-plugin 
 // checkouts the same test also compares the snapshot with them.
 
 const SNAPSHOT = {
-  'agent-engine': ['engine-asset-import', 'engine-phaser', 'engine-selection', 'phaser-verification'],
+  'agent-engine': ['engine-asset-import', 'engine-selection'],
   'agent-meshes': ['mesh-build', 'mesh-tool-selection'],
+  'agent-phaser': ['engine-phaser', 'phaser-verification'],
   'agent-tests': ['test-audit', 'test-strategy'],
 };
 const cites = (text) => extractCitations(text, Object.keys(SNAPSHOT)).map((c) => [c.via, c.plugin ?? 'none', ...c.names].join(' '));
@@ -204,7 +205,7 @@ test('citation grammar: the forms the skills use are read, with the plugin each 
     ['`engine-asset-import` and `engine-selection` in agent-engine.', ['in agent-engine engine-asset-import engine-selection']],
     ['(use engine-asset-import from agent-engine)', ['in agent-engine engine-asset-import']],
     ['Other engines are in `engine-asset-import` (agent-engine); the rest', ['paren agent-engine engine-asset-import']],
-    ['method (`phaser-verification` skill, agent-engine) for budgets', ['skill-comma agent-engine phaser-verification']],
+    ['method (`phaser-verification` skill, agent-phaser) for budgets', ['skill-comma agent-phaser phaser-verification']],
     ['the `mesh-tool-selection` and `mesh-build` skills in agent-meshes', ['in agent-meshes mesh-tool-selection mesh-build']],
     ['the `agent-tests` plugin\'s test-strategy and test-audit skills', ['possessive agent-tests test-strategy test-audit']],
     ['Check with agent-meshes `verify-unreal` (see its `mesh-build` skill).', ['its agent-meshes mesh-build']],
@@ -225,7 +226,7 @@ test('citation grammar: the forms the skills use are read, with the plugin each 
 test('a citation of a skill that does not exist fails, with the plugin\'s skill names in the message; one that exists passes', () => {
   const found = problemsFor({ ...ownSkill('unreal-import'), 'skills/unreal-import/references/a.md': '# A\n\n- See `engine-fizz` in agent-engine.\n- See `engine-selection` in agent-engine.\n' });
   assert.equal(found.length, 1);
-  assert.match(found[0], /^skills\/unreal-import\/references\/a\.md:3: "engine-fizz" is not a skill of agent-engine \(it has: engine-asset-import, engine-phaser,/);
+  assert.match(found[0], /^skills\/unreal-import\/references\/a\.md:3: "engine-fizz" is not a skill of agent-engine \(it has: engine-asset-import, engine-selection\)/);
 
   // A chain fails by name, and a misspelt plugin or one the snapshot lacks is named.
   assert.equal(problemsFor({ ...ownSkill('x'), 'skills/x/references/a.md': 'the `mesh-build` and `mesh-bild` skills in agent-meshes\n' }).length, 1);
@@ -243,8 +244,8 @@ test('an unqualified skill name resolves in this plugin, then in the plugin name
 });
 
 test('limit: a name check passes a skill that exists but no longer holds the cited content (the stale engine-phaser pointer)', () => {
-  // engine-phaser still exists in agent-engine, so only a person or a content check can see that profiling moved out of it.
-  assert.deepEqual(problemsFor({ ...ownSkill('x'), 'skills/x/references/a.md': 'method (`engine-phaser` skill, agent-engine)\n' }), []);
+  // engine-phaser still exists in agent-phaser, so only a person or a content check can see that profiling moved out of it.
+  assert.deepEqual(problemsFor({ ...ownSkill('x'), 'skills/x/references/a.md': 'method (`engine-phaser` skill, agent-phaser)\n' }), []);
 });
 
 test('citations are checked in skills, examples and the README', () => {
