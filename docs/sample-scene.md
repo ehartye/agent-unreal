@@ -21,6 +21,8 @@ level headless, and `run_scene.py` plays it offscreen, samples state and saves a
 
 ![The scene on an earlier Unreal 5.8 build: the same three elements](images/unreal-5.8-sample-scene.png)
 
+![The scene in a UEFN editor viewport: a 3D fox, a pixel-art campfire (with its light device) and a pixel courier](images/uefn-sample-scene.png)
+
 ## Open
 
 - A trigger and real variant picking for the one-shot.
