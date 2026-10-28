@@ -107,3 +107,8 @@ Read back again, save explicitly and run physics checks. A count alone cannot
 show that boxes are in the right place or leave doorways open.
 
 Circular decks, editor physics checks and reimport: [FBX decks and verification](uefn-native-fbx-verification.md).
+
+## Skeletal import in a scratch project
+
+- [tested] `SkeletalMeshTools.import_file` with materials, textures and animations on gave one skeletal mesh, one skeleton, both clips (1.2 s / 36 frames and 0.8 s / 24 frames at 30 fps, the asset name as a prefix) and one material per FBX material. The response lists only the mesh; read the destination folder for the rest.
+- [tested] Vertex colours do not survive the import: a model coloured by vertex colours imported with white materials, and a material that reads vertex colours also rendered white. The native importer option that replaces vertex colours split the model into several meshes. Colour a UEFN character with per-material colours or a baked texture.

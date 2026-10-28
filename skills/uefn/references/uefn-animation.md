@@ -49,3 +49,10 @@ need actor/component rebinding in the destination; verify their references and
 scrub after migration. Do not assume custom bindings or director events transfer.
 Keep original FBX/WAV sources as recovery paths. A successful copy or forward-looking
 version number alone does not prove compatible serialization or Fortnite support.
+
+## A scene built from code in a scratch project
+
+- [tested] In a scratch UEFN project made from a template (no connection to any real game) a scene was built from scripts and the device tools: an Animated Mesh device with the fox (`skeletalMesh`, `animation`, `loop` true, `playRate` 1, read back), a Customizable Light, two Audio Player devices, a Button and a Fixed Point Camera. `AddEventBinding` wired both spawn pads' `On Player Spawned` to the fox device's `Play` and the Button's `On Interact` to the one-shot player's `Play`. `ListEventBindings` is called on the target device and lists the bindings wired into it.
+- [tested] A sprite flipbook needs no particles: an unlit masked Material whose frame is `floor(Time * fps) mod cells` shifts a texture sample's U coordinate by one cell, on a plane static mesh. It showed one cell per sprite and animated. The first build showed the whole sheet because the connect call for the texture sample's UV pin returned False without an error; check every connect result.
+- [tested] The Fixed Point Camera device has `addToPlayersOnStart` on by default, so every player's view is fixed at the device from spawn: the character moves and the camera does not follow. Turn it off, or leave the device out, to keep the follow camera.
+- [tested] A private session launched from the editor (`StartSession`, then `StartGame`) reached Connected and Running in 1 to 2 minutes on a small project. An owner play-test of the running match reported that the scene looked right (movement, fox, sprites, audio). None of it was read from logs, and multiplayer and the memory budget were not checked.

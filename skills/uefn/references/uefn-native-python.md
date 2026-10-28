@@ -104,3 +104,5 @@ none establishes cooked character or weapon collision.
 - [general] A session launch exceeded the HTTP timeout and continued cooking. Poll session
   status before retrying. Validation/upload then a transport disconnect does not
   establish runtime success and is separate from the authoring transport.
+- [tested] Epic's MCP server answers streamable HTTP at `/mcp` on the configured port (8000 in one session): `initialize`, an `initialized` notification, then `tools/call` of `list_toolsets`, `describe_toolset` and `call_tool`; the session id comes from `initialize`. `ObjectTools.get_properties` fails the whole call when one named property is unreadable.
+- [tested] `remote_execution.py` `MODE_EXEC_STATEMENT` takes one statement ("multiple statements found while compiling a single statement"); run a file with `MODE_EXEC_FILE` or evaluate one expression. A script run that way reads its configuration from a file beside it, because the editor process does not see the caller's environment.
