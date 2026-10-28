@@ -13,6 +13,8 @@ into five Sound Waves and five direct looping Sound Cues. Sources were stereo
 Exact source hashes, editor metadata, Cue graphs, explicit scoped saves, clean
 package state and the disk package hashes were independently checked.
 
+[tested] In a scratch project the route imported a 172.8 s stereo 48 kHz music WAV and a 1.412 s one-shot into Sound Waves and Cues (the Cue's first node a Wave Player; looping set on the music's), saved explicitly. An Audio Player device took the Cue (`audio`) with `loopAudio` and autoplay during gameplay. An owner play-test reported nothing wrong with the audio; seamless repeats were not measured.
+
 **Playback preparation:** [general] the follow-up added personal audio selection,
 five Audio Players, two mute controls and preserved typed bindings. Independent
 settings/reference readback and scoped actor saves passed. The single launch

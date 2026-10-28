@@ -1,1 +1,1 @@
-{"unreal": {"version": "5.8.4", "changelist": 58902052, "verifiedOn": "2026-10-26"}, "uefn": {"version": "42.40", "build": "59343437", "verifiedOn": "2026-10-27", "note": "only the helper-freshness probe has been run on this UEFN build"}}
+{"unreal": {"version": "5.8.4", "changelist": 58902052, "verifiedOn": "2026-10-26"}, "uefn": {"version": "42.40", "build": "59343437", "verifiedOn": "2026-10-27", "note": "the helper-freshness probe and the sample scene have been run on this UEFN build"}}

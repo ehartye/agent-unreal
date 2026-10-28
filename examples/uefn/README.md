@@ -34,3 +34,12 @@ Runtime animation and the complete sample scene remain unverified.
 `CaptureViewport` returns the PNG in a separate MCP image content block. Its JSON `image` value is a
 `urn:toolresult` reference, not base64 data. Session startup can also outlast the HTTP request timeout: query
 `GetSessionStatus` before retrying a launch.
+
+## Sample scene builder
+
+`sample_scene_build.py` builds the UEFN [sample scene](../../docs/sample-scene.md) in a scratch project through native editor
+Python, one phase per run (`audio`, `fbx`, `materials`, `vcolor`, `quads`, `inspect`). Make the scratch project from a
+template in UEFN (nothing here depends on any particular project), start Epic's MCP server, and run the script through an
+already verified native connection with `MODE_EXEC_FILE`, with a `sample_scene_config.json` beside it (phase, mount, level,
+source folder, report path; the mount and level are project inputs, never written into the script). Import the fox and the
+sprite sheets with the MCP import tools, place devices with `PlaceDevice`, and read everything back before saving.

@@ -17,12 +17,14 @@ level headless, and `run_scene.py` plays it offscreen, samples state and saves a
 |---|---|---|
 | An earlier Unreal 5.7 build | Checks 1 and 2 for all assets: one SkeletalMesh, one Skeleton, 2 animations and 48 material instances for the fox, no errors. Check 3 by eye (screenshot above). Check 4 partly: the music bed reports playing, the campfire flipbook advances through its 8 frames at 10 fps, the fox animation plays, and the log has no errors. | Audio by ear; the pickup's variant picking (only variant 0 is placed, not playing); the courier flipbook's advance (samples landed on the same frame). |
 | An earlier Unreal 5.8 build | Checks 1 and 2 for all assets after three fixes (the fox split into 48 meshes, automated imports were not saved, FBX clips needed frame-aligned lengths; the Unreal import notes in the `unreal-import` skill list them). Check 3 by eye ([screenshot](images/unreal-5.8-sample-scene.png)). Check 4 partly: the music bed reports playing, both flipbooks advance, the fox animation plays and advances. Epic's MCP server also started headless and imported textures and an FBX. | Audio by ear, pickup variant picking, any automated pixel check. |
-| An earlier UEFN build | Epic's MCP server on a set port; texture import; the fox as a skeletal mesh from a converted FBX. | A scene, a play-test session, the fox's clips after the frame-rate fix, audio import (no MCP route), the memory budget. |
+| A UEFN session in a scratch project | Checks 1 and 2 in the editor: the fox (one skeletal mesh, one skeleton, `walk` 1.2 s / 36 frames, `trot` 0.8 s / 24 frames), both sprite sheets as flipbooks driven by a material, the music bed (172.8 s, looping Cue) and one one-shot, all imported by script and read back; the editor log had no error from the scene. Check 3 by eye in the editor (fox, campfire and courier in one frame). Check 4 in a private session launched from the editor, which reached Connected and Running; an owner play-test reported that the movement, fox, sprites and music looked right. | Audio by measurement, the one-shot's variants (one WAV only), playback read from logs, multiplayer and the memory budget. The fox's colours (vertex colours do not survive the import). |
 
 ![The scene on an earlier Unreal 5.8 build: the same three elements](images/unreal-5.8-sample-scene.png)
+
+![The scene in a UEFN editor viewport: a 3D fox, a pixel-art campfire (with its light device) and a pixel courier](images/uefn-sample-scene.png)
 
 ## Open
 
 - A trigger and real variant picking for the one-shot.
 - An automated screenshot check (pixel presence, not exact match).
-- A UEFN build of the same scene; the `uefn` skill holds the routes that exist.
+- UEFN: playback read from logs, multiplayer and the memory budget; the `uefn` skill holds the routes that exist.
