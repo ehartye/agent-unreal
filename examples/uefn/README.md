@@ -11,6 +11,12 @@ It sets the scene to 30 fps **before** importing the glTF, so clips whose length
 (the fox's 0.8 s and 1.2 s) survive Unreal's importer, which drops any clip that is not frame-aligned. Setting the rate
 after the import shrinks every clip. See FBX clips and MCP (`unreal-import` skill).
 
+It exports only the meshes the armature owns: a mesh with an Armature modifier that has an object set, or one parented
+to the armature (including a part attached to a bone). Every other mesh is dropped before export. Blender's glTF importer
+adds an unskinned Icosphere, its bone-display shape, to every rigged import, so the FBX would otherwise carry an extra
+static mesh. A GLB with no armature is static and keeps all its meshes. The `AGENT_UNREAL_CONVERT` line reports
+`kept=`, `dropped=` and `dropped_names=`, so a mesh you wanted that appears there was not skinned or parented.
+
 [general] Observed on an earlier engine build and an earlier UEFN build; not yet verified on the pinned builds. With Blender on the sample fox, Epic's MCP `import_file` in Unreal produced the mesh, the
 skeleton and both clips. Re-run in UEFN: the saved import contains `walk` at 1.2 seconds / 36 frames
 and `trot` at 0.8 seconds / 24 frames, both at 30 fps. The UEFN import response initially listed only the mesh;
