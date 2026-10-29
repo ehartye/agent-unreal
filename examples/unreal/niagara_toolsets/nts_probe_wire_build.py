@@ -1,10 +1,10 @@
 """Probe, build half: generated assets wired into Niagara. A GLB through Interchange into a mesh renderer, and a sprite atlas into a Sub UV flipbook.
-Prepared 2026-10-26; not yet run on an engine. A first run tests the probe before it tests the engine.
+Run on 2026-10-26, 2026-10-27 and 2026-10-29.
 
 Run headless (assets and level only, no rendering), through nts_probe.mjs --only wire, or by hand:
   UnrealEditor-Cmd.exe Project.uproject -run=pythonscript -script=<this file> -unattended -nullrhi -nosplash -nopause -nosound -notraceserver
 Environment: NTS_PROBE_DIR, NTS_REPORT, NTS_MANIFEST, and the inputs nts_probe.mjs resolves and checks first:
-  NTS_WIRE_MESHES    JSON list of {"id", "path", "skinned"}: the GLB files to import (the sample model, and a small built-in static cube)
+  NTS_WIRE_MESHES    JSON list of {"id", "path", "skinned"}: the GLB files to import (the sample model, a static export of it, and a small built-in static cube)
   NTS_WIRE_ATLAS_PNG, NTS_WIRE_ATLAS_JSON   the sprite atlas image and its Aseprite-style JSON
   NTS_WIRE_GRID      "<columns>,<rows>" computed from the atlas JSON by atlasGrid() in nts-probe-checks.mjs
 The project needs the Interchange plugins the import sample uses (see examples/unreal/README.md) on top of nts_validate.mjs's plugins;
@@ -21,8 +21,14 @@ Chains:
           (the property names come from FNiagaraMeshRendererMeshPropertiesBase in NiagaraMeshRendererMeshProperties.h); read back
   atlas   import the PNG; an unlit masked SubUV material; a template system with the SubUVAnimation emitter and Sub Image Size = the grid
   user    a copy of the mesh system gets a Static Mesh data-interface user parameter (AddUserVariables), for the runtime override
-          NiagaraFunctionLibrary.override_system_user_variable_static_mesh; the renderer is NOT bound to it (the JSON shape of
-          FNiagaraParameterBinding was not confirmed), so that call is recorded for acceptance, not for appearance
+          NiagaraFunctionLibrary.override_system_user_variable_static_mesh; the renderer is NOT bound to it, so that call is
+          recorded for acceptance, not for appearance
+  bind    copies of the mesh system get an object-typed Static Mesh user parameter (User.MeshBind, default the engine sphere), and the
+          mesh slot's meshParameterBinding (FNiagaraParameterBinding, source: NiagaraMeshRendererMeshProperties.h; it allows
+          UStaticMesh objects, NiagaraMeshRendererProperties.cpp) is written through SetRendererData. The binding's variable carries a
+          registered type index (FNiagaraTypeDefinitionHandle.RegisteredTypeIndex) that has no readable name, so one copy per candidate
+          index is made, plus a copy with the name only and a copy with no binding (the control). nts_probe_sim.py swaps the mesh with
+          set_variable_static_mesh and takes a shot before and after; a copy whose pair of shots differs is bound
 """
 import json
 import os
@@ -175,19 +181,134 @@ if ATLAS_PNG:
     probe.guarded("atlas", atlas_chain)
 probe.write()
 
-# a copy of the first mesh system, for the user-parameter override (see the header)
+MESH_PARAM = "User.MeshBind"
+SPHERE, CONE = "/Engine/BasicShapes/Sphere", "/Engine/BasicShapes/Cone"
+BIND_SPAN = int(os.environ.get("NTS_WIRE_BIND_SPAN", "22"))   # how many type indices the bind chain tries
+BIND_FIRST = os.environ.get("NTS_WIRE_BIND_FIRST")   # the first index tried; by default one above the highest index the renderer's own bindings show
+ONE_PARTICLE = os.environ.get("NTS_WIRE_ONE_PARTICLE", "1") != "0"   # run 2 (many particles, fixed seed) still differed by about 2,000 pixels between copies from the shot timing alone
+DETERMINISTIC = os.environ.get("NTS_WIRE_DETERMINISTIC", "1") != "0"   # the first run (random seeds) could not tell a swapped mesh from the noise between two shots
+base = next((p for p in placed if p[0] == "Mesh_builtin" and p[2]), None) or next((p for p in placed if p[2]), None)   # the cube carries the copies
+
+
+def duplicate_of(source, target):
+    duplicate = eal.duplicate_asset("%s.%s" % (source, source.rsplit("/", 1)[-1]), target)   # as niagara_build.py
+    if not duplicate or not eal.save_asset(target):
+        raise RuntimeError("could not copy " + source)
+
+
+def object_variable(system, name, asset):
+    """AddUserVariables with the object shape that listed in the earlier runs (type StaticMesh, NiagaraExt_VariableValue_Object)."""
+    return c.call("AddUserVariables", {"system": c.ref(system), "variablesToAdd": [{
+        "name": name, "type": {"classStructOrEnum": {"refPath": "/Script/Engine.StaticMesh"}},
+        "defaultValue": {"struct": {"refPath": "/Script/NiagaraEditor.NiagaraExt_VariableValue_Object"}, "value": {
+            "objectClass": {"refPath": "/Script/Engine.StaticMesh"}, "object": {"refPath": asset + "." + asset.rsplit("/", 1)[-1]}}},
+        "description": "Mesh chosen from Python"}]})
+
+
+def variables_in(node, path=""):
+    """Every JSON object that holds a name and a child object with one integer index in it (an FNiagaraVariableBase and its type handle)."""
+    found = []
+    if isinstance(node, dict):
+        name = next((v for k, v in node.items() if k.lower() == "name" and isinstance(v, str)), None)
+        for key, child in node.items():
+            if isinstance(child, dict):
+                index_key = next((k for k, v in child.items() if isinstance(v, int) and not isinstance(v, bool) and "index" in k.lower()), None)
+                if name is not None and index_key:
+                    found.append({"path": path, "name": name, "handle": key, "index_key": index_key, "index": child[index_key]})
+        for key, child in node.items():
+            found += variables_in(child, "%s/%s" % (path, key))
+    elif isinstance(node, list):
+        for i, child in enumerate(node):
+            found += variables_in(child, "%s[%d]" % (path, i))
+    return found
+
+
+def rewrite_binding(binding, name, index):
+    """A copy of the read-back binding with every variable in it renamed to `name` and, when `index` is not None, given that type index."""
+    out = json.loads(json.dumps(binding))
+
+    def walk(node):
+        if isinstance(node, dict):
+            for key in list(node):
+                if key.lower() == "name" and isinstance(node[key], str):
+                    node[key] = name
+                    if index is not None:
+                        for child in node.values():
+                            if isinstance(child, dict):
+                                for k in child:
+                                    if isinstance(child[k], int) and not isinstance(child[k], bool) and "index" in k.lower():
+                                        child[k] = index
+                else:
+                    walk(node[key])
+        elif isinstance(node, list):
+            for item in node:
+                walk(item)
+    walk(out)
+    return out
+
+
+def bind_chain():
+    """Copies of the mesh system with User.MeshBind and a bound mesh slot, one candidate type index per copy (see the header)."""
+    system, mesh = base[1], base[2]
+    renderer = c.at(system, "Mesh", renderer=0)
+    props = json.loads(c.tool("GetRendererData", {"rendererRef": renderer})["propertyValues"])
+    slot = dict((props.get("Meshes") or [{}])[0])
+    key = next((k for k in slot if k.lower() == "meshparameterbinding"), None)
+    if key is None:
+        raise RuntimeError("the mesh slot has no meshParameterBinding; keys %s" % sorted(slot))
+    anchors = variables_in({k: v for k, v in props.items() if k != "Meshes"}) + variables_in({k: v for k, v in slot.items() if k != key})
+    highest = max([a["index"] for a in anchors] or [0])
+    first = int(BIND_FIRST) if BIND_FIRST else highest + 1
+    fields = {"slot_keys": sorted(slot), "binding_key": key, "binding_default": json.dumps(slot[key], sort_keys=True)[:700],
+              "binding_variables": variables_in(slot[key]), "anchors": [{"name": a["name"], "index": a["index"]} for a in anchors][:24], "first_index": first, "span": BIND_SPAN}
+    probe.step("bind_shape", **fields)
+    probe.write()
+    candidates = [("ctl", None, False), ("default", None, True)] + [(str(i), i, True) for i in range(first, first + BIND_SPAN)]
+    rows = []
+    for tag, index, bind in candidates:
+        sid = "Bind_" + tag
+        path = FOLDER + "/NS_" + sid
+        row = {"id": sid, "index": index, "bound": False, "set_error": ""}
+        try:
+            duplicate_of(system, path)
+            added = object_variable(path, MESH_PARAM, SPHERE)
+            row["add_error"] = added["error"]
+            if DETERMINISTIC:   # the same random seed on every restart, so two shots of one mesh differ only by the sub-frame timing of the shot
+                row["determinism_error"] = c.call("SetEmitterData", {"emitter": c.at(path, "Mesh"), "emitterData": {"propertyValues": json.dumps({"bDeterminism": True, "RandomSeed": 7})}})["error"]
+            if ONE_PARTICLE:   # one big particle, so the swapped mesh is the only thing that differs between a copy and the control
+                row["count_error"] = c.call("SetStackInputData", {"stackInputRef": c.at(path, "Mesh", "EmitterUpdateScript", "SpawnBurst_Instantaneous", ["Spawn Count"]), "inputData": {"struct": {"refPath": c.INT32}, "value": {"value": 1}}})["error"]
+            binding = rewrite_binding(slot[key], MESH_PARAM, index) if bind else slot[key]
+            big = dict(slot, **{key: binding})
+            if ONE_PARTICLE and isinstance(big.get("scale"), dict):
+                big["scale"] = {axis: 3.0 for axis in big["scale"]}
+            row["binding_sent"] = json.dumps(binding, sort_keys=True)[:400] if bind else "none (control)"
+            written = c.call("SetRendererData", {"renderer": c.at(path, "Mesh", renderer=0), "rendererData": {"propertyValues": json.dumps({"Meshes": [big]})}})
+            row["set_error"] = written["error"]
+            after = json.loads(c.tool("GetRendererData", {"rendererRef": c.at(path, "Mesh", renderer=0)})["propertyValues"])
+            first_slot = (after.get("Meshes") or [{}])[0]
+            row["binding_after"] = json.dumps(first_slot.get(key), sort_keys=True)[:400] if isinstance(first_slot, dict) else None
+            row["bound"] = bool(bind) and not written["error"] and MESH_PARAM in (row["binding_after"] or "") and (index is None or str(index) in (row["binding_after"] or ""))
+            eal.save_asset(path)
+            placed.append((sid, path, mesh))
+        except Exception as exc:
+            row["exception"] = str(exc)[:300]
+        rows.append(row)
+        probe.step("bind_" + tag, **row)
+        probe.write()
+    return {"candidates": rows, "mesh": mesh, "first_index": first, "span": BIND_SPAN}
+
+
+# a copy of the cube's mesh system, for the user-parameter override (see the header)
 user_system = None
-if placed and placed[0][2]:
+if base:
     def copy_for_user():
         global user_system
-        source = placed[0][1]
         user_system = FOLDER + "/NS_MeshUser"
-        duplicate = eal.duplicate_asset("%s.%s" % (source, source.rsplit("/", 1)[-1]), user_system)   # as niagara_build.py
-        if not duplicate or not eal.save_asset(user_system):
-            raise RuntimeError("could not copy " + source)
-        placed.append(("MeshUser", user_system, placed[0][2]))
+        duplicate_of(base[1], user_system)
+        placed.append(("MeshUser", user_system, base[2]))
         return {"copy": user_system}
     probe.guarded("user_copy", copy_for_user)
+    probe.guarded("bind_mesh", bind_chain)
 
 positions = {sid: (i * 1500, 0, 100) for i, (sid, _, _) in enumerate(placed)}
 samples = []
@@ -195,6 +316,11 @@ for sid, path, mesh in placed:
     if sid == "MeshUser":
         samples.append({"id": sid, "actor": "Fx_" + sid, "camera": "Cam_" + sid, "metric_emitter": "Mesh",
                         "sequence": [{"name": "override", "frames": 30, "override_mesh": {"name": "User.Mesh", "asset": mesh}}]})
+    elif sid.startswith("Bind_"):
+        samples.append({"id": sid, "actor": "Fx_" + sid, "camera": "Cam_" + sid, "metric_emitter": "Mesh",
+                        "sequence": [{"name": "w", "frames": 5, "shot": sid + "_w", "live_seconds": 0.5},   # a warm-up shot: the first shot of a sample differed from the later ones in the second run
+                                     {"name": "a", "frames": 5, "shot": sid + "_a", "live_seconds": 0.5},
+                                     {"name": "b", "frames": 5, "set": [{"type": "static_mesh", "name": MESH_PARAM, "asset": CONE}], "shot": sid + "_b", "live_seconds": 0.5}]})
     elif sid.startswith("Mesh_"):
         samples.append({"id": sid, "actor": "Fx_" + sid, "camera": "Cam_" + sid, "metric_emitter": "Mesh",
                         "sequence": [{"name": "base", "hidden": True, "shot": sid + "_base", "live_seconds": 0.5},

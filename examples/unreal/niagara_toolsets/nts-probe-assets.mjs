@@ -1,4 +1,4 @@
-// Prepared 2026-10-26; not yet run on an engine. Pure helpers of the opt-in Niagara probes (nts_probe.mjs): the sample assets the wire group imports, a small PNG reader for the
+// Prepared 2026-10-26; run in the wire group on 2026-10-26 and after. Pure helpers of the opt-in Niagara probes (nts_probe.mjs): the sample assets the wire group imports, a small PNG reader for the
 // screenshots, and a built-in static cube. No Unreal, no engine; nts-probe.test.mjs covers all of it. Node standard library only.
 //   atlasGrid(json)         the cell grid of an Aseprite-style atlas, for the Sub Image Size
 //   resolveWireAssets(...)  where the GLB and the atlas are, or why they are not
@@ -40,13 +40,13 @@ export function atlasGrid(atlas) {
  * Find the files of the wire group. A path option wins over the workspace layout of examples/unreal/README.md
  * (assets/meshes/fox.glb, assets/sprites/campfire.png and campfire.atlas.json under the scenes folder). `--glb builtin` imports only
  * the built-in cube. The built-in cube is always imported too, because the sample model is rigged and a mesh renderer needs a static mesh.
- * @param {{ scenes?: string, glb?: string, atlasPng?: string, atlasJson?: string }} options
+ * @param {{ scenes?: string, glb?: string, staticGlb?: string, atlasPng?: string, atlasJson?: string }} options
  * @param {{ exists: (p: string) => boolean, readText: (p: string) => string }} io
  * @returns {{ error?: string, problems: string[], meshes: { id: string, path: string, skinned: boolean }[], atlas?: { png: string, json: string, grid: object } }}
  */
 export function resolveWireAssets(options, io) {
   const problems = [], meshes = [];
-  const { scenes, glb, atlasPng, atlasJson } = options;
+  const { scenes, glb, staticGlb, atlasPng, atlasJson } = options;
   const under = (...parts) => (scenes ? join(scenes, ...parts) : undefined);
   const wantBuiltinOnly = glb === 'builtin';
   const glbPath = wantBuiltinOnly ? undefined : glb || under('assets', 'meshes', 'fox.glb');
@@ -56,7 +56,7 @@ export function resolveWireAssets(options, io) {
   if (!png) need.push('--atlas-png <file>');
   if (!json) need.push('--atlas-json <file>');
   if (need.length) problems.push(`no ${scenes ? 'path' : 'scenes folder'} for ${need.join(', ')}: pass them, or pass --scenes <folder> (or set AGENT_UNREAL_SCENES) with the layout in examples/unreal/README.md`);
-  for (const [what, path] of [['GLB', glbPath], ['atlas image', png], ['atlas JSON', json]]) {
+  for (const [what, path] of [['GLB', glbPath], ['static GLB', staticGlb], ['atlas image', png], ['atlas JSON', json]]) {
     if (path && !io.exists(path)) problems.push(`${what} not found: ${path}`);
   }
   let grid;
@@ -69,6 +69,7 @@ export function resolveWireAssets(options, io) {
     }
   }
   if (glbPath) meshes.push({ id: 'sample', path: glbPath, skinned: true });
+  if (staticGlb) meshes.push({ id: 'static', path: staticGlb, skinned: false });   // a static export of the sample model: a mesh renderer needs a static mesh
   meshes.push({ id: 'builtin', path: '', skinned: false });   // the runner writes the cube and fills in the path
   if (problems.length) return { error: problems.join('\n'), problems, meshes };
   return { problems, meshes, atlas: { png, json, grid } };
