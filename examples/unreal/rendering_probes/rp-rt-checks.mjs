@@ -14,18 +14,19 @@ export const RT_OFF_BY_SETTING = /Ray tracing is disabled\. Reason: disabled thr
 export const PROFILE_START = '[rp_rt] ProfileGPU requested';
 export const PROFILE_END = '[rp_rt] ProfileGPU wait done';
 
-/** Settings the three launches differ by. */
+/** Settings the launches differ by. `lights` is the hardware route plus the console variable that makes an edited Niagara system recompile when the process loads it. */
 export const PHASES = {
   fatal: { rayTracing: true, skinCache: false, megaLights: false },
   hardware: { rayTracing: true, skinCache: true, megaLights: true },
   software: { rayTracing: false, skinCache: true, megaLights: true, distanceFields: true, softwareRayTracing: true },
+  lights: { rayTracing: true, skinCache: true, megaLights: true, forceCompileOnLoad: true },
 };
 
 /**
  * The DefaultEngine.ini text for one phase. The graphics lines are what the engine's own new-project code writes (GameProjectUtils.cpp): DX12, SM6 only. The RendererSettings keys
  * are the console variable names the editor's Project Settings write for ray tracing and the skin cache (GameProjectUtils.cpp AddRaytracingConfigValues).
  */
-export function engineIni({ rayTracing = false, skinCache = false, megaLights = false, distanceFields = false, softwareRayTracing = false } = {}) {
+export function engineIni({ rayTracing = false, skinCache = false, megaLights = false, distanceFields = false, softwareRayTracing = false, forceCompileOnLoad = false } = {}) {
   const lines = [
     '[/Script/WindowsTargetPlatform.WindowsTargetSettings]',
     'DefaultGraphicsRHI=DefaultGraphicsRHI_DX12',
@@ -39,6 +40,8 @@ export function engineIni({ rayTracing = false, skinCache = false, megaLights = 
   if (megaLights) lines.push('r.MegaLights.EnableForProject=True');
   if (distanceFields) lines.push('r.GenerateMeshDistanceFields=True');
   if (softwareRayTracing) lines.push('', '[SystemSettings]', 'r.MegaLights.SoftwareRayTracing.Allow=1');
+  // a system edited through the Niagara toolsets is not recompiled when the next process loads it (the toolset's view model has auto compile off); this makes it recompile on load
+  if (forceCompileOnLoad) lines.push('', '[ConsoleVariables]', 'fx.ForceCompileOnLoad=1');
   return `${lines.join('\n')}\n`;
 }
 
@@ -158,6 +161,67 @@ export function evaluateRt(runs) {
   check('MegaLights shows in the GPU profile on the software route',
     'A ProfileGPU taken after the warm-up lists a MegaLights pass with hardware ray tracing off (the same candidate read-back)',
     softwareLines.length > 0, softwareLines.length ? `${softwareLines.length} line(s), first: ${softwareLines[0].trim().slice(0, 140)}` : 'no MegaLights line between the markers');
+  return out;
+}
+
+// ---- the Niagara Light Renderer count: a Niagara system with a Light renderer (both MegaLights switches on) is built in a commandlet, then drawn in a rendering editor
+// that profiles the GPU. The renderer scopes its light-culling pass as "CullLights <x>x<y>x<z> NumLights <n> NumCaptures <m>" (Renderer/Private/LightGridInjection.cpp), and n is
+// the number of local lights the view draws, simple lights (the Niagara ones) included; the scene holds no other light.
+export const CULL_LIGHTS = /CullLights\s+(\d+)x(\d+)x(\d+)\s+NumLights\s+(\d+)\s+NumCaptures\s+(\d+)/;
+
+/** Every CullLights line of the ProfileGPU section, as { grid, lights, captures } (one per rendered view). */
+export function profileLightCounts(log) {
+  return lines(profileSection(log)).flatMap((l) => {
+    const m = CULL_LIGHTS.exec(l);
+    return m ? [{ grid: [Number(m[1]), Number(m[2]), Number(m[3])], lights: Number(m[4]), captures: Number(m[5]) }] : [];
+  });
+}
+
+/** The lights drawn: the largest NumLights of the profile (the Play-In-Editor viewport is the only view that draws), or undefined when the profile has no CullLights line. */
+export function lightsDrawn(log) {
+  const found = profileLightCounts(log);
+  return found.length ? Math.max(...found.map((f) => f.lights)) : undefined;
+}
+
+/** Whether two counts of the same live particles agree: a frame apart they differ by the few that spawned or died. */
+export function countsAgree(lights, particles) {
+  return Number.isInteger(lights) && Number.isInteger(particles) && Math.abs(lights - particles) <= Math.max(3, Math.ceil(particles * 0.05));
+}
+
+/**
+ * @param {{ build?: object, render?: object }} run  build: the commandlet launch, render: the rendering-editor launch; each { exit, timedOut, log, report }
+ * @returns {{ name: string, claim: string, pass: boolean, detail: string }[]}
+ */
+export function evaluateLights(run) {
+  const { build = {}, render = {} } = run ?? {};
+  const out = [];
+  const check = (name, claim, pass, detail = '') => out.push({ name, claim, pass: Boolean(pass), detail: String(detail) });
+  const b = build.report ?? {}, r = render.report ?? {}, log = String(render.log ?? ''), cv = r.cvars ?? {};
+  const sw = b.switches ?? {};
+  check('the build step makes a Light renderer with both MegaLights switches on',
+    'A Niagara system with a Light renderer is saved and bAllowMegaLights and bMegaLightsCastShadows read back true',
+    build.exit === 0 && b.saved === true && sw.bAllowMegaLights === true && sw.bMegaLightsCastShadows === true && !(b.errors?.length),
+    `exit ${build.exit}; saved ${b.saved}; switches ${JSON.stringify(sw)}; renderers ${JSON.stringify(b.renderers)}; errors ${JSON.stringify(b.errors ?? 'no report')}`);
+  check('the render step starts with ray tracing enabled and writes its report',
+    'The log says "Ray tracing is enabled", has no Fatal line, and the probe wrote its report',
+    RT_ENABLED.test(log) && !log.includes(FATAL_TEXT) && Boolean(render.report),
+    `${RT_UNSUPPORTED.test(log) ? 'the RHI on this machine does not support ray tracing; ' : ''}enabled line ${RT_ENABLED.test(log)}; Fatal ${log.includes(FATAL_TEXT)}; report ${render.report ? 'written' : 'absent'}; exit ${render.exit}${render.timedOut ? ' (timed out)' : ''}`);
+  check('the render step reads the MegaLights settings back',
+    'r.RayTracing 1, r.MegaLights.EnableForProject 1, r.MegaLights.Allowed 1, r.MegaLights.HardwareRayTracing 1 and r.MegaLights.SimpleLightMode at least 1',
+    cv['r.RayTracing'] === 1 && cv['r.MegaLights.EnableForProject'] === 1 && cv['r.MegaLights.Allowed'] === 1 && cv['r.MegaLights.HardwareRayTracing'] === 1 && cv['r.MegaLights.SimpleLightMode'] >= 1,
+    JSON.stringify(cv));
+  const found = profileLightCounts(log), drawn = lightsDrawn(log);
+  check('the GPU profile gives the number of lights drawn',
+    'A ProfileGPU taken after the warm-up has a "CullLights ... NumLights <n>" line with n above 0 (the scene holds no light but the Niagara ones)',
+    drawn > 0, found.length ? `NumLights ${found.map((f) => f.lights).join(', ')} (${found.length} line(s))` : 'no CullLights line between the markers');
+  const particles = r.particles && typeof r.particles === 'object' ? Object.values(r.particles).filter(Number.isInteger).reduce((a, n) => a + n, 0) : undefined;
+  check('the lights drawn match the live particles',
+    'The number of lights equals the particles of the emitter (the Light renderer draws one light per live particle), to within the few that spawn or die in a frame',
+    countsAgree(drawn, particles), `lights ${drawn}; particles in the simulation cache ${particles === undefined ? 'not read' : particles} ${JSON.stringify(r.particles ?? null)}`);
+  const mega = megaLightsProfileLines(log);
+  check('MegaLights shows in the GPU profile with the Light renderer in the scene',
+    'The profile lists a MegaLights pass (the same candidate read-back as the tracing routes)', mega.length > 0,
+    mega.length ? `${mega.length} line(s), first: ${mega[0].trim().slice(0, 140)}` : 'no MegaLights line between the markers');
   return out;
 }
 

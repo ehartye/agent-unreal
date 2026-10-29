@@ -12,6 +12,7 @@ Unreal 5.8 on Windows. Pick the feature from the goal, then read that system's r
 |---|---|
 | Light a scene dynamically: global illumination, reflections, many shadow-casting lights, high-resolution shadows (project settings; MegaLights opt-in) | [Lumen](references/unreal-lumen.md), [MegaLights](references/unreal-megalights.md), [Virtual Shadow Maps](references/unreal-virtual-shadow-maps.md) |
 | Set MegaLights variables, volume overrides and quality tiers, or tune its cost | [Driving and tuning MegaLights](references/unreal-megalights-driving.md) |
+| Read the MegaLights tracing-route probe records or the cost comparison against Virtual Shadow Maps | [MegaLights measurements](references/unreal-megalights-measurements.md) |
 | Set up a sun and a moon (two directional lights) or fix a renderer message that directional lights are competing for forward shading (ForwardShadingPriority) | [Directional lights](references/unreal-directional-lights.md) |
 | Render dense or high-polygon geometry without authored LODs (project setting, per-mesh flag) | [Nanite](references/unreal-nanite.md) |
 | Give meshes and scenes a toon or cel look (Substrate Toon, experimental); for particles start in unreal-effects | [Substrate](references/unreal-substrate.md) |

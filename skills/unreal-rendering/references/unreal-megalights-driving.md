@@ -27,6 +27,7 @@ Python reaches console variables and Post Process Volume settings. Project Setti
 6. [general] Tune with `r.MegaLights.NumSamplesPerPixel` and `r.MegaLights.DownsampleMode`; use `r.MegaLights.LightAttenuationFalloff` to tighten light influence.
 7. [general] Profile with `r.RDG.AsyncCompute 0`, then A/B test `r.MegaLights.AsyncCompute.Volume`, `.GenerateSamples` and `r.StochasticLighting.AsyncCompute`.
 8. [documented] Inspect shadow mismatches with `r.MegaLights.Visualize 1` and the Light Complexity view.
+9. [tested] 2026-10-29: a Niagara Light renderer with `bAllowMegaLights` and `bMegaLightsCastShadows` on drew one light per live particle. On the hardware route with `r.MegaLights.SimpleLightMode` 1, 144 live particles gave `NumLights 144` in the `CullLights` line of a `ProfileGPU` taken in a Play-In-Editor viewport with no other light in the scene. Not compared: the same scene with the switches off.
 
 Related: [MegaLights](unreal-megalights.md), [Lumen](unreal-lumen.md), [Virtual Shadow Maps](unreal-virtual-shadow-maps.md), [Nanite](unreal-nanite.md).
 
