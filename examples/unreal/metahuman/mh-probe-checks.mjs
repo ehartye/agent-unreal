@@ -16,20 +16,16 @@ export const POSES = [
 ];
 /** The part of the frame the camera frames on the face, as fractions of width and height. */
 export const FACE_REGION = { x: 0.3, y: 0.1, w: 0.4, h: 0.8 };
-// Word boundaries matter: a bare `log[ -]?in` matches "LogInit" and "loginid" in every editor log.
-export const SIGNIN_PATTERN = '\\bsign[ -]?in\\b|\\blog[ -]?in\\b|authenticat';
-/** Lines that match the pattern but are not a prompt: a missing Slate widget style named "MetaHumanAuthenticationMenu" is logged four times in every launch, signed in or not. */
-export const SIGNIN_EXCLUDE = ['LogSlateStyle', '[mh_probe]', 'Login complete: EOS_Success'];   // the probe's own messages (one says the first request waits for the sign-in), and the online services' silent login success, logged once per launch with nobody at the editor
-/** The build attempts, in order. Run 2: the Cine pipeline failed after 250 s with a Control Rig "Cannot break link" error and the optimized one then built in 108 s. Run 3: the optimized pipeline,
- *  tried first, failed after 126 s with the same error. So that error is a first-attempt failure (the first build touches the shared Control Rig assets under the build folder's Common/Face and a
- *  second attempt passes): attempt 1 is optimized, attempt 2 is optimized again but only after that error, attempt 3 is the Cine pipeline. A success stops the sequence. */
+/** The build attempts, in order. The first build attempt failed with the Control Rig "Cannot break link" error in three runs (run 2 Cinematic after 250 s, run 3 Optimized after 126 s, run 4 Optimized after 110.7 s)
+ *  and a retry built in the two runs where one was made (run 2 Optimized after Cinematic, 108 s; run 4 Optimized after Optimized, 64.5 s). Why is not established. So: attempt 1 is optimized, attempt 2 is
+ *  optimized again but only after that error, attempt 3 is the Cine pipeline. A success stops the sequence. */
 export const RETRY_ERROR = 'Cannot break link';
 export const PIPELINES = [
   { pipeline: 'OPTIMIZED', quality: 'MEDIUM' },
   { pipeline: 'OPTIMIZED', quality: 'MEDIUM', retry_after: RETRY_ERROR },
   { pipeline: 'CINEMATIC', quality: 'CINEMATIC' },
 ];
-export const PIPELINE_ORDER_REASON = 'optimized first (the Cine pipeline lost 250 s to a Control Rig "Cannot break link" error in one run and the optimized pipeline built in 108 s after it); optimized again after that error (it failed the same way on a first attempt in another run, and the second attempt of a run built); the Cine pipeline last';
+export const PIPELINE_ORDER_REASON = 'optimized first (in run 2 the Cine pipeline lost 250 s to a Control Rig "Cannot break link" error and the optimized pipeline built in 108 s after it); optimized again after that error (in runs 3 and 4 an optimized first attempt failed the same way, and in run 4 the second attempt built); the Cine pipeline last';
 /** The project settings Epic lists for MetaHumans (Requirements and Configuration Settings page); they need an editor restart, so the runner writes them before the first launch. */
 export const PROJECT_SETTINGS = [
   { section: '/Script/Engine.RendererSettings', entries: [['r.GPUSkin.Support16BitBoneIndex', 'True'], ['r.GPUSkin.UnlimitedBoneInfluences', 'True'], ['r.SkinCache.CompileShaders', 'True'], ['r.SkinCache.DefaultBehavior', '0']] },
@@ -126,7 +122,7 @@ export function buildPlan({ groups = GROUPS, preset, cameraFlip = false, timeout
     level: '/Game/Maps/MhProbe', settle_seconds: 20, shader_wait_seconds: 90, pie_wait_seconds: 120, capture_budget_seconds: 600, pose_budget_seconds: 60, shot_wait_seconds: 20,
     launch_budget_seconds: launches.map((stages) => Math.max(60, launchMinutes(stages, timeoutMinutes) * 60 - BUDGET_MARGIN_SECONDS)),
     camera_distance: 80, camera_fov: 45, camera_flip: cameraFlip, resolution: [1280, 720],
-    poses: POSES, face_region: FACE_REGION, signin_pattern: SIGNIN_PATTERN, signin_exclude: SIGNIN_EXCLUDE,
+    poses: POSES, face_region: FACE_REGION,
   };
 }
 
@@ -190,14 +186,6 @@ export function regionDeviation(image, region = FACE_REGION) {
   if (!n) return -1;
   const mean = sum / n;
   return Math.sqrt(Math.max(0, sum2 / n - mean * mean));
-}
-
-const excluded = (line, exclude) => [].concat(exclude || []).some((part) => line.includes(part));
-
-/** The lines of an editor log that look like a sign-in (the pattern the editor script uses), for a judge that reads a log instead of a report. */
-export function signInLines(log, pattern = SIGNIN_PATTERN, exclude = SIGNIN_EXCLUDE) {
-  const re = new RegExp(pattern, 'i');
-  return String(log || '').split(/\r?\n/).filter((line) => re.test(line) && !excluded(line, exclude));
 }
 
 // ---------------------------------------------------------------------------------------------------------------------------------
@@ -281,10 +269,8 @@ function driveChecks(stage, images, plan, check) {
     `route ${s.route || 'none'}; not run: ${list(s.routes_not_run).join(', ') || 'none listed'}`);
 }
 
-function repeatChecks(launch, first, check) {
+function repeatChecks(launch, check) {
   const report = reportOf(launch), s = obj(obj(report.stages).repeat), read = obj(s.readback);
-  const real = (l) => !/^log not read/.test(l) && !excluded(l, SIGNIN_EXCLUDE);   // a report written before these lines were excluded is read the same way
-  const lines = list(report.signin_lines).filter(real), before = list(reportOf(first).signin_lines).filter(real);
   const timedOut = obj(launch).timedOut === true;
   check('repeat', 'the same create stage completes in a reopened editor',
     'In an editor closed and reopened, the create stage runs again on a second character: auto-rigging and textures return, the character reads back rigged with textures, and the launch finishes by itself',
@@ -293,12 +279,11 @@ function repeatChecks(launch, first, check) {
   const rigged = s.created === true && obj(s.rig_request).error === '' && obj(s.texture_request).error === '' && read.can_build === true;
   const verdict = timedOut ? 'the launch timed out, which is what a prompt waiting for a person looks like'
     : report.done !== true ? 'the launch did not finish'
-    : rigged ? `the repeat launch finished by itself with the rig and textures returned and ${lines.length ? `${lines.length} sign-in line(s)` : 'no sign-in line'}` : 'the launch finished but the create stage did not return rigged';
-  const fewer = lines.length === 0 || (before.length > 0 && lines.length < before.length);
+    : rigged ? 'the repeat launch finished by itself with nobody at the editor and the rig and textures returned, so no prompt blocked it' : 'the launch finished but the create stage did not return rigged';
   check('repeat', 'no sign-in flow appears in the reopened editor',
-    'With nobody at the editor, the launch finishes without a sign-in prompt: it does not time out, and its log holds no sign-in lines (or fewer than the first launch, whose prompt a person answered)',
-    report.done === true && !timedOut && fewer,
-    `${verdict}; sign-in lines in the repeat launch ${lines.length}, in the first launch ${before.length}${lines.length ? `; first: ${lines[0].slice(0, 140)}` : ''}${before.length === 0 && lines.length === 0 ? '; the first launch showed none either, so the log pattern itself is unconfirmed and completion with nobody present is the evidence' : ''}`);
+    'The launch finished by itself with nobody at the editor, so no prompt blocked it: the report is done, its end_reason is completed, it did not time out, and the create stage returned its rig and textures with can_build_meta_human true (a prompt waiting for a person would block the editor and time the launch out); the editor log is not read',
+    report.done === true && report.end_reason === 'completed' && !timedOut && rigged,
+    verdict);
 }
 
 /**
@@ -314,7 +299,7 @@ export function evaluateProbes({ groups, plan, launches, images }) {
     if (group === 'create') createChecks(stageOf(launchFor(p, launches, 'create'), 'create'), 'create', check, 'create');
     else if (group === 'assemble') assembleChecks(stageOf(launchFor(p, launches, 'assemble'), 'assemble'), images, p, check);
     else if (group === 'drive') driveChecks(stageOf(launchFor(p, launches, 'drive'), 'drive'), images, p, check);
-    else if (group === 'repeat') repeatChecks(launchFor(p, launches, 'repeat'), launchFor(p, launches, 'create'), check);
+    else if (group === 'repeat') repeatChecks(launchFor(p, launches, 'repeat'), check);
   }
   return out;
 }

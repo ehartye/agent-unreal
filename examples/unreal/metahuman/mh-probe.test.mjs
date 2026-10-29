@@ -1,6 +1,6 @@
 // node --test examples/unreal/metahuman/mh-probe.test.mjs  (no Unreal, no dependencies)
 // Prepared 2026-10-29. The canned reports below follow the real reports of engine run 4 (mh-launch-1.json and mh-launch-2.json): the field names of the create, assemble, drive and repeat stages match. Their values are
-// invented (preset count, seconds, asset counts, sign-in line text, 100 x 100 synthetic frames) and the cases no run produced are still assumptions: a timed-out repeat launch, the `Shot` fallback, a successful Cine build.
+// invented (preset count, seconds, asset counts, 100 x 100 synthetic frames) and the cases no run produced are still assumptions: a timed-out repeat launch, the `Shot` fallback, a successful Cine build.
 // The names mode report was produced by a headless run on 2026-10-29. A field the real report spells differently makes the matching check fail, and the check or the script is fixed then. Each mutation changes one fact and expects the matching check to fail, so the probe cannot
 // pass by accident, and an empty or partial input fails.
 import { test } from 'node:test';
@@ -12,7 +12,7 @@ import { join } from 'node:path';
 import { encodePng } from '../niagara_toolsets/nts-probe-assets.mjs';
 import {
   FACE_REGION, GROUPS, POSES, PROJECT_SETTINGS, buildPlan, engineIni, evaluateNames, evaluateProbes, launchMinutes, launchesFor, ownerSteps, parseOptions, progressLine, regionChange, regionDeviation,
-  repeatMayRun, shotNames, signInLines, summarize,
+  repeatMayRun, shotNames, summarize,
 } from './mh-probe-checks.mjs';
 
 const here = import.meta.dirname;
@@ -47,8 +47,8 @@ const assembleStage = () => ({
 });
 const pose = (p, value) => ({ name: p.name, curves: p.curves, frame: `mh_${p.name}`, created: true, applied: true, readback: Object.fromEntries(Object.keys(p.curves).map((c) => [c, value ?? p.curves[c]])), error: '' });
 const driveStage = () => ({ route: 'anim_sequence_curves', routes_not_run: ['arkit_pose_asset', 'live_link_pose', 'sequencer_control_rig', 'morph_targets'], poses: POSES.map((p) => pose(p)), control_frame: 'mh_neutral_again', errors: [] });
-const launchOne = () => ({ report: { launch: 1, done: true, signin_lines: ['LogMetaHuman: sign in required', 'LogMetaHuman: signed in', 'LogHttp: login callback'], stages: { create: createStage(), assemble: assembleStage(), drive: driveStage() } } });
-const launchTwo = () => ({ report: { launch: 2, done: true, signin_lines: [], stages: { repeat: { ...createStage(), asset: '/Game/MhProbe/MhProbeCharRepeat.MhProbeCharRepeat' } } } });
+const launchOne = () => ({ report: { launch: 1, done: true, end_reason: 'completed', signin_lines: ['LogMetaHuman: sign in required', 'LogMetaHuman: signed in', 'LogHttp: login callback'], stages: { create: createStage(), assemble: assembleStage(), drive: driveStage() } } });
+const launchTwo = () => ({ report: { launch: 2, done: true, end_reason: 'completed', stages: { repeat: { ...createStage(), asset: '/Game/MhProbe/MhProbeCharRepeat.MhProbeCharRepeat' } } } });
 const canned = () => [launchOne(), launchTwo()];
 const evaluate = (launches = canned(), imgs = images(), groups = GROUPS) => evaluateProbes({ groups, plan: buildPlan({ groups }), launches, images: imgs });
 const failing = (...args) => evaluate(...args).filter((c) => !c.pass).map((c) => c.name);
@@ -132,12 +132,18 @@ test('repeat: the second launch must finish by itself, with the same stage passi
   assert.ok(has(names((l) => { l[1] = {}; }), 'completes in a reopened editor'), 'repeat skipped');
 });
 
-test('repeat: sign-in lines in the second launch fail it unless the first launch had more', () => {
-  assert.ok(has(names((l) => { l[1].report.signin_lines = ['LogMetaHuman: sign in required', 'LogMetaHuman: signed in', 'LogHttp: login callback']; }), 'no sign-in flow'), 'as many lines as the first launch');
-  assert.ok(has(names((l) => { l[0].report.signin_lines = []; l[1].report.signin_lines = ['LogX: login']; }), 'no sign-in flow'), 'lines with no first-launch baseline');
-  assert.deepEqual(names((l) => { l[1].report.signin_lines = ['LogHttp: login callback']; }), [], 'fewer lines than the first launch (a background line) still passes');
-  assert.equal(evaluate().find((c) => c.name.includes('no sign-in flow')).pass, true);
-  assert.match(evaluate(canned()).find((c) => c.name.includes('no sign-in flow')).detail, /sign-in lines in the repeat launch 0, in the first launch 3/);
+test('repeat: no sign-in flow is judged by behaviour only: the launch finished by itself with the create stage returned', () => {
+  const sign = (launches) => evaluate(launches).find((c) => c.name.includes('no sign-in flow'));
+  assert.equal(sign(canned()).pass, true);
+  assert.match(sign(canned()).detail, /finished by itself with nobody at the editor/);
+  assert.ok(has(names((l) => { l[1].timedOut = true; }), 'no sign-in flow'), 'a timeout is the prompt blocking the editor');
+  assert.match(sign((() => { const l = canned(); l[1].timedOut = true; return l; })()).detail, /timed out, which is what a prompt/);
+  assert.ok(has(names((l) => { l[1].report.done = false; }), 'no sign-in flow'), 'no final report');
+  assert.ok(has(names((l) => { l[1].report.end_reason = 'launch budget exceeded'; }), 'no sign-in flow'), 'the budget ended it');
+  assert.ok(has(names((l) => { l[1].report.stages.repeat.readback.can_build = false; }), 'no sign-in flow'), 'finished without a rigged character');
+  assert.ok(has(names((l) => { l[1] = {}; }), 'no sign-in flow'), 'repeat skipped');
+  // a saved report may still carry the old log-line field: it is ignored, whatever it holds
+  assert.equal(sign((() => { const l = canned(); l[1].report.signin_lines = ['LogHttp: Warning: Please sign in to your Epic account', 'LogHttp: login callback']; return l; })()).pass, true);
 });
 
 test('an empty report, no reports and a missing stage fail every check without throwing', () => {
@@ -191,7 +197,7 @@ test('launches: create, assemble and drive share one editor session, repeat is i
   assert.deepEqual(buildPlan({ groups: ['create'] }).launches, [['create']]);
 });
 
-test('the plan holds the pipelines (optimized, optimized again after the Control Rig error, Cine last), the poses with control curve names and the sign-in pattern', () => {
+test('the plan holds the pipelines (optimized, optimized again after the Control Rig error, Cine last), and the poses with control curve names', () => {
   const plan = buildPlan({ preset: 'Ada', cameraFlip: true });
   assert.deepEqual(plan.pipelines.map((p) => p.pipeline), ['OPTIMIZED', 'OPTIMIZED', 'CINEMATIC']);
   assert.deepEqual(plan.pipelines.map((p) => p.retry_after), [undefined, 'Cannot break link', undefined], 'the second optimized attempt is a retry after that error only');
@@ -201,12 +207,8 @@ test('the plan holds the pipelines (optimized, optimized again after the Control
   assert.equal(plan.camera_flip, true);
   assert.deepEqual(plan.poses.map((p) => p.name), ['neutral', 'jaw_open', 'smile']);
   for (const p of plan.poses) for (const curve of Object.keys(p.curves)) assert.match(curve, /^CTRL_expressions_\w+$/);
-  assert.match('LogMetaHuman: Please sign in', new RegExp(plan.signin_pattern, 'i'));
-  assert.deepEqual(signInLines('a\nLogX: Login ok\nb\nsign-in needed'), ['LogX: Login ok', 'sign-in needed']);
-  assert.deepEqual(signInLines(undefined), []);
-  // Found in the first engine run: a bare `log[ -]?in` matched "LogInit" and loginid= on every start-up line (40 false hits).
-  assert.deepEqual(signInLines('LogInit: Running DelayedAutoRegister Phase StartOfEnginePreInit\nLogCsvProfiler: Display: Metadata set : loginid="abc"\nLogInit: MachineId=1'), []);
-  assert.deepEqual(signInLines('LogHttp: Warning: authentication failed'), ['LogHttp: Warning: authentication failed']);
+  assert.equal(plan.signin_pattern, undefined, 'the plan carries no log-line pattern');
+  assert.equal(plan.signin_exclude, undefined);
 });
 
 test('the screenshots a run asks for follow its groups', () => {
@@ -478,9 +480,6 @@ if cfg.get("build_error"):
     subsystem.build_meta_human.side_effect = RuntimeError(cfg["build_error"])
 if cfg.get("build_errors") is not None:
     subsystem.build_meta_human.side_effect = [RuntimeError(e) if e else None for e in cfg["build_errors"]]
-if cfg.get("log"):
-    os.makedirs(project + "/Saved/Logs", exist_ok=True)
-    open(project + "/Saved/Logs/launch-1.log", "w").write(cfg["log"])
 ticks = []
 unreal.register_slate_post_tick_callback.side_effect = lambda fn: ticks.append(fn) or "handle"
 runpy.run_path(script)
@@ -596,51 +595,6 @@ test('the launch budget covers three build attempts, the Blueprint wait after ea
   const plan = buildPlan({ groups: GROUPS });
   const worstBuild = plan.pipelines.length * (300 + plan.build_wait_seconds);
   assert.ok(plan.launch_budget_seconds[0] > worstBuild + plan.capture_budget_seconds + 600, `${plan.launch_budget_seconds[0]} s covers ${worstBuild} s of builds`);
-});
-
-test('a message from the probe itself is not a sign-in line, and a real sign-in line still is, in the log reader, the editor script and the judge', () => {
-  const own = '[2026.10.29-19.52.20:000][162]LogPython: [mh_probe] request_auto_rigging (blocking: the editor does not answer until it returns, and the first one waits for the sign-in)';
-  const real = 'LogHttp: Warning: Please sign in to your Epic account to continue';
-  assert.deepEqual(signInLines(`${own}
-${real}`), [real]);
-  assert.deepEqual(signInLines(own), []);
-  assert.deepEqual(signInLines('[2026.10.29-20.39.57:404][163]LogEOSSDK: LogEOSAuth: UserAuthGenerated: Login complete: EOS_Success'), [], 'the silent login success is logged once per launch');
-  const launches = canned();
-  launches[0].report.signin_lines = [own, own];
-  launches[1].report.signin_lines = [own, own];
-  assert.equal(evaluate(launches).find((c) => c.name.includes('no sign-in flow')).pass, true, 'older reports that carry the probe lines are judged without them');
-  launches[1].report.signin_lines = [own, real];
-  const failed = evaluate(launches).find((c) => c.name.includes('no sign-in flow'));
-  assert.equal(failed.pass, false, 'a real sign-in line in the repeat launch still fails the check');
-  const r = runEditorStub({}, { log: `${own}
-${real}
-LogInit: Display: x
-` });
-  if (!r) return;
-  assert.deepEqual(r.report.signin_lines, [real]);
-});
-
-test('a Slate widget style warning is not a sign-in line, in the log reader, the editor script and the judge', () => {
-  const style = "[2026.10.29-19.51.37:111][  0]LogSlateStyle: Warning: Unable to find Slate Widget Style 'MetaHumanAuthenticationMenu'. Using FButtonStyle defaults instead.";
-  assert.deepEqual(signInLines(`${style}
-LogHttp: Warning: authentication failed`), ['LogHttp: Warning: authentication failed']);
-  assert.deepEqual(signInLines(style), []);
-  // a report that still carries the style lines (written before the exclusion) is judged without them
-  const launches = canned();
-  launches[0].report.signin_lines = [style];
-  launches[1].report.signin_lines = [style, style];
-  const checks = evaluate(launches);
-  const sign = checks.find((c) => c.name.includes('no sign-in flow'));
-  assert.equal(sign.pass, true);
-  assert.match(sign.detail, /^the repeat launch finished by itself with the rig and textures returned and no sign-in line/);
-  const timedOut = canned(); timedOut[1].timedOut = true;
-  assert.match(evaluate(timedOut).find((c) => c.name.includes('no sign-in flow')).detail, /timed out, which is what a prompt/);
-  const r = runEditorStub({}, { log: `${style}
-LogHttp: Warning: authentication failed
-LogInit: Display: x
-` });
-  if (!r) return;
-  assert.deepEqual(r.report.signin_lines, ['LogHttp: Warning: authentication failed']);
 });
 
 test('editor script: a start-up failure, an exception and an expired budget each end with a final report', () => {

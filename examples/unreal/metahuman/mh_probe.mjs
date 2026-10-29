@@ -208,7 +208,7 @@ for (let i = 0; i < launches.length; i++) {
   const minutes = launchMinutes(stages, options.timeoutMinutes);
   say(`  launch ${i + 1} (${stages.join(', ')}): started${isRepeat ? '; step away from the editor now' : '; keep the editor window in front and leave it open, it closes itself'}`);
   const started = Date.now();
-  const result = await runEditor([uproject, `-abslog=${log}`, '-nosplash', '-nosound', '-notraceserver'], { ...process.env, MH_REPORT: report, MH_LAUNCH: String(i + 1), MH_LOG: log }, minutes, report);
+  const result = await runEditor([uproject, `-abslog=${log}`, '-nosplash', '-nosound', '-notraceserver'], { ...process.env, MH_REPORT: report, MH_LAUNCH: String(i + 1) }, minutes, report);
   const timedOut = result.timedOut;
   say(`  launch ${i + 1}: exit ${result.status}${timedOut ? ' (timed out)' : ''}${result.error ? ` (${result.error.message})` : ''}, ${Math.round((Date.now() - started) / 1000)} s, report ${existsSync(report) ? 'written' : 'NOT written'}`);
   stopProjectProcesses(root);

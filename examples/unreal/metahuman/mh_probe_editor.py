@@ -21,7 +21,7 @@ Two modes, chosen by MH_MODE.
       Cloud calls block the editor while they run, by design (blocking=True is Epic's pattern for scripts); every other wait is bounded, and a launch always ends with done true and an
       "end_reason" (completed, launch budget exceeded, exception, start-up failure), even when a stage ran out of time.
 
-Environment: MH_MODE, MH_REPORT, MH_LAUNCH, MH_LOG (the editor log, to look for sign-in lines). Plan: see mh-probe-checks.mjs buildPlan.
+Environment: MH_MODE, MH_REPORT, MH_LAUNCH. Plan: see mh-probe-checks.mjs buildPlan.
 Nothing here reads or writes credentials, a GPU name or a home folder; error texts have the project folder replaced.
 """
 import glob
@@ -197,9 +197,7 @@ def run_flow():
         return
     stages = launches[launch - 1]
     report_path = os.environ.get("MH_REPORT") or (SAVED + "/mh-launch-%d.json" % launch)
-    logs = sorted(glob.glob(SAVED + "/Logs/*.log"), key=os.path.getmtime)
-    log_path = os.environ.get("MH_LOG") or (logs[-1] if logs else SAVED + "/Logs/none.log")
-    report = {"launch": launch, "stages_requested": stages, "engine": unreal.SystemLibrary.get_engine_version(), "errors": [], "stages": {}, "done": False, "end_reason": "", "signin_lines": [], "seconds": 0.0,
+    report = {"launch": launch, "stages_requested": stages, "engine": unreal.SystemLibrary.get_engine_version(), "errors": [], "stages": {}, "done": False, "end_reason": "", "seconds": 0.0,
               "progress": "starting", "trace": [], "shots": []}
     clock = {"t": 0.0, "wait": float(plan.get("settle_seconds", 20)), "gen": None, "handle": None, "pie": False, "finished": False}
     began_at = time.time()
@@ -246,16 +244,6 @@ def run_flow():
             note("waiting for %s (%.0f of %.0f s)" % (reason, spent, total), save=total >= 15)
             yield step
             spent += step
-
-    def sign_in_lines():
-        pattern = re.compile(plan.get("signin_pattern", r"\bsign[ -]?in\b|\blog[ -]?in\b|authenticat"), re.I)
-        exclude = plan.get("signin_exclude", ["LogSlateStyle", "[mh_probe]", "Login complete: EOS_Success"])   # a missing Slate widget style named ...AuthenticationMenu, the probe's own messages and the silent login success are not a prompt
-        exclude = [exclude] if isinstance(exclude, str) else list(exclude or [])
-        try:
-            with open(log_path, errors="replace") as fh:
-                return [clean(line.strip())[:240] for line in fh if pattern.search(line) and not any(part in line for part in exclude)][:40]
-        except Exception as exc:
-            return ["log not read: " + clean(exc)[:120]]
 
     def timed(fn):
         began = time.time()
@@ -362,7 +350,6 @@ def run_flow():
             out["saved"] = bool(unreal.EditorAssetLibrary.save_asset(out["asset"].split(".")[0], only_if_is_dirty=False))
         except Exception:
             out["saved"] = False
-        report["signin_lines"] = sign_in_lines()
         write_report()
 
     # ---------- assemble
@@ -391,7 +378,7 @@ def run_flow():
         for number, attempt in enumerate(plan.get("pipelines", []), 1):
             record = {"attempt": number, "pipeline": attempt["pipeline"], "quality": attempt["quality"], "error": "", "seconds": 0.0, "blueprint": None, "waited_seconds": 0.0, "skipped": ""}
             out["attempts"].append(record)
-            # a retry attempt runs only after the error it names (the first build leaves the shared assets in a state the second one passes); after any other outcome it is skipped
+            # a retry attempt runs only after the error it names (a retry built in runs 2 and 4 after a first attempt failed with it; why is not established); after any other outcome it is skipped
             wanted = attempt.get("retry_after")
             if wanted and wanted.lower() not in previous_error.lower():
                 record["skipped"] = "retry only after '%s'; the previous attempt's error was %s" % (wanted, "'" + previous_error.strip().splitlines()[-1][:80] + "'" if previous_error.strip() else "none")
@@ -751,7 +738,6 @@ def run_flow():
         report["done"] = True
         report["end_reason"] = reason
         report["progress"] = "finished (%s)" % reason
-        report["signin_lines"] = sign_in_lines()
         write_report()
         if clock["handle"] is not None:
             unreal.unregister_slate_post_tick_callback(clock["handle"])
@@ -836,7 +822,7 @@ except Exception:
         if MODE != "names":
             # a start-up failure still leaves a final report, so the runner judges it at once instead of waiting for its timeout
             with open(path, "w") as fh:
-                json.dump({"done": True, "end_reason": "start-up failure", "errors": [text], "stages": {}, "signin_lines": [], "progress": "start-up failure", "trace": [], "shots": []}, fh, indent=2)
+                json.dump({"done": True, "end_reason": "start-up failure", "errors": [text], "stages": {}, "progress": "start-up failure", "trace": [], "shots": []}, fh, indent=2)
     except Exception:
         pass
     unreal.log_error("[mh_probe] failed: " + tail(500))
