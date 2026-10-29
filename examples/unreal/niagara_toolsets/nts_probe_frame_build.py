@@ -1,11 +1,12 @@
 """Probe, build half: a flipbook emitter whose Direct Frame Index is linked to a user parameter set from Python.
-Prepared 2026-10-26; not yet run on an engine. A first run tests the probe before it tests the engine.
+Run on 2026-10-26, 2026-10-27 and 2026-10-29. Linking alone left the index age-driven (3 of 5); with the saved system recompiled on load (the force_compile
+step) the index follows the parameter (5 of 5).
 
 Run headless (assets and level only, no rendering), through nts_probe.mjs --only frame, or by hand:
   UnrealEditor-Cmd.exe Project.uproject -run=pythonscript -script=<this file> -unattended -nullrhi -nosplash -nopause -nosound -notraceserver
 Environment: NTS_PROBE_DIR, NTS_REPORT (build report), NTS_MANIFEST (what nts_probe_sim.py samples). Project plugins as nts_validate.mjs.
 
-The reference says linking Direct Frame Index to a user parameter is not verified (the frame stayed age-driven). Steps:
+Steps:
   texture    a procedural 4x4 flipbook (cell n holds a white disc whose radius grows with n, so the area on screen tells the cell), imported
              as a point-filtered texture (the import pattern of stylized_build.py)
   material   an unlit, masked material with a Texture Sample Parameter SubUV, flagged for Niagara sprites (as stylized_build.py)
@@ -14,7 +15,10 @@ The reference says linking Direct Frame Index to a user parameter is not verifie
   user_variable  AddUserVariables adds a float user parameter; GetUserVariables reads it back
   link       SetStackInputData links Direct Frame Index to it (FNiagaraExt_StackInputData_Linked: linkedVariable {name, type}); up to three
              attempts that differ in the type JSON and the name, each read back with GetStackInputData
-nts_probe_sim.py then sets the parameter to 2 and 9 from Python, reads Particles.SubImageIndex from a simulation cache and takes a screenshot at
+  force_compile  appends [ConsoleVariables] fx.ForceCompileOnLoad=1 to the project's DefaultEngine.ini, which nts_probe_sim.py's editor process reads at start.
+             Without it SubImageIndex stays 16 times NormalizedAge (the saved compile data is presumed to predate the link; the recompile is what was observed to
+             change the result); NTS_FRAME_FORCECOMPILE=0 turns the step off
+nts_probe_sim.py then sets the parameter to 0, 2 and 9 from Python, reads Particles.SubImageIndex from a simulation cache and takes a screenshot at
 each value, after a baseline screenshot with the actor hidden.
 """
 import json
@@ -33,6 +37,7 @@ SYSTEM, MATERIAL, TEXTURE = FOLDER + "/NS_Flip", FOLDER + "/M_Flip", FOLDER + "/
 VARIABLE = "User.FrameIndex"
 VARIANT = os.environ.get("NTS_FRAME_VARIANT", "link")   # "const": write 5.0 into Direct Frame Index instead of linking it (separates the mode from the link)
 USER_DEFAULT = float(os.environ.get("NTS_FRAME_DEFAULT", "0"))   # the user parameter default; a non-zero default shows whether the link is read at all
+FORCE_COMPILE = os.environ.get("NTS_FRAME_FORCECOMPILE", "1") != "0"   # on by default; "0" is the control that shows the age-driven index. Writes fx.ForceCompileOnLoad=1 into the project's DefaultEngine.ini, so the sim process recompiles the saved system on load
 SET_NAME = os.environ.get("NTS_FRAME_SETNAME", VARIABLE)   # the name the sim passes to set_variable_float
 SHORT_NAME = "FrameIndex"
 VALUES = (0.0, 2.0, 9.0)   # 0 is the user parameter default: the sim values at 0, 2 and 9 show whether they move with the parameter or with the particle age
@@ -173,6 +178,16 @@ def diagnostics():
             "frame_error": frame["error"], "frame": json.dumps(frame["value"])[:600]}
 
 
+def force_compile_on_load():
+    """The sim process recompiles the saved system when it loads it (UNiagaraEmitter GetForceCompileOnLoad, the cvar fx.ForceCompileOnLoad), because a link written
+    through the toolset is not followed by a compile (auto compile is off in its view model). The cvar has to be set before the asset loads, so it goes in the project's ini."""
+    ini = os.path.join(unreal.SystemLibrary.get_project_directory(), "Config", "DefaultEngine.ini")
+    os.makedirs(os.path.dirname(ini), exist_ok=True)
+    with open(ini, "a") as fh:
+        fh.write("\n[ConsoleVariables]\nfx.ForceCompileOnLoad=1\n")
+    return {"ini": ini.replace("\\", "/")}
+
+
 try:
     unreal.AssetRegistryHelpers.get_asset_registry().search_all_assets(True)
     eal.make_directory(FOLDER)
@@ -184,12 +199,14 @@ steps = (("texture", texture), ("material", material), ("system", system), ("use
 if VARIANT == "modelast":   # the mode is written again after the link, to see whether the order decides the compiled behaviour
     steps += (("mode_again", lambda: {"error": c.call("SetStackInputData", {"stackInputRef": c.at(SYSTEM, "Sprite", "ParticleUpdateScript", "SubUVAnimation", ["SubUV Animation Mode"]), "inputData": ENUM_DIRECT})["error"]}),)
 steps += (("diagnostics", diagnostics),)
+if FORCE_COMPILE:
+    steps += (("force_compile", force_compile_on_load),)
 for name, fn in steps:
     probe.guarded(name, fn)
 probe.guarded("save", lambda: {"system": bool(eal.save_asset(SYSTEM))})
 probe.write()
 
-probe.manifest.update({"map": MAP, "settle_seconds": 8, "systems": [{"id": "Flip", "asset": SYSTEM}], "samples": [{
+probe.manifest.update({"map": MAP, "settle_seconds": 40 if FORCE_COMPILE else 8, "systems": [{"id": "Flip", "asset": SYSTEM}], "samples": [{
     "id": "Flip", "actor": "Fx_Flip", "camera": "Cam_Flip", "metric_emitter": "Sprite",
     "sequence": [{"name": "base", "hidden": True, "shot": "base", "live_seconds": 0.5}] + [
         {"name": "v%d" % int(v), "frames": 30, "attributes": ["SubImageIndex", "NormalizedAge"], "set": [{"type": "float", "name": SET_NAME, "value": v}], "shot": "v%d" % int(v), "live_seconds": 1.5}

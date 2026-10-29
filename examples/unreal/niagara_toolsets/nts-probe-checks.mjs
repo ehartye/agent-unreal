@@ -13,16 +13,16 @@ export const PROBE_PHASES = {
   wire: [{ name: 'wire-build', mode: 'commandlet', script: 'nts_probe_wire_build.py' }, { name: 'wire-sim', mode: 'editor', script: 'nts_probe_sim.py', map: '/Game/Maps/NtsProbeWire', prefix: 'nts_wire' }],
   gradient: [{ name: 'gradient', mode: 'commandlet', script: 'nts_probe_gradient.py' }],
 };
-export const USAGE = 'usage: node nts_probe.mjs --engine <UE_5.8 folder> [--only <group>[,<group>...]] [--keep] [--plan] [--scenes <folder>] [--glb <file|builtin>] [--atlas-png <file>] [--atlas-json <file>]'
+export const USAGE = 'usage: node nts_probe.mjs --engine <UE_5.8 folder> [--only <group>[,<group>...]] [--keep] [--plan] [--scenes <folder>] [--glb <file|builtin>] [--static-glb <file>] [--atlas-png <file>] [--atlas-json <file>]'
   + `   groups: ${PROBE_GROUPS.join(', ')}   (no --only: every group; wire joins only when its assets resolve)`;
 
 /**
  * @param {string[]} argv  process.argv without node and the script
  * @param {Record<string, string|undefined>} [env]  UE_ROOT supplies the engine folder; AGENT_UNREAL_SCENES the scenes workspace
- * @returns {{ error?: string, engine?: string, keep?: boolean, plan?: boolean, groups?: string[], named?: boolean, scenes?: string, glb?: string, atlasPng?: string, atlasJson?: string }}
+ * @returns {{ error?: string, engine?: string, keep?: boolean, plan?: boolean, groups?: string[], named?: boolean, scenes?: string, glb?: string, staticGlb?: string, atlasPng?: string, atlasJson?: string }}
  */
 export function parseProbeOptions(argv, env = {}) {
-  const values = {}, valued = { '--engine': 'engine', '--only': 'only', '--scenes': 'scenes', '--glb': 'glb', '--atlas-png': 'atlasPng', '--atlas-json': 'atlasJson' };
+  const values = {}, valued = { '--engine': 'engine', '--only': 'only', '--scenes': 'scenes', '--glb': 'glb', '--static-glb': 'staticGlb', '--atlas-png': 'atlasPng', '--atlas-json': 'atlasJson' };
   let keep = false, plan = false;
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
@@ -47,7 +47,7 @@ export function parseProbeOptions(argv, env = {}) {
     if (unknown.length) return { error: `unknown group ${unknown.join(', ')}; the groups are ${PROBE_GROUPS.join(', ')}` };
     groups = PROBE_GROUPS.filter((g) => asked.includes(g));
   }
-  return { engine, keep, plan, groups, named, scenes: values.scenes || env.AGENT_UNREAL_SCENES || undefined, glb: values.glb, atlasPng: values.atlasPng, atlasJson: values.atlasJson };
+  return { engine, keep, plan, groups, named, scenes: values.scenes || env.AGENT_UNREAL_SCENES || undefined, glb: values.glb, staticGlb: values.staticGlb, atlasPng: values.atlasPng, atlasJson: values.atlasJson };
 }
 
 // ---------------------------------------------------------------------------------------------------------------------------------
@@ -204,15 +204,16 @@ function frameChecks({ build, sim, images }, check) {
     'SetStackInputData with a Linked value ({linkedVariable: {name, type}}) leaves GetStackInputData returning NiagaraExt_StackInputData_Linked with the parameter name',
     ok(link) && link.linked === true,
     attempts.map((a) => `${a.type_source}/${a.name}: ${a.skipped || a.set_error || `${a.kind_after} ${a.link_after}`}`).join('; ') || link.error || 'no attempts');
-  const v2 = attribute(stepOf(sim, 'Flip', 'v2'), 'Sprite', 'SubImageIndex'), v9 = attribute(stepOf(sim, 'Flip', 'v9'), 'Sprite', 'SubImageIndex');
+  const sub = (id) => attribute(stepOf(sim, 'Flip', id), 'Sprite', 'SubImageIndex'), age = (id) => attribute(stepOf(sim, 'Flip', id), 'Sprite', 'NormalizedAge');
+  const v0 = sub('v0'), v2 = sub('v2'), v9 = sub('v9');
   check('frame', 'the sprite SubImageIndex follows the user parameter',
-    'After the parameter is set from Python to 2 and to 9, Particles.SubImageIndex in a simulation cache reads 2 and 9 (within 0.05), not an age-driven value',
-    close(v2, 2) && close(v9, 9), `set 2 -> ${v2}; set 9 -> ${v9}`);
-  const base = (images || {})[shotOf(sim, 'Flip', 'base')], a = (images || {})[shotOf(sim, 'Flip', 'v2')], b = (images || {})[shotOf(sim, 'Flip', 'v9')];
-  const n2 = changedPixels(base, a), n9 = changedPixels(base, b);
-  check('frame', 'screenshots at the two values show different cells',
-    'Against a baseline with the actor hidden, the frame-2 shot changes some pixels and the frame-9 shot changes at least twice as many (the cell discs grow with the frame number)',
-    n2 > 500 && n9 >= 2 * n2, `changed pixels: frame 2 ${n2}, frame 9 ${n9}${n2 < 0 || n9 < 0 ? ' (a screenshot is missing or has another size)' : ''}`);
+    'After the parameter is set from Python to 0, 2 and 9, Particles.SubImageIndex in a simulation cache reads 0, 2 and 9 (within 0.05), not an age-driven value',
+    close(v0, 0) && close(v2, 2) && close(v9, 9), `set 0 -> ${v0} (NormalizedAge ${age('v0')}); set 2 -> ${v2} (${age('v2')}); set 9 -> ${v9} (${age('v9')})`);
+  const base = (images || {})[shotOf(sim, 'Flip', 'base')], z = (images || {})[shotOf(sim, 'Flip', 'v0')], a = (images || {})[shotOf(sim, 'Flip', 'v2')], b = (images || {})[shotOf(sim, 'Flip', 'v9')];
+  const n2 = changedPixels(base, a), n9 = changedPixels(base, b), d02 = changedPixels(z, a), d29 = changedPixels(a, b);
+  check('frame', 'screenshots at the three values show different cells',
+    'Against a baseline with the actor hidden, the frame-2 shot changes some pixels and the frame-9 shot changes at least twice as many (the cell discs grow with the frame number); the shots at 0, 2 and 9 differ from one another',
+    n2 > 500 && n9 >= 2 * n2 && d02 > 0 && d29 > 0, `changed pixels against the baseline: frame 2 ${n2}, frame 9 ${n9}; between shots: 0 and 2 ${d02}, 2 and 9 ${d29}${[n2, n9, d02, d29].some((n) => n < 0) ? ' (a screenshot is missing or has another size)' : ''}`);
 }
 
 function wireChecks({ build, sim, images }, check) {
@@ -222,7 +223,9 @@ function wireChecks({ build, sim, images }, check) {
     'Interchange imports the sample GLB; the report counts static and skeletal meshes (a rigged model gives skeletal meshes, which a mesh renderer cannot take)',
     steps(build).length > 0 && (!sample || (typeof sample.returned === 'boolean' && (list(sample.static_meshes).length + (sample.skeletal_meshes || 0)) > 0)),
     sample ? `${list(sample.static_meshes).length} static, ${sample.skeletal_meshes || 0} skeletal${sample.error ? `; ${String(sample.error).split('\n')[0]}` : ''}` : 'no sample model given');
-  const chain = meshSteps.find((s) => list(s.static_meshes).length > 0 && s.set_error === '' && typeof s.mesh_after === 'string' && String(s.mesh_path).endsWith(String(s.mesh_after).split('.').pop()) && !s.error);
+  const held = (s) => list(s.static_meshes).length > 0 && s.set_error === '' && typeof s.mesh_after === 'string' && String(s.mesh_path).endsWith(String(s.mesh_after).split('.').pop()) && !s.error;
+  const cube = meshSteps.find((s) => s.step === 'mesh_builtin');   // the built-in cube carries the chain; the sample and its static export have checks of their own
+  const chain = cube ? (held(cube) ? cube : undefined) : meshSteps.find((s) => held(s));
   const id = chain ? chain.step.slice('mesh_'.length) : undefined;
   check('wire', 'an imported static mesh is held by the mesh renderer',
     'A GLB imported through Interchange gives a StaticMesh; SetRendererData with Meshes[0].Mesh stores it and GetRendererData reads the same asset back',
@@ -235,20 +238,50 @@ function wireChecks({ build, sim, images }, check) {
   check('wire', 'the mesh is visible in a screenshot',
     'Against a baseline with the actor hidden, the shot with the system running changes at least 0.1 percent of the pixels',
     meshDiff > 0.001 * meshTotal && meshTotal > 0, `changed pixels ${meshDiff} of ${meshTotal}`);
+  const exported = meshSteps.find((s) => s.step === 'mesh_static');
+  const exportOn = stepOf(sim, 'Mesh_static', 'on'), exportDiff = changedPixels((images || {})[shotOf(sim, 'Mesh_static', 'base')], (images || {})[shotOf(sim, 'Mesh_static', 'on')]);
+  const exportTotal = ((images || {})[shotOf(sim, 'Mesh_static', 'on')] || {}).width * ((images || {})[shotOf(sim, 'Mesh_static', 'on')] || {}).height || 0;
+  check('wire', 'a static export of the rigged model is held and drawn by a mesh renderer',
+    'The static export of the sample model (no skeleton, no skin) imports as a StaticMesh through Interchange, SetRendererData with Meshes[0].Mesh stores it, the system emits, and against a baseline with the actor hidden the shot with the system running changes at least 0.1 percent of the pixels. Passes with nothing to check when no static export is given',
+    steps(build).length > 0 && (!exported || held(exported) && metric(exportOn) > 0 && exportDiff > 0.001 * exportTotal && exportTotal > 0),
+    exported ? `${list(exported.static_meshes).length} static, ${exported.skeletal_meshes || 0} skeletal; ${held(exported) ? `${exported.mesh_path} -> ${exported.mesh_after}` : String(exported.error || exported.set_error || 'no mesh stored').split(/\r?\n/)[0].slice(0, 120)}; particles ${metric(exportOn)}; changed pixels ${exportDiff} of ${exportTotal}` : 'no static export given');
   const atlas = step(build, 'atlas');
   check('wire', 'the atlas image becomes a flipbook with the atlas grid as Sub Image Size',
     'The atlas PNG imports as a texture; the sprite renderer takes the unlit SubUV material and a Sub Image Size equal to the columns and rows computed from the atlas JSON',
     ok(atlas) && typeof atlas.texture === 'string' && atlas.set_error === '' && Boolean(atlas.sub_image_size) && atlas.sub_image_size.x === (atlas.grid || [])[0] && atlas.sub_image_size.y === (atlas.grid || [])[1],
     atlas.error ? String(atlas.error).split('\n')[0] : `grid ${JSON.stringify(atlas.grid)}, stored ${JSON.stringify(atlas.sub_image_size)}`);
   const early = attribute(stepOf(sim, 'Atlas', 'early'), 'Sprite', 'SubImageIndex'), late = attribute(stepOf(sim, 'Atlas', 'late'), 'Sprite', 'SubImageIndex'), lateStep = stepOf(sim, 'Atlas', 'late');
+  const cells = (atlas.grid || [])[0] * (atlas.grid || [])[1];
   check('wire', 'the flipbook emits and its frame index advances',
-    'A sim cache shows more than 0 particles, and Particles.SubImageIndex is larger after 60 frames than after 10',
-    metric(lateStep) > 0 && Number.isFinite(early) && Number.isFinite(late) && late > early, `particles ${metric(lateStep)}; SubImageIndex after 10 frames ${early}, after 60 ${late}`);
+    'A sim cache shows more than 0 particles, and Particles.SubImageIndex is larger after 60 frames than after 10 and does not pass the number of cells in the atlas grid',
+    metric(lateStep) > 0 && Number.isFinite(early) && Number.isFinite(late) && late > early && (!(cells > 0) || late <= cells + 0.5), `particles ${metric(lateStep)}; SubImageIndex after 10 frames ${early}, after 60 ${late}; ${cells || '?'} cells in the grid`);
   const flipBase = (images || {})[shotOf(sim, 'Atlas', 'base')], flipOn = (images || {})[shotOf(sim, 'Atlas', 'late')];
   const flipDiff = changedPixels(flipBase, flipOn), flipTotal = flipOn ? flipOn.width * flipOn.height : 0;
   check('wire', 'the flipbook is visible in a screenshot',
     'Against a baseline with the actor hidden, the shot with the system running changes at least 0.1 percent of the pixels',
     flipDiff > 0.001 * flipTotal && flipTotal > 0, `changed pixels ${flipDiff} of ${flipTotal}`);
+  const bound = step(build, 'bind_mesh'), shotImage = (id, name) => (images || {})[shotOf(sim, id, name)];
+  const control = list(bound.candidates).find((cand) => cand.id === 'Bind_ctl');
+  const tries = list(bound.candidates).filter((cand) => cand.id !== 'Bind_ctl').map((cand) => {
+    const setStep = stepOf(sim, cand.id, 'b'), shot = shotImage(cand.id, 'b');
+    return { ...cand, dA: changedPixels(shotImage(cand.id, 'a'), control && shotImage(control.id, 'a')), dB: changedPixels(shot, control && shotImage(control.id, 'b')),
+      total: shot ? shot.width * shot.height : 0, setError: setStep && setStep.error, particles: metric(stepOf(sim, cand.id, 'a')) };
+  });
+  const median = (values) => { const v = values.filter((x) => x >= 0).sort((x, y) => x - y); return v.length ? v[Math.floor(v.length / 2)] : Infinity; };
+  const noiseA = median(tries.map((t) => t.dA)), noiseB = median(tries.map((t) => t.dB));
+  const tail = (text) => String(text).split(/\r?\n/).slice(-2).join(' ').slice(0, 200);
+  const beyond = (value, noise, t) => value > Math.max(0.002 * t.total, 4 * (noise + 100));
+  const drawn = tries.filter((t) => t.bound === true && t.particles > 0 && beyond(t.dA, noiseA, t));   // the default mesh of the parameter is drawn, not the slot's cube
+  const swapped = drawn.filter((t) => !t.setError && beyond(t.dB, noiseB, t));   // and the mesh set from Python is drawn after it
+  const claim = 'Copies of a one-particle mesh system (fixed random seed, the cube in the slot as the fallback) get the object user parameter User.MeshBind (default: the engine sphere); each copy has its Meshes[0].meshParameterBinding written with SetRendererData to name it with one candidate type index, and one copy is left unbound (the control). ';
+  const where = (rows) => rows.map((t) => `${t.id} (${t.dA} and ${t.dB} changed pixels against the control, median ${noiseA} and ${noiseB}) with ${t.binding_sent}`).join('; ') || 'none';
+  const summary = `${tries.length} copies against the control; set errors ${list(bound.candidates).filter((cand) => cand.set_error).length}; diffs ${tries.map((t) => `${t.id}=${t.dA}/${t.dB}`).join(' ')}`;
+  check('wire', 'a mesh slot bound to an object user parameter draws the parameter default',
+    `${claim}After a warm-up shot, the shot with no call differs from the control by more than 0.2 percent of the pixels and by more than four times what the other copies differ from it (their median): the slot draws the sphere, not its own cube. The index and the binding JSON that worked are recorded in the detail`,
+    ok(bound) && Boolean(control) && drawn.length > 0, bound.error ? tail(bound.error) : `drawn: ${where(drawn)}; ${summary}`);
+  check('wire', 'set_variable_static_mesh changes the mesh a bound slot draws',
+    `${claim}On a copy that draws the parameter default, the shot after set_variable_static_mesh swaps in the engine cone differs from the control's shot at the same step by more than the same bound: the cone is drawn`,
+    ok(bound) && Boolean(control) && swapped.length > 0, bound.error ? tail(bound.error) : `swapped: ${where(swapped)}; ${summary}`);
   const user = step(build, 'user_variable'), override = stepOf(sim, 'MeshUser', 'override');
   check('wire', 'a Static Mesh user parameter is added from the toolsets (as an object parameter) and the runtime override call runs',
     'AddUserVariables with type StaticMesh and a NiagaraExt_VariableValue_Object default lists User.MeshObj on a copy of the mesh system; the data-interface shapes (class only, and an instance) are recorded and are not expected to list; override_system_user_variable_static_mesh runs on the component without an error and the system still emits. The renderer is not bound to the parameter (MeshesBinding takes a renderable-mesh-array data interface), so this does not show the override on screen',

@@ -1,5 +1,5 @@
 """Probe, run half: play a probe level offscreen, count particles with a simulation cache, read attributes, take screenshots, then quit.
-Prepared 2026-10-26; not yet run on an engine. A first run tests the probe before it tests the engine.
+Run on 2026-10-26 and after by the emit, frame and wire groups.
 
   UnrealEditor.exe Project.uproject <map from the manifest> -RenderOffScreen -ExecCmds="py <abs path to this file>"
       -abslog=<log> -notraceserver -nosplash -unattended -nosound        (in Git Bash set MSYS_NO_PATHCONV=1)
@@ -11,7 +11,7 @@ The manifest (written by nts_probe_*_build.py; the shape is this file's own cont
   {"map": ..., "settle_seconds": 8, "systems": [{"id", "asset"}],
    "samples": [{"id", "actor": "Fx_<id>", "camera": "Cam_<id>", "metric_emitter": "Probe" or null,
                 "sequence": [{"name", "frames": 40, "step_seconds": 0.016667, "attributes": ["SubImageIndex"],
-                              "set": [{"type": "float", "name": "User.X", "value": 1.0}],
+                              "set": [{"type": "float", "name": "User.X", "value": 1.0}, {"type": "static_mesh", "name": "User.Mesh", "asset": "/Game/..."}],
                               "override_mesh": {"name": "User.Mesh", "asset": "/Game/..."},
                               "hidden": false, "shot": "<name>", "live_seconds": 1.2}]}]}
 Each step: apply `set`, restart the system, capture `frames` simulation-cache frames and record the particle count per emitter after
@@ -103,6 +103,8 @@ def apply_sets(comp, step):
             comp.set_variable_int(name, int(item["value"]))          # source: NiagaraComponent.h SetVariableInt(FName, int32)
         elif item["type"] == "bool":
             comp.set_variable_bool(name, bool(item["value"]))        # as showcase_run.py
+        elif item["type"] == "static_mesh":
+            comp.set_variable_static_mesh(name, unreal.EditorAssetLibrary.load_asset(item["asset"]))   # source: NiagaraComponent.h SetVariableStaticMesh(FName, UStaticMesh*)
         else:
             raise RuntimeError("unknown variable type " + str(item["type"]))
     override = step.get("override_mesh")
