@@ -62,26 +62,39 @@ const frameReport = () => ({
   ] },
   sim: { probe: 'sim', samples: { Flip: { steps: {
     base: { shot: 'nts_frame_base.png' },
+    v0: { ...run(1), attributes: { Sprite: { SubImageIndex: [0, 0], NormalizedAge: [0.4, 0.4] } }, shot: 'nts_frame_v0.png' },
     v2: { ...run(1), attributes: { Sprite: { SubImageIndex: [2, 2] } }, shot: 'nts_frame_v2.png' },
     v9: { ...run(1), attributes: { Sprite: { SubImageIndex: [9, 9] } }, shot: 'nts_frame_v9.png' },
-  } } }, shots: [{ name: 'nts_frame_base.png' }, { name: 'nts_frame_v2.png' }, { name: 'nts_frame_v9.png' }] },
-  images: { 'nts_frame_base.png': solid(100, 100), 'nts_frame_v2.png': withSquare(solid(100, 100), 30), 'nts_frame_v9.png': withSquare(solid(100, 100), 60) },
+  } } }, shots: [{ name: 'nts_frame_base.png' }, { name: 'nts_frame_v0.png' }, { name: 'nts_frame_v2.png' }, { name: 'nts_frame_v9.png' }] },
+  images: { 'nts_frame_base.png': solid(100, 100), 'nts_frame_v0.png': withSquare(solid(100, 100), 10), 'nts_frame_v2.png': withSquare(solid(100, 100), 30), 'nts_frame_v9.png': withSquare(solid(100, 100), 60) },
 });
 
-const CUBE = '/Game/Probe/Wire/Mesh_builtin/ProbeCube.ProbeCube';
+const DRAWS = 'a mesh slot bound to an object user parameter draws the parameter default', SWAPS = 'set_variable_static_mesh changes the mesh a bound slot draws';
+const CUBE = '/Game/Probe/Wire/Mesh_builtin/ProbeCube.ProbeCube', EXPORT = '/Game/Probe/Wire/Mesh_static/Vulpine.Vulpine';
+const BOUND_JSON = '{"aliasedParameter":{"name":"User.MeshBind","typeDefHandle":{"registeredTypeIndex":33}},"resolvedParameter":{"name":"User.MeshBind","typeDefHandle":{"registeredTypeIndex":33}}}';
+const bindRow = (id, index, bound) => ({ id, index, bound, set_error: '', add_error: '', binding_sent: bound ? BOUND_JSON : 'none (control)', binding_after: bound ? BOUND_JSON : undefined });
+const bindSample = (id) => ({ steps: { a: { ...run(60), shot: `nts_wire_${id}_a.png` }, b: { ...run(60), shot: `nts_wire_${id}_b.png` } } });
 const wireReport = () => ({
   build: { probe: 'wire-build', steps: [
     { step: 'mesh_sample', id: 'sample', returned: true, assets: 52, static_meshes: [], skeletal_meshes: 1, error: 'the import produced no static mesh (1 skeletal)' },
+    { step: 'mesh_static', id: 'static', returned: true, assets: 4, static_meshes: [EXPORT], skeletal_meshes: 0, mesh_path: EXPORT, set_error: '', mesh_after: EXPORT, lifetime_error: '' },
     { step: 'mesh_builtin', id: 'builtin', returned: true, assets: 3, static_meshes: [CUBE], skeletal_meshes: 0, mesh_path: CUBE, set_error: '', mesh_after: CUBE, lifetime_error: '' },
     { step: 'atlas', returned: true, texture: '/Game/Probe/Wire/Atlas/campfire.campfire', grid: [4, 2], set_error: '', sub_image_size: { x: 4, y: 2 }, material: '/Game/Probe/Wire/M_Atlas.M_Atlas' },
+    { step: 'bind_mesh', candidates: [bindRow('Bind_ctl', null, false), bindRow('Bind_default', null, true), bindRow('Bind_32', 32, true), bindRow('Bind_33', 33, true)], first_index: 32, span: 2 },
     { step: 'user_variable', add_error: '', names: ['User.MeshObj'], variants: [{ variant: 'di_class', listed: false }, { variant: 'object', listed: true }, { variant: 'di_instance', listed: false }], saved: true },
   ] },
   sim: { probe: 'sim', samples: {
     Mesh_builtin: { steps: { base: { shot: 'nts_wire_Mesh_builtin_base.png' }, on: { ...run(80), shot: 'nts_wire_Mesh_builtin_on.png' } } },
     Atlas: { steps: { base: { shot: 'nts_wire_Atlas_base.png' }, early: { ...run(1), attributes: { Sprite: { SubImageIndex: [0.6] } } }, late: { ...run(1), attributes: { Sprite: { SubImageIndex: [4.1] } }, shot: 'nts_wire_Atlas_on.png' } } },
+    Mesh_static: { steps: { base: { shot: 'nts_wire_Mesh_static_base.png' }, on: { ...run(80), shot: 'nts_wire_Mesh_static_on.png' } } },
+    Bind_ctl: bindSample('Bind_ctl'), Bind_default: bindSample('Bind_default'), Bind_32: bindSample('Bind_32'), Bind_33: bindSample('Bind_33'),
     MeshUser: { steps: { override: run(80) } },
   }, shots: [] },
-  images: Object.fromEntries([['nts_wire_Mesh_builtin_base.png', solid(100, 100)], ['nts_wire_Mesh_builtin_on.png', withSquare(solid(100, 100), 20)], ['nts_wire_Atlas_base.png', solid(100, 100)], ['nts_wire_Atlas_on.png', withSquare(solid(100, 100), 20)]]),
+  images: Object.fromEntries([['nts_wire_Mesh_builtin_base.png', solid(100, 100)], ['nts_wire_Mesh_builtin_on.png', withSquare(solid(100, 100), 20)], ['nts_wire_Atlas_base.png', solid(100, 100)], ['nts_wire_Atlas_on.png', withSquare(solid(100, 100), 20)],
+    ['nts_wire_Mesh_static_base.png', solid(100, 100)], ['nts_wire_Mesh_static_on.png', withSquare(solid(100, 100), 25)],
+    // only the right type index swaps the mesh: its shots differ from the control's; the control and the wrong indices draw the same fallback cube
+    ...['Bind_ctl', 'Bind_default', 'Bind_32'].flatMap((id) => [[`nts_wire_${id}_a.png`, withSquare(solid(100, 100), 20)], [`nts_wire_${id}_b.png`, withSquare(solid(100, 100), 20)]]),
+    ['nts_wire_Bind_33_a.png', withSquare(solid(100, 100), 40)], ['nts_wire_Bind_33_b.png', withSquare(solid(100, 100), 60)]]),
 });
 
 const gradientReport = () => ({
@@ -221,9 +234,12 @@ test('frame: each claim has a failing case', () => {
   assert.deepEqual(mutate('frame', (r) => { step(r.build, 'link').linked = false; }), ['Direct Frame Index reads back as linked to the user parameter']);
   assert.deepEqual(mutate('frame', (r) => { r.sim.samples.Flip.steps.v9.attributes.Sprite.SubImageIndex = [0.4]; }), ['the sprite SubImageIndex follows the user parameter']);
   assert.deepEqual(mutate('frame', (r) => { delete r.sim.samples.Flip.steps.v2.attributes; }), ['the sprite SubImageIndex follows the user parameter']);
-  assert.deepEqual(mutate('frame', (r) => { r.images['nts_frame_v9.png'] = r.images['nts_frame_v2.png']; }), ['screenshots at the two values show different cells']);
-  assert.deepEqual(mutate('frame', (r) => { delete r.images['nts_frame_base.png']; }), ['screenshots at the two values show different cells']);
-  assert.deepEqual(mutate('frame', (r) => { r.images['nts_frame_v2.png'] = solid(50, 50); }), ['screenshots at the two values show different cells']);
+  assert.deepEqual(mutate('frame', (r) => { r.images['nts_frame_v9.png'] = r.images['nts_frame_v2.png']; }), ['screenshots at the three values show different cells']);
+  assert.deepEqual(mutate('frame', (r) => { r.images['nts_frame_v0.png'] = r.images['nts_frame_v2.png']; }), ['screenshots at the three values show different cells']);
+  assert.deepEqual(mutate('frame', (r) => { delete r.sim.samples.Flip.steps.v0.attributes; }), ['the sprite SubImageIndex follows the user parameter']);
+  assert.deepEqual(mutate('frame', (r) => { r.sim.samples.Flip.steps.v0.attributes.Sprite.SubImageIndex = [6.1]; }), ['the sprite SubImageIndex follows the user parameter']);
+  assert.deepEqual(mutate('frame', (r) => { delete r.images['nts_frame_base.png']; }), ['screenshots at the three values show different cells']);
+  assert.deepEqual(mutate('frame', (r) => { r.images['nts_frame_v2.png'] = solid(50, 50); }), ['screenshots at the three values show different cells']);
 });
 
 // ---- wire
@@ -237,8 +253,25 @@ test('wire: each claim has a failing case', () => {
   assert.deepEqual(mutate('wire', (r) => { r.sim.samples.Atlas.steps.late.attributes.Sprite.SubImageIndex = [0.6]; }), ['the flipbook emits and its frame index advances']);
   assert.deepEqual(mutate('wire', (r) => { r.sim.samples.Atlas.steps.late.metric_max = 0; }), ['the flipbook emits and its frame index advances']);
   assert.deepEqual(mutate('wire', (r) => { r.images['nts_wire_Atlas_on.png'] = solid(100, 100); }), ['the flipbook is visible in a screenshot']);
+  assert.deepEqual(mutate('wire', (r) => { step(r.build, 'mesh_static').static_meshes = []; }), ['a static export of the rigged model is held and drawn by a mesh renderer']);
+  assert.deepEqual(mutate('wire', (r) => { r.sim.samples.Mesh_static.steps.on.metric_max = 0; }), ['a static export of the rigged model is held and drawn by a mesh renderer']);
+  assert.deepEqual(mutate('wire', (r) => { r.images['nts_wire_Mesh_static_on.png'] = solid(100, 100); }), ['a static export of the rigged model is held and drawn by a mesh renderer']);
+  assert.deepEqual(mutate('wire', (r) => { r.images['nts_wire_Bind_33_b.png'] = r.images['nts_wire_Bind_ctl_b.png']; }), [SWAPS]);
+  assert.deepEqual(mutate('wire', (r) => { step(r.build, 'bind_mesh').candidates.find((x) => x.id === 'Bind_33').bound = false; }), [DRAWS, SWAPS]);
+  assert.deepEqual(mutate('wire', (r) => { r.sim.samples.Bind_33.steps.b.error = 'TypeError'; }), [SWAPS]);
+  assert.deepEqual(mutate('wire', (r) => { r.images['nts_wire_Bind_33_a.png'] = r.images['nts_wire_Bind_ctl_a.png']; }), [DRAWS, SWAPS]);
+  assert.deepEqual(mutate('wire', (r) => { for (const id of ['Bind_default', 'Bind_32']) { r.images[`nts_wire_${id}_a.png`] = withSquare(solid(100, 100), 38); r.images[`nts_wire_${id}_b.png`] = withSquare(solid(100, 100), 58); } }), [DRAWS, SWAPS]);   // every copy differs from the control: the shots are noise, not a swap
+  assert.deepEqual(mutate('wire', (r) => { delete r.sim.samples.Bind_ctl; }), [DRAWS, SWAPS]);
+  assert.deepEqual(mutate('wire', (r) => { step(r.build, 'bind_mesh').error = 'RuntimeError'; delete step(r.build, 'bind_mesh').candidates; }), [DRAWS, SWAPS]);
+  assert.deepEqual(mutate('wire', (r) => { r.sim.samples.Atlas.steps.late.attributes.Sprite.SubImageIndex = [9.7]; }), ['the flipbook emits and its frame index advances']);
   assert.deepEqual(mutate('wire', (r) => { step(r.build, 'user_variable').names = []; }), ['a Static Mesh user parameter is added from the toolsets (as an object parameter) and the runtime override call runs']);
   assert.deepEqual(mutate('wire', (r) => { r.sim.samples.MeshUser.steps.override.error = 'TypeError'; }), ['a Static Mesh user parameter is added from the toolsets (as an object parameter) and the runtime override call runs']);
+});
+
+test('wire: no static export given passes the export check with nothing to check', () => {
+  const r = canned();
+  r.wire.build.steps = r.wire.build.steps.filter((s) => s.step !== 'mesh_static');
+  assert.deepEqual(failing(r, ['wire']), []);
 });
 
 test('wire: no sample model given is fine, and a skeletal-only sample does not stop the built-in cube carrying the chain', () => {
@@ -270,8 +303,8 @@ test('options: groups, the engine folder, the wire assets and unknown input', ()
   assert.match(parseProbeOptions(['--engine'], {}).error, /needs a value/);
   assert.match(parseProbeOptions(['--engine', 'E', '--bogus'], {}).error, /unknown option --bogus/);
   assert.match(parseProbeOptions(['--engine', 'E', '--only', 'emit', '--only', 'wire'], {}).error, /given twice/);
-  const w = parseProbeOptions(['--engine', 'E', '--scenes', 'S', '--glb', 'builtin', '--atlas-png', 'a.png', '--atlas-json', 'a.json', '--keep', '--plan'], {});
-  assert.deepEqual([w.scenes, w.glb, w.atlasPng, w.atlasJson, w.keep, w.plan], ['S', 'builtin', 'a.png', 'a.json', true, true]);
+  const w = parseProbeOptions(['--engine', 'E', '--scenes', 'S', '--glb', 'builtin', '--static-glb', 's.glb', '--atlas-png', 'a.png', '--atlas-json', 'a.json', '--keep', '--plan'], {});
+  assert.deepEqual([w.scenes, w.glb, w.staticGlb, w.atlasPng, w.atlasJson, w.keep, w.plan], ['S', 'builtin', 's.glb', 'a.png', 'a.json', true, true]);
   assert.equal(parseProbeOptions(['--engine', 'E'], { AGENT_UNREAL_SCENES: 'W' }).scenes, 'W');
 });
 
@@ -316,6 +349,9 @@ test('resolveWireAssets: the workspace layout, explicit paths and clear failures
   const explicit = resolveWireAssets({ glb: 'a.glb', atlasPng: 'a.png', atlasJson: 'a.json' }, { exists: () => true, readText: () => atlas });
   assert.equal(explicit.error, undefined);
   assert.equal(explicit.meshes[0].path, 'a.glb');
+  const withStatic = resolveWireAssets({ glb: 'a.glb', staticGlb: 's.glb', atlasPng: 'a.png', atlasJson: 'a.json' }, { exists: () => true, readText: () => atlas });
+  assert.deepEqual(withStatic.meshes.map((m) => [m.id, m.skinned]), [['sample', true], ['static', false], ['builtin', false]]);
+  assert.match(resolveWireAssets({ glb: 'a.glb', staticGlb: 's.glb', atlasPng: 'a.png', atlasJson: 'a.json' }, { exists: (p) => p !== 's.glb', readText: () => atlas }).error, /static GLB not found: s[.]glb/);
 });
 
 // ---- the built-in cube
@@ -369,11 +405,15 @@ test('shotNames lists the screenshots a sim report asked for', () => {
 });
 
 // ---- the scripts and the checks agree
+// A script that has been run says so; the others keep the prepared line until their group is run.
+const RUN_STATUS = { 'nts_probe_emit_build.py': /Run on 5\.8\.2 on 2026-10-26/, 'nts_probe_frame_build.py': /Run on 2026-10-26, 2026-10-27 and 2026-10-29/, 'nts_probe_sim.py': /Run on 2026-10-26 and after/,
+  'nts_probe_wire_build.py': /Run on 2026-10-26, 2026-10-27 and 2026-10-29/, 'nts-probe-assets.mjs': /run in the wire group on 2026-10-26 and after/ };
+const statusOf = (name) => RUN_STATUS[name] || /Prepared 2026-10-26; not yet run on an engine/;
 test('the python scripts exist, name the maps the runner plays, and write the fields the checks read', () => {
   for (const group of PROBE_GROUPS) {
     for (const phase of PROBE_PHASES[group]) {
       const source = read(phase.script);
-      assert.match(source, phase.script === 'nts_probe_emit_build.py' ? /Run on 5\.8\.2 on 2026-10-26/ : /Prepared 2026-10-26; not yet run on an engine/, phase.script);
+      assert.match(source, statusOf(phase.script), phase.script);
       if (phase.mode === 'editor') {
         const build = read(PROBE_PHASES[group][0].script);
         assert.ok(build.includes(`"${phase.map}"`), `${group}: build script and runner disagree on the map`);
@@ -384,9 +424,9 @@ test('the python scripts exist, name the maps the runner plays, and write the fi
   for (const id of EMIT_IDS) assert.ok(read('nts_probe_emit_build.py').includes(`"${id}"`), id);
   assert.ok(read('nts_probe_sim.py').includes('"refused_frames"'));
   const frame = read('nts_probe_frame_build.py');
-  for (const word of ['"id": "Flip"', 'Cam_Flip', 'User.FrameIndex', '"shot": "base"', '"shot": "v%d"', 'SubImageIndex', '"user_variable"', '"link"', '"system"']) assert.ok(frame.includes(word), word);
+  for (const word of ['"id": "Flip"', 'Cam_Flip', 'User.FrameIndex', '"shot": "base"', '"shot": "v%d"', 'SubImageIndex', '"user_variable"', '"link"', '"system"', 'fx.ForceCompileOnLoad=1', 'NTS_FRAME_FORCECOMPILE']) assert.ok(frame.includes(word), word);
   const wire = read('nts_probe_wire_build.py');
-  for (const word of ['"mesh_" + source["id"]', '"atlas"', 'sid + "_base"', 'sid + "_on"', '"MeshUser"', '"early"', '"late"', '"override"', '"user_variable"']) assert.ok(wire.includes(word), word);
+  for (const word of ['"mesh_" + source["id"]', '"atlas"', 'sid + "_base"', 'sid + "_on"', '"MeshUser"', '"early"', '"late"', '"override"', '"user_variable"', '"bind_mesh"', '"Bind_"', 'sid + "_a"', 'sid + "_b"', '"static_mesh"', 'meshparameterbinding']) assert.ok(wire.includes(word), word);
   const sim = read('nts_probe_sim.py');
   for (const word of ['"metric_max"', '"max_by_emitter"', '"valid"', '"num_frames"', '"attributes"', '"shots"', 'override_system_user_variable_static_mesh', 'set_variable_float']) assert.ok(sim.includes(word), word);
   const renderers = read('nts_probe_renderers.py');
@@ -406,7 +446,7 @@ test('the probe files carry the status line and no machine or home-directory tex
   assert.ok(probeFiles.length >= 10, probeFiles.join(', '));
   for (const name of probeFiles) {
     const text = read(name);
-    assert.match(text, name === 'nts_probe_emit_build.py' ? /Run on 5\.8\.2 on 2026-10-26/ : /Prepared 2026-10-26; not yet run on an engine/, name);
+    assert.match(text, statusOf(name), name);
     assert.doesNotMatch(text, /[A-Za-z]:[\\/]Users[\\/]|\/home\/|\/Users\//, name);
     assert.doesNotMatch(text, /\r/, name);
   }
