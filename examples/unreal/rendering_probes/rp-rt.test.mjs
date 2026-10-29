@@ -1,11 +1,13 @@
 // node --test examples/unreal/rendering_probes/rp-rt.test.mjs  (no Unreal, no dependencies)
 // The runs below are written by hand to the shape rp_rt_validate.mjs collects: the log lines are the strings the 5.8.2 renderer source logs (RenderUtils.cpp), and the report is
 // the shape rp_rt_probe.py writes. Neither has been produced by an engine run yet: the first run confirms the report shape, the ProfileGPU wording and the exit code of a Fatal.
+// The Light Renderer run (evaluateLights) was confirmed by an engine run on 2026-10-29: its CullLights line and report shape below are the ones the engine produced.
 // Each test changes one fact and expects the matching check to fail, and an empty input fails every check.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  FATAL_TEXT, PHASES, PROFILE_END, PROFILE_START, engineIni, evaluateRt, evaluateToggle, iniSection, megaLightsProfileLines, profileSection, rendererDiff, summarize,
+  FATAL_TEXT, PHASES, PROFILE_END, PROFILE_START, countsAgree, engineIni, evaluateLights, evaluateRt, evaluateToggle, iniSection, lightsDrawn, megaLightsProfileLines, profileLightCounts,
+  profileSection, rendererDiff, summarize,
 } from './rp-rt-checks.mjs';
 
 const ENABLED = 'LogRendererCore: Ray tracing is enabled (dynamic). Reason: r.RayTracing=1 and r.RayTracing.EnableOnDemand=1.';
@@ -145,4 +147,90 @@ test('the diff lists only RendererSettings keys that changed', () => {
   });
   assert.deepEqual(rendererDiff(BEFORE, BEFORE), {});
   assert.deepEqual(rendererDiff(`[Other]\nr.RayTracing=True\n${BEFORE}`, BEFORE), {});
+});
+
+// ---- the Niagara Light Renderer count: a commandlet builds the system, a rendering editor draws it and profiles the GPU
+const CULL = (n) => `LogRHI: Display:   0.05ms   CullLights 52x30x32 NumLights ${n} NumCaptures 0`;
+const cannedLights = () => ({
+  build: { exit: 0, timedOut: false, log: '', report: { system: '/Game/Lights/NS_RpLights', saved: true, switches: { bAllowMegaLights: true, bMegaLightsCastShadows: true }, renderers: ['NiagaraSpriteRendererProperties', 'NiagaraLightRendererProperties'], errors: [] } },
+  render: {
+    exit: 0, timedOut: false,
+    report: { cvars: { ...HARDWARE_CVARS, 'r.MegaLights.SimpleLightMode': 1 }, particles: { Lights: 145 }, errors: [], seconds: 150 },
+    log: `${ENABLED}
+${profile(CULL(145), 'LogRHI: Display:   0.40ms   MegaLights')}
+`,
+  },
+});
+const failingLights = (fn) => { const r = cannedLights(); fn(r); return evaluateLights(r).filter((c) => !c.pass).map((c) => c.name); };
+const L = {
+  build: 'the build step makes a Light renderer with both MegaLights switches on',
+  starts: 'the render step starts with ray tracing enabled and writes its report',
+  cvars: 'the render step reads the MegaLights settings back',
+  count: 'the GPU profile gives the number of lights drawn',
+  match: 'the lights drawn match the live particles',
+  mega: 'MegaLights shows in the GPU profile with the Light renderer in the scene',
+};
+
+test('the canned Light Renderer run passes every check', () => {
+  assert.deepEqual(failingLights(() => {}), []);
+  assert.deepEqual(summarize(evaluateLights(cannedLights())), { passed: 6, total: 6 });
+});
+
+test('the lights count is read from the CullLights lines between the markers only', () => {
+  assert.deepEqual(profileLightCounts(cannedLights().render.log), [{ grid: [52, 30, 32], lights: 145, captures: 0 }]);
+  assert.equal(lightsDrawn(cannedLights().render.log), 145);
+  assert.equal(lightsDrawn(`${CULL(9)}
+${profile(CULL(3), CULL(7))}
+${CULL(11)}`), 7);   // the larger of two views; lines outside the markers do not count
+  assert.equal(lightsDrawn(profile('LogRHI: Display: 1.0ms BasePass')), undefined);
+  assert.equal(lightsDrawn(''), undefined);
+  assert.deepEqual(failingLights((r) => { r.render.log = `${ENABLED}
+${CULL(145)}
+${profile('LogRHI: MegaLights')}`; }), [L.count, L.match]);
+  assert.deepEqual(failingLights((r) => { r.render.log = r.render.log.replace(CULL(145), CULL(0)); }), [L.count, L.match]);
+});
+
+test('the lights and the particles must agree to within a frame of spawns and deaths', () => {
+  assert.ok(countsAgree(145, 145));
+  assert.ok(countsAgree(147, 145));
+  assert.ok(countsAgree(60, 62));
+  assert.ok(!countsAgree(145, 100));
+  assert.ok(!countsAgree(145, undefined));
+  assert.ok(!countsAgree(undefined, 145));
+  assert.deepEqual(failingLights((r) => { r.render.report.particles = { Lights: 20 }; }), [L.match]);
+  assert.deepEqual(failingLights((r) => { r.render.report.particles = null; }), [L.match]);
+  assert.deepEqual(failingLights((r) => { r.render.report.particles = { Lights: 100, Other: 45 }; }), []);   // emitters are summed
+});
+
+test('the build checks fail when a switch is off, the system is not saved or the step errored', () => {
+  assert.deepEqual(failingLights((r) => { r.build.report.switches.bMegaLightsCastShadows = false; }), [L.build]);
+  assert.deepEqual(failingLights((r) => { r.build.report.switches = {}; }), [L.build]);
+  assert.deepEqual(failingLights((r) => { r.build.report.saved = false; }), [L.build]);
+  assert.deepEqual(failingLights((r) => { r.build.report.errors = ['Traceback']; }), [L.build]);
+  assert.deepEqual(failingLights((r) => { r.build.exit = 1; }), [L.build]);
+});
+
+test('the render checks fail on a Fatal, a missing report, a changed setting or a missing MegaLights pass', () => {
+  assert.deepEqual(failingLights((r) => { r.render.log += `${FATAL_TEXT}
+`; }), [L.starts]);
+  assert.deepEqual(failingLights((r) => { r.render.log = r.render.log.replace(ENABLED, OFF); }), [L.starts]);
+  assert.ok(failingLights((r) => { r.render.report = undefined; }).includes(L.starts));
+  assert.deepEqual(failingLights((r) => { r.render.report.cvars['r.MegaLights.SimpleLightMode'] = 0; }), [L.cvars]);
+  assert.deepEqual(failingLights((r) => { r.render.report.cvars['r.MegaLights.HardwareRayTracing'] = 0; }), [L.cvars]);
+  assert.deepEqual(failingLights((r) => { r.render.log = r.render.log.replace('MegaLights', 'Lighting'); }), [L.mega]);
+});
+
+test('an empty Light Renderer input fails every check instead of throwing', () => {
+  for (const input of [{}, undefined]) {
+    const checks = evaluateLights(input);
+    assert.equal(checks.length, 6);
+    assert.ok(checks.every((c) => c.pass === false));
+  }
+});
+
+test('the lights launch writes the hardware ini plus the recompile-on-load variable, and no other phase does', () => {
+  const lights = engineIni(PHASES.lights);
+  assert.deepEqual(iniSection(lights, '/Script/Engine.RendererSettings'), iniSection(engineIni(PHASES.hardware), '/Script/Engine.RendererSettings'));
+  assert.deepEqual(iniSection(lights, 'ConsoleVariables'), { 'fx.ForceCompileOnLoad': ['1'] });
+  for (const name of ['fatal', 'hardware', 'software']) assert.deepEqual(iniSection(engineIni(PHASES[name]), 'ConsoleVariables'), {});
 });
