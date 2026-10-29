@@ -3,7 +3,14 @@
   blender --background --python glb_to_fbx.py -- <in.glb> <out.fbx>
 
 Imports the GLB with Blender's glTF importer (the 48 skins that share 19 joints become one armature with 48 meshes),
-then exports every action as a baked animation, without the extra leaf bones Blender adds by default.
+then drops mesh objects the armature does not own, and exports every action as a baked animation, without the extra
+leaf bones Blender adds by default.
+
+In a GLB with an armature, a mesh is kept when an Armature modifier with an object set skins it, or when it is
+parented to an armature object (a part attached to a bone is parented that way). Every other mesh is dropped before
+export. Blender's glTF importer adds an unskinned Icosphere (its bone-display shape) to every rigged import; left in,
+it would arrive in Unreal as an extra static mesh. A GLB with no armature is static, so all its meshes are kept.
+The AGENT_UNREAL_CONVERT line reports the kept and dropped counts and the dropped names.
 """
 import sys
 
@@ -23,8 +30,23 @@ bpy.ops.import_scene.gltf(filepath=src)
 armatures = [o for o in bpy.data.objects if o.type == "ARMATURE"]
 meshes = [o for o in bpy.data.objects if o.type == "MESH"]
 actions = [a.name for a in bpy.data.actions]
-print("AGENT_UNREAL_CONVERT armatures=%d meshes=%d bones=%s actions=%s" % (
-    len(armatures), len(meshes), [len(a.data.bones) for a in armatures], actions))
+
+
+def owned_by_armature(obj):
+    if obj.parent is not None and obj.parent.type == "ARMATURE":
+        return True
+    return any(m.type == "ARMATURE" and m.object is not None for m in obj.modifiers)
+
+
+# A GLB with no armature is a static model: there is nothing to skin or parent to, so every mesh stays.
+kept = [o for o in meshes if not armatures or owned_by_armature(o)]
+dropped = [o for o in meshes if o not in kept]
+dropped_names = [o.name for o in dropped]
+for o in dropped:
+    bpy.data.objects.remove(o, do_unlink=True)
+
+print("AGENT_UNREAL_CONVERT armatures=%d meshes=%d kept=%d dropped=%d dropped_names=%s bones=%s actions=%s" % (
+    len(armatures), len(meshes), len(kept), len(dropped), dropped_names, [len(a.data.bones) for a in armatures], actions))
 
 bpy.ops.export_scene.fbx(
     filepath=dst,
