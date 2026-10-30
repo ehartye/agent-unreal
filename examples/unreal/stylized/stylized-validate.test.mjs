@@ -6,7 +6,9 @@ import assert from 'node:assert/strict';
 import { deflateSync } from 'node:zlib';
 import { countNear, decodePng, foreground, pixel, regionHash } from './png-tools.mjs';
 import { bandsIn, cellFillCounts, drawnShot, measureAll } from './stylized-measure.mjs';
-import { evaluate, logProblems, readGetAll, summarize } from './stylized-validate-checks.mjs';
+import { evaluate, evaluateInk, logProblems, readGetAll, summarize } from './stylized-validate-checks.mjs';
+import { changedPixels, costVerdict, describeCost, drawnShare, GROUPS, measureInk, median, outlineRing, parseCsvColumn, parseSmi, percentile, STATIONS } from './stylized-ink.mjs';
+import { readFileSync } from 'node:fs';
 
 // ---- PNG helpers: encode a colour function into a PNG so decodePng sees what the engine's writer produces (RGBA, filter 0 or 1)
 const crcTable = Array.from({ length: 256 }, (_, n) => { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1; return c >>> 0; });
@@ -163,4 +165,199 @@ test('each claim fails when its fact changes', () => {
   assert.deepEqual(failing((r) => { r.measures.stepped.bands = 4; }), ['the Niagara Dynamic Material Parameter reaches the material']);
   assert.deepEqual(failing((r) => { r.persistWrite.set_by_property_name = true; r.persistWrite.property_name_error = ''; }), ['the Python property name for the override does not exist', 'a Toon Profile override survives save and an editor restart']);
   assert.deepEqual(failing((r) => { r.logs.persistRead = r.logs.persistRead.replace(/ToonProfileOverride = .*TP_Ink'/, 'ToonProfileOverride = None'); }), ['a Toon Profile override survives save and an editor restart']);
+});
+
+// ---------------------------------------------------------------- ink-brush groups: the pixel judging code
+const OUT = [64, 237, 225], BODY = [240, 196, 64];
+const raw = (colorAt, width = 1280, height = 720) => {
+  const rgba = new Uint8Array(width * height * 4);
+  for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) rgba.set([...colorAt(x, y), 255], (y * width + x) * 4);
+  return { width, height, rgba };
+};
+/** A disc of `body` colour with an outer ring of `ring` colour `thick` pixels wide, on the backdrop. */
+const disc = ({ r = 100, thick = 0, ring = OUT, body = BODY, arc = 360, inside = null } = {}) => raw((x, y) => {
+  const d = Math.hypot(x - 640, y - 360), angle = ((Math.atan2(y - 360, x - 640) * 180) / Math.PI + 360) % 360;
+  if (d <= r) return inside || body;
+  return thick && d <= r + thick && angle < arc ? ring : BG;
+});
+
+test('outlineRing finds a ring around a shape and nothing around a bare one', () => {
+  const ringed = outlineRing(disc({ thick: 8 }), { colour: OUT });
+  assert.equal(ringed.found, true);
+  assert.ok(ringed.coverage >= 0.95 && ringed.hugging >= 0.99 && ringed.pixels > 4000, JSON.stringify(ringed));
+  const bare = outlineRing(disc(), { colour: OUT });
+  assert.deepEqual([bare.found, bare.pixels], [false, 0]);
+});
+
+test('outlineRing rejects a partial arc, a filled blob of the colour, a near colour, and a ring too thin to count', () => {
+  const arc = outlineRing(disc({ thick: 8, arc: 150 }), { colour: OUT });
+  assert.ok(!arc.found && arc.coverage < 0.6, JSON.stringify(arc));
+  const blob = outlineRing(disc({ inside: OUT }), { colour: OUT });
+  assert.ok(!blob.found && blob.hugging < 0.7, JSON.stringify(blob));
+  assert.equal(outlineRing(disc({ thick: 8, ring: [200, 60, 60] }), { colour: OUT }).found, false);
+  assert.equal(outlineRing(disc({ r: 8, thick: 2 }), { colour: OUT }).found, false);
+  const shifted = disc({ thick: 8, ring: [80, 225, 215] });   // the colour as a post process may shift it
+  assert.equal(outlineRing(shifted, { colour: OUT }).found, true);
+  assert.equal(outlineRing(shifted, { colour: OUT, tolerance: 5 }).found, false);
+});
+
+test('outlineRing treats the frame edge as shape, so a ribbon that runs off the frame needs only its long edges', () => {
+  const ribbon = raw((x, y) => (y < 250 || y >= 470 ? BG : y < 258 || y >= 462 ? OUT : BODY));
+  const r = outlineRing(ribbon, { colour: OUT });
+  assert.ok(r.found && r.coverage >= 0.99, JSON.stringify(r));
+  const plain = raw((x, y) => (y < 250 || y >= 470 ? BG : BODY));
+  assert.equal(outlineRing(plain, { colour: OUT }).found, false);
+});
+
+test('changedPixels counts the frame difference and refuses frames of different sizes', () => {
+  const a = disc(), b = disc({ thick: 8 });
+  const n = changedPixels(a, b);
+  assert.ok(n > 4000 && n < 6000, String(n));
+  assert.equal(changedPixels(a, a), 0);
+  assert.throws(() => changedPixels(a, raw(() => BG, 640, 360)), /differ in size/);
+});
+
+test('drawnShare reads how much of the frame is not backdrop', () => {
+  assert.equal(drawnShare(raw(() => BG)), 0);
+  assert.ok(Math.abs(drawnShare(disc({ r: 100 })) - (Math.PI * 100 * 100) / (1280 * 720)) < 0.002);
+});
+
+// ---------------------------------------------------------------- ink-brush groups: measuring a run
+/** Frames for every station: a stepped sphere or ribbon, a smooth control, ringed stencil frames and their stencil-off twins. */
+function inkFrames() {
+  const stepsOf = (x) => (x < 580 ? [30, 30, 100] : x < 640 ? [120, 100, 100] : x < 700 ? [200, 180, 100] : [240, 230, 120]);
+  const sphere = (colorAt) => raw((x, y) => (Math.hypot(x - 640, y - 360) > 140 ? BG : colorAt(x, y)));
+  const strip = (colorAt, ring) => raw((x, y) => (y < 250 || y >= 470 ? BG : ring && (y < 258 || y >= 462) ? OUT : colorAt(x, y)));
+  const gradient = (x) => [x % 256, 120, 60];
+  const frames = {
+    o_swatch: disc({ r: 120, body: OUT }), o_none: disc(), o_ramp: disc({ thick: 8 }), o_flange: disc({ thick: 8 }),
+    o_stencil_sprite: disc({ thick: 8 }), o_stencil_sprite_off: disc(), o_stencil_mesh: disc({ r: 140, thick: 8 }), o_stencil_mesh_off: disc({ r: 140 }),
+    r_smooth: strip((x) => gradient(x)), r_ink: strip((x) => stepsOf(x)), r_edge: strip((x) => stepsOf(x), true), r_stencil: strip((x) => stepsOf(x), true), r_stencil_off: strip((x) => stepsOf(x)),
+    m_smooth: sphere((x) => gradient(x)), m_ink: sphere((x) => stepsOf(x)), m_stencil: disc({ r: 140, thick: 8 }), m_stencil_off: disc({ r: 140 }),
+    c_control: disc({ r: 200 }), c_ink: disc({ r: 200 }), c_drawn: disc({ r: 200 }),
+  };
+  return (name) => { if (!frames[name]) throw new Error('no frame ' + name); return frames[name]; };
+}
+
+test('measureInk turns the station frames into rings, bands, frame differences and the swatch colour', () => {
+  const m = measureInk(inkFrames());
+  assert.deepEqual(m.colour, OUT);
+  assert.equal(m.rings.o_none.found, false);
+  for (const name of ['o_ramp', 'o_flange', 'o_stencil_sprite', 'o_stencil_mesh', 'r_edge', 'r_stencil', 'm_stencil']) assert.equal(m.rings[name].found, true, name);
+  assert.equal(m.rings.o_stencil_sprite_off.found, false);
+  assert.ok(m.changed.o_stencil_sprite > 4000 && m.changed.m_stencil > 4000);
+  assert.ok(m.bands.r_ink.bands >= 2 && m.bands.r_smooth.bands === 0 && m.bands.m_ink.bands >= 2 && m.bands.m_smooth.levels >= 12);
+  assert.ok(m.drawn.c_ink > 0.05);
+});
+
+test('measureInk leaves the entries of a missing frame undefined and ignores groups that did not run', () => {
+  const frames = inkFrames();
+  const m = measureInk((name) => { if (name === 'o_flange') throw new Error('missing'); return frames(name); }, ['outline']);
+  assert.equal(m.rings.o_flange, undefined);
+  assert.equal(m.rings.o_ramp.found, true);
+  assert.deepEqual(Object.keys(m.bands), []);
+  assert.equal(measureInk(() => { throw new Error('none'); }).colour, undefined);
+});
+
+// ---------------------------------------------------------------- ink-brush groups: readings and the cost gate
+test('parseSmi reads nvidia-smi lines with and without a timestamp and skips others', () => {
+  assert.deepEqual(parseSmi('1 %, 26158 MiB\n'), [{ util: 1, memMiB: 26158 }]);
+  const stamped = parseSmi('2026/10/29 14:03:11.123, 7 %, 26200 MiB\n\ngarbage\nNo devices were found\n');
+  assert.equal(stamped.length, 1);
+  assert.deepEqual([stamped[0].util, stamped[0].memMiB], [7, 26200]);
+  assert.ok(Number.isFinite(stamped[0].t));
+  assert.deepEqual(parseSmi(''), []);
+});
+
+test('parseCsvColumn reads a CSV-profiler column with the header first or last and skips metadata rows', () => {
+  const first = 'EVENTS,FrameTime,GPUTime\n,16.6,3.1\n,16.7,3.3\n[Platform],Windows\n';
+  assert.deepEqual(parseCsvColumn(first, 'GPUTime'), [3.1, 3.3]);
+  const last = ',16.6,3.1\n,16.7,3.3\nEVENTS,FrameTime,GPUTime\n[HasHeaderRowAtEnd],1\n';
+  assert.deepEqual(parseCsvColumn(last, 'GPUTime'), [3.1, 3.3]);
+  assert.deepEqual(parseCsvColumn(first, 'Nope'), []);
+  assert.deepEqual([median([3, 1, 2]), median([1, 2, 3, 4]), median([]), percentile([1, 2, 3, 4, 5, 6, 7, 8, 9, 10], 95)], [2, 2.5, undefined, 10]);
+});
+
+const windowsOf = ({ control = 1.0, ink = 1.6, rounds = 2, frames = 200, jitter = 0.01, inkRounds } = {}) => ['c_control', 'c_ink'].flatMap((scene) => Array.from({ length: rounds }, (_, round) => {
+  const base = scene === 'c_control' ? control : (inkRounds ? inkRounds[round] : ink);
+  return { scene, round, t0: 1000 + round * 20, t1: 1010 + round * 20, gpuMs: Array.from({ length: frames + 10 }, (_, i) => (i < 10 ? 9 : base + (i % 3) * jitter)) };
+}));
+const quiet = () => ({ before: [{ util: 1, memMiB: 26158 }, { util: 2, memMiB: 26158 }], after: [{ util: 1, memMiB: 26158 }], during: [{ t: 1005000, util: 55, memMiB: 28000 }, { t: 5000, util: 3, memMiB: 28000 }], windows: windowsOf(), counts: { c_control: 256, c_ink: 256 } });
+
+test('costVerdict records the millisecond difference when the GPU was nearly idle around the run and the rounds agree', () => {
+  const v = costVerdict(quiet());
+  assert.equal(v.status, 'measured');
+  assert.ok(Math.abs(v.result.diffMs - 0.6) < 0.02, JSON.stringify(v.result));
+  assert.equal(v.result.counts, 256);
+  assert.deepEqual([v.readings.before, v.readings.after, v.readings.duringMax, v.readings.inWindows], [[1, 2], [1], 55, [55]]);
+  assert.match(describeCost(v), /ink minus control 0\.6\d* ms/);
+});
+
+test('costVerdict says "not measured" with the readings when other processes are busy, the rounds disagree, or the data is short', () => {
+  const busy = costVerdict({ ...quiet(), before: [{ util: 1, memMiB: 1 }, { util: 38, memMiB: 1 }] });
+  assert.deepEqual([busy.status, busy.code], ['not measured', 'busy']);
+  assert.match(describeCost(busy), /not measured \(busy\).*38 percent.*before \[1,38\]/);
+  assert.equal(costVerdict({ ...quiet(), after: [{ util: 10, memMiB: 1 }] }).code, 'busy', 'ten percent is not under ten percent');
+  const drift = costVerdict({ ...quiet(), windows: windowsOf({ inkRounds: [1.6, 2.2] }) });
+  assert.deepEqual([drift.status, drift.code], ['not measured', 'unstable']);
+  assert.ok(drift.result.scenes.c_ink.spread > 0.3);
+  assert.equal(costVerdict({ ...quiet(), windows: windowsOf({ frames: 20 }) }).code, 'no-window');
+  assert.equal(costVerdict({ ...quiet(), windows: windowsOf().filter((w) => w.scene === 'c_control') }).code, 'no-window');
+  assert.equal(costVerdict({ ...quiet(), counts: { c_control: 256, c_ink: 255 } }).code, 'counts');
+  assert.equal(costVerdict({ ...quiet(), before: [], after: [] }).code, 'no-readings');
+});
+
+// ---------------------------------------------------------------- ink-brush groups: the checks
+const allWork = Object.fromEntries(['ramp', 'flange', 'stencil_sprite', 'stencil_mesh', 'ribbon_stepped', 'ribbon_edge', 'ribbon_stencil', 'mesh_stepped', 'mesh_stencil'].map((k) => [k, true]));
+const inkRun = () => {
+  const counts = Object.fromEntries(Object.values(STATIONS).flat().map((s) => [s, s.startsWith('c_') ? 256 : 1]));
+  const compile = Object.fromEntries(['NS_Swatch', 'NS_OutlineRamp'].map((n) => [n, { aggregateStatus: 'UpToDate', bHasErrors: false }]));
+  return { groups: GROUPS, expected: { ...allWork }, measures: measureInk(inkFrames()), cost: costVerdict(quiet()), render: { counts, compile }, logs: { build: 'LogPython: ok', render: 'LogPython: ok' } };
+};
+const failingInk = (mutate) => { const r = inkRun(); mutate(r); return evaluateInk(r).filter((c) => !c.pass).map((c) => c.name); };
+
+test('the ink-brush checks pass when the frames agree with the table', () => {
+  const checks = evaluateInk(inkRun());
+  assert.deepEqual(checks.filter((c) => !c.pass), []);
+  assert.deepEqual(summarize(checks), { passed: 16, total: 16 });
+});
+
+test('a method that does not work is a recorded negative result, not a failing probe', () => {
+  const r = inkRun();
+  r.expected.flange = false;
+  r.measures.rings.o_flange = { ...r.measures.rings.o_flange, found: false, coverage: 0, pixels: 0 };
+  const checks = evaluateInk(r);
+  assert.deepEqual(checks.filter((c) => !c.pass), []);
+  assert.ok(checks.some((c) => c.name === 'a coverage flange (second sprite renderer behind the first) draws no ring'));
+});
+
+test('each ink-brush claim fails when its fact changes', () => {
+  assert.deepEqual(failingInk((r) => { r.measures.rings.o_ramp.found = false; }), ['a coverage-ramp outline in the flipbook material draws a ring']);
+  assert.deepEqual(failingInk((r) => { r.measures.rings.o_none.found = true; r.measures.rings.o_none.pixels = 900; }), ['the drawn flipbook with no outline method has no ring']);
+  assert.deepEqual(failingInk((r) => { r.measures.changed.o_stencil_sprite = 12; }), ['a custom-depth stencil outline on the sprite renderer draws a ring']);
+  assert.deepEqual(failingInk((r) => { r.measures.rings.r_edge.found = false; }), ['a coverage-ramp outline on a ribbon draws a ring']);
+  assert.deepEqual(failingInk((r) => { r.measures.bands.r_smooth = { bands: 2, levels: 4, flatShare: 0.9 }; }), ['the ink material on a ribbon renderer is lit in flat bands']);
+  assert.deepEqual(failingInk((r) => { r.measures.bands.m_ink.bands = 1; }), ['the ink material on a mesh-particle renderer is lit in flat bands']);
+  assert.deepEqual(failingInk((r) => { r.measures.colour = [20, 20, 20]; }), ['a flat swatch shows the outline colour']);
+  assert.deepEqual(failingInk((r) => { r.render.counts.r_ink = 0; }), ['every ink station emits particles']);
+  assert.deepEqual(failingInk((r) => { r.render.compile.NS_Swatch.aggregateStatus = 'Dirty'; }), ['every authored Niagara system compiles']);
+  assert.deepEqual(failingInk((r) => { r.logs.render = 'LogMaterial: Error: [M_RibbonInk] failed'; }), ['the ink-brush materials compile without errors or fallbacks']);
+  assert.deepEqual(failingInk((r) => { r.render.counts.c_ink = 128; }), ['the cost scenes hold the same particle count']);
+  assert.deepEqual(failingInk((r) => { r.cost = costVerdict({ ...quiet(), windows: [] }); }), ['the frame cost is recorded, or declined with the GPU readings']);
+  assert.deepEqual(failingInk((r) => { delete r.expected.ramp; }), ['a coverage-ramp outline in the flipbook material draws a ring']);
+});
+
+test('a busy GPU is a complete answer for the cost check', () => {
+  const r = inkRun();
+  r.cost = costVerdict({ ...quiet(), before: [{ util: 60, memMiB: 1 }] });
+  assert.deepEqual(evaluateInk(r).filter((c) => !c.pass), []);
+});
+
+test('the node station table matches stylized_ink.py, which the build and render scripts share', () => {
+  const py = readFileSync(new URL('./stylized_ink.py', import.meta.url), 'utf8');
+  const rows = [...py.matchAll(/\("([a-z_]+)", "(outline|ribbon|mesh|cost)", "NS_\w+", (?:True|False)\)/g)].map((m) => [m[2], m[1]]);
+  const byGroup = {};
+  for (const [group, name] of rows) (byGroup[group] ||= []).push(name);
+  assert.deepEqual(byGroup, STATIONS);
+  assert.deepEqual(py.match(/ALL_GROUPS = \(([^)]*)\)/)[1].replaceAll('"', '').split(',').map((g) => g.trim()), GROUPS);
 });

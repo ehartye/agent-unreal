@@ -1,6 +1,7 @@
 // Pure checks for stylized_validate.mjs: turn the JSON reports, log excerpts and image measurements of the stylized scene runs into
 // pass or fail results, one per claim in the Substrate and Niagara references. No Unreal, no files: stylized-validate.test.mjs feeds
 // it canned results, and stylized_validate.mjs feeds it real ones.
+import { describeCost, STATIONS as STATION_NAMES, stepped } from './stylized-ink.mjs';
 
 const LOG_PROBLEM = /(LogMaterial|LogShaderCompilers|LogNiagara|LogToonProfile): (Error|Warning)|Failed to compile Material|default material/i;
 
@@ -87,3 +88,84 @@ export function evaluate(r) {
 }
 
 export const summarize = (checks) => ({ passed: checks.filter((c) => c.pass).length, total: checks.length });
+
+/**
+ * What each ink-brush method showed when the probe ran on the engine, pinned like the other checks: a check passes when the frame
+ * agrees with this table, so a method that does not work is a recorded negative result and not a failing probe. Change a value only
+ * when a run shows the other result. See README.md for the runs behind each value.
+ */
+export const INK_EXPECTED = {
+  ramp: true, flange: false, stencil_sprite: true, stencil_mesh: true,
+  ribbon_stepped: true, ribbon_edge: true, ribbon_stencil: true, mesh_stepped: true, mesh_stencil: true,
+};
+
+const STENCIL_MIN_CHANGED = 300;   // pixels that differ between the stencil-on and stencil-off frames when an outline is drawn
+
+/**
+ * The checks of the outline, ribbon, mesh and cost groups.
+ * @param {{ groups: string[], expected?: Record<string, boolean|undefined>, build?: any, render?: any, measures?: any, cost?: any, logs?: { build?: string, render?: string } }} r
+ * `cost` is the costVerdict() result; `measures` is measureInk().
+ * @returns {{ name: string, claim: string, pass: boolean, detail: string }[]}
+ */
+export function evaluateInk(r) {
+  const groups = r.groups || [], expected = r.expected || INK_EXPECTED, m = r.measures || { rings: {}, bands: {}, changed: {}, drawn: {} }, render = r.render || {}, logs = r.logs || {};
+  const out = [];
+  const check = (name, claim, pass, detail = '') => out.push({ name, claim, pass: Boolean(pass), detail: String(detail) });
+  const on = (g) => groups.includes(g);
+  const ring = (key) => m.rings?.[key];
+  const describe = (x) => (x ? `ring coverage ${x.coverage}, ${x.pixels} outline pixels, hugging ${x.hugging}, boundary ${x.boundary}` : 'no frame');
+  // a method check: the frame shows a ring exactly when the table says the method works
+  const method = (key, label, claim, frameKey, { needChange = false } = {}) => {
+    const x = ring(frameKey), changed = m.changed?.[frameKey], want = expected[key];
+    const worked = Boolean(x && x.found && (!needChange || (changed ?? 0) >= STENCIL_MIN_CHANGED));
+    check(`${label} ${want === false ? 'draws no ring' : 'draws a ring'}`, claim, x && want !== undefined && worked === want,
+      `${describe(x)}${needChange ? `; ${changed ?? 'no'} pixels differ from the frame without the outline` : ''}; table says ${want === undefined ? 'not yet recorded' : want ? 'works' : 'does not work'}, frame ${x ? (worked ? 'works' : 'does not') : 'missing'}`);
+  };
+  if (on('outline')) {
+    const colour = m.colour;
+    check('a flat swatch shows the outline colour', 'The outline colour (linear 0.05, 0.85, 0.75) reaches the frame as a flat colour the ring check can match',
+      Array.isArray(colour) && colour[1] > 150 && colour[2] > 120 && colour[0] < colour[1], colour ? `swatch centre ${colour}` : 'no swatch');
+    const none = ring('o_none');
+    check('the drawn flipbook with no outline method has no ring', 'The control frame holds no ring of outline-coloured pixels, so a ring in another frame comes from its method',
+      none && !none.found && none.pixels < 150, describe(none));
+    method('ramp', 'a coverage-ramp outline in the flipbook material', 'The flipbook material takes the largest coverage of 16 taps around each pixel and colours the ring between it and the coverage with the outline colour', 'o_ramp');
+    method('flange', 'a coverage flange (second sprite renderer behind the first)', 'A second sprite renderer draws the dilated coverage in the outline colour, pushed away from the camera by world position offset', 'o_flange');
+    method('stencil_sprite', 'a custom-depth stencil outline on the sprite renderer', 'A stencil value on the Niagara component and a post process that outlines pixels next to the stencil draw a ring around the sprite', 'o_stencil_sprite', { needChange: true });
+    method('stencil_mesh', 'a custom-depth stencil outline on the mesh-particle renderer', 'The same stencil value and post process draw a ring around a mesh particle', 'o_stencil_mesh', { needChange: true });
+  }
+  if (on('ribbon')) {
+    const ink = m.bands?.r_ink, smooth = m.bands?.r_smooth, want = expected.ribbon_stepped;
+    const ok = stepped(ink, smooth);
+    check(`the ink material on a ribbon renderer ${want === false ? 'is not' : 'is'} lit in flat bands`, 'A ribbon material with a stepped light term draws flat bands across the ribbon and the smooth control draws a gradient',
+      want !== undefined && ok === want, `ink ${ink ? `${ink.bands} bands, flat share ${ink.flatShare}` : 'no frame'}; smooth ${smooth ? `${smooth.bands} bands, ${smooth.levels} levels` : 'no frame'}; table says ${want}`);
+    method('ribbon_edge', 'a coverage-ramp outline on a ribbon', 'A ribbon material that colours the two long edges (coverage across the width above 0.8) with the outline colour shows a ring', 'r_edge');
+    method('ribbon_stencil', 'a custom-depth stencil outline on a ribbon renderer', 'The stencil value and post process outline a ribbon', 'r_stencil', { needChange: true });
+  }
+  if (on('mesh')) {
+    const ink = m.bands?.m_ink, smooth = m.bands?.m_smooth, want = expected.mesh_stepped;
+    const ok = stepped(ink, smooth);
+    check(`the ink material on a mesh-particle renderer ${want === false ? 'is not' : 'is'} lit in flat bands`, 'A mesh-particle material with a stepped light term draws flat bands on a sphere and the smooth control draws a gradient',
+      want !== undefined && ok === want, `ink ${ink ? `${ink.bands} bands, flat share ${ink.flatShare}` : 'no frame'}; smooth ${smooth ? `${smooth.bands} bands, ${smooth.levels} levels` : 'no frame'}; table says ${want}`);
+    method('mesh_stencil', 'a custom-depth stencil outline on a mesh particle', 'The stencil value and post process outline a mesh particle', 'm_stencil', { needChange: true });
+  }
+  const stations = groups.flatMap((g) => STATION_NAMES[g] || []);
+  if (stations.length) {
+    const counts = render.counts || {}, empty = stations.filter((s) => !(counts[s] > 0));
+    check('every ink station emits particles', 'A one-step simulation cache of each station holds at least one live particle', stations.length > 0 && empty.length === 0,
+      empty.length ? `no particles: ${empty.join(', ')}; counts ${JSON.stringify(counts)}` : stations.map((s) => `${s}=${counts[s]}`).join(', '));
+    const compile = render.compile && typeof render.compile === 'object' ? render.compile : {}, systems = Object.keys(compile);
+    check('every authored Niagara system compiles', 'Poll GetSystemCompileState from the editor tick and expect UpToDate',
+      systems.length > 0 && !render.compile_timeout && systems.every((n) => compile[n].aggregateStatus === 'UpToDate' && !compile[n].bHasErrors), systems.map((n) => `${n}=${compile[n].aggregateStatus}`).join(', ') || String(render.compile));
+    const problems = ['build', 'render'].flatMap((k) => logProblems(logs[k]).map((l) => `${k}: ${l.slice(0, 120)}`));
+    check('the ink-brush materials compile without errors or fallbacks', 'No material, shader or Niagara error or warning in the build and offscreen-run logs', Boolean(logs.build && logs.render) && problems.length === 0,
+      problems.length ? problems.slice(0, 3).join(' | ') : 'no problem lines');
+  }
+  if (on('cost')) {
+    const counts = render.counts || {}, v = r.cost;
+    check('the cost scenes hold the same particle count', 'The control, the ink look and the drawn look each hold the same number of live particles', ['c_control', 'c_ink', 'c_drawn'].every((s) => counts[s] > 0 && counts[s] === counts.c_control),
+      ['c_control', 'c_ink', 'c_drawn'].map((s) => `${s}=${counts[s]}`).join(', '));
+    check('the frame cost is recorded, or declined with the GPU readings', 'The ink-minus-control GPU time is recorded only when other processes used under 10 percent of the GPU and the repeated windows agree; otherwise the answer is "not measured" with the readings',
+      Boolean(v) && (v.status === 'measured' || ['busy', 'unstable', 'no-readings'].includes(v.code)), v ? describeCost(v) : 'no verdict');
+  }
+  return out;
+}
