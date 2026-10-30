@@ -1,7 +1,8 @@
 // Judges what ds_probe.mjs collects. Pure functions: no Unreal, no dependencies.
 //
 //   target    the Server-target build:  { exit, timedOut, log }                    (group `target`, question 1)
-//   packaged  the packaged-game run:    { build, package, serverExit, serverLog, clientLog, port, variant, ... } (group `packaged`, question 2)
+//   packaged  the packaged-game run:    { build, package, serverExit, serverLog, clientLog, port, variant, ... } (group `packaged`, question 2; variant `server-game`, question 3)
+//   editor    the editor-binary server: { build, package, exe, serverEnded, clientEnded, serverLog, clientLog, port }  (group `editor`, questions 1 and 2 of the launcher-listen spike)
 //
 // Nothing is judged by eye. The server is judged by its log (the engine's own "listening on port" line), the client by its
 // log ("Welcomed by server") and the replicated value by the number the probe's Actor writes on the client.
@@ -72,10 +73,37 @@ export function classifyServerBuild({ exit, timedOut, log }) {
   return { verdict: 'other-failure', exit, message };
 }
 
-/** The packaged game's arguments as a server. `variant` 'server' is the brief's `-server`; 'listen' makes a listen server with `?listen` instead. */
+export const VARIANTS = ['server', 'server-game', 'listen'];
+const SERVER_SWITCHES = { server: ['-server'], 'server-game': ['-server', '-game'], listen: [] };
+const COMMON = ['-log', '-nullrhi'];
+const QUIET = ['-unattended', '-nosplash', '-nosound', '-notraceserver', '-NoGamepad'];
+
+/**
+ * The packaged game's arguments as a server. `variant` 'server' is `-server`; 'server-game' is `-server -game`; 'listen' makes a listen
+ * server with `?listen` instead.
+ */
 export function serverArguments({ port = DEFAULT_PORT, log, variant = 'server', map = DEFAULT_MAP }) {
   const url = `${map}?game=${GAME_MODE}${variant === 'listen' ? '?listen' : ''}`;
-  return [url, ...(variant === 'server' ? ['-server'] : []), '-log', '-nullrhi', `-port=${port}`, `-abslog=${log}`, '-unattended', '-nosplash', '-nosound', '-notraceserver', '-NoGamepad'];
+  return [url, ...(SERVER_SWITCHES[variant] ?? SERVER_SWITCHES.server), ...COMMON, `-port=${port}`, `-abslog=${log}`, ...QUIET];
+}
+
+/** The editor binary of an installed engine, which the `editor` group starts as the server. */
+export const editorExecutable = (engine) => `${String(engine).replace(/[\\/]+$/, '')}/Engine/Binaries/Win64/UnrealEditor.exe`;
+
+/** The editor binary's arguments as a server: the project file first, then the same map URL and Game Mode the packaged runs use. */
+export function editorServerArguments({ uproject, port = DEFAULT_PORT, log, map = DEFAULT_MAP }) {
+  return [uproject, `${map}?game=${GAME_MODE}`, '-server', '-game', ...COMMON, `-port=${port}`, `-abslog=${log}`, ...QUIET];
+}
+
+/** The hard limit, in seconds, on each process the probe starts: the server outlives the client's wait, the client does not outlive its own. */
+export const hardLimitSeconds = (waitSeconds) => ({ server: waitSeconds * 2 + 60, client: waitSeconds + 60 });
+
+/** How a process ended, for a report: its own exit, a start failure, the hard limit, or still running when the probe stopped it. */
+export function describeEnd({ done, exit, error, limited } = {}) {
+  if (limited) return 'stopped by the probe at its hard time limit';
+  if (error) return `did not start (${error})`;
+  if (done) return exit === undefined ? 'exited (no exit code)' : `exited with code ${exit}`;
+  return 'still running when the probe stopped it';
 }
 
 /** The packaged game's arguments as the client: the address is the first argument. */
@@ -114,7 +142,7 @@ export function parseClientLog(log) {
 export const serverSawJoin = (serverLog) => /LogNet: Join succeeded/.test(String(serverLog ?? ''));
 
 /** The checks of both groups. `observe` checks are recorded and never counted as pass or fail. */
-export function evaluate({ target, packaged, groups = ['target', 'packaged'] }) {
+export function evaluate({ target, packaged, editor, groups = ['target', 'packaged'] }) {
   const out = [];
   const add = (group, name, claim, pass, detail, observe = false) => out.push({ group, name, claim, pass: !!pass, detail, observe });
 
@@ -128,18 +156,37 @@ export function evaluate({ target, packaged, groups = ['target', 'packaged'] }) 
 
   if (groups.includes('packaged')) {
     const p = packaged;
+    const q = p?.variant === 'server-game' ? 'Q3' : 'Q2';
     const server = parseServerLog(p?.serverLog);
     const client = parseClientLog(p?.clientLog);
-    add('packaged', 'Q2 packaged Game built and staged', 'the editor build and RunUAT BuildCookRun exited 0 and the packaged executable exists',
+    add('packaged', `${q} packaged Game built and staged`, 'the editor build and RunUAT BuildCookRun exited 0 and the packaged executable exists',
       p && p.build?.exit === 0 && p.package?.exit === 0 && !!p.exe, p ? `editor build exit ${p.build?.exit}, package exit ${p.package?.exit}, executable ${p.exe ?? 'not found'}` : 'the packaged group did not run');
-    add('packaged', 'Q2 server reports listening', `the server log holds the engine's "IpNetDriver listening on port ${p?.port ?? DEFAULT_PORT}" line`,
-      server.listening && server.port === (p?.port ?? DEFAULT_PORT), server.listening ? `${server.listenLine}` : `no listening line (variant ${p?.variant ?? '?'}, server exit ${p?.serverExit ?? 'none'})`);
-    add('packaged', 'Q2 client reports a connection', 'the client log holds "Welcomed by server" and the server log holds "Join succeeded"',
+    add('packaged', `${q} server reports listening`, `the server log holds the engine's "IpNetDriver listening on port ${p?.port ?? DEFAULT_PORT}" line`,
+      server.listening && server.port === (p?.port ?? DEFAULT_PORT), server.listening ? `${server.listenLine}` : `no listening line (variant ${p?.variant ?? '?'}; server ${p?.serverEnded ?? `exit ${p?.serverExit ?? 'none'}`})`);
+    add('packaged', `${q} client reports a connection`, 'the client log holds "Welcomed by server" and the server log holds "Join succeeded"',
       client.welcomed && serverSawJoin(p?.serverLog), client.welcomed ? `${client.welcomeLine}; server join lines: ${server.joins.length}` : `no welcome line${client.failure.length ? `; ${client.failure[0]}` : ''}`);
-    add('packaged', 'Q2 replicated value reaches the client log', `the server set Value=${PROBE_VALUE} and the client log shows Value=${PROBE_VALUE}`,
+    add('packaged', `${q} replicated value reaches the client log`, `the server set Value=${PROBE_VALUE} and the client log shows Value=${PROBE_VALUE}`,
       server.setValue === PROBE_VALUE && client.received.includes(PROBE_VALUE), `server set ${server.setValue ?? 'nothing'}; client received [${client.received.join(', ')}], began with [${client.began.join(', ')}]`);
-    add('packaged', 'Q2 server net mode', 'the server process reports its net mode (a dedicated server reports DedicatedServer)', server.netMode === 'DedicatedServer',
+    add('packaged', `${q} server net mode`, 'the server process reports its net mode (a dedicated server reports DedicatedServer)', server.netMode === 'DedicatedServer',
       server.netMode ? `net mode ${server.netMode}, IsRunningDedicatedServer ${server.runningDedicatedServer ? 1 : 0}` : 'no net mode line in the server log', true);
+  }
+
+  if (groups.includes('editor')) {
+    const e = editor;
+    const server = parseServerLog(e?.serverLog);
+    const client = parseClientLog(e?.clientLog);
+    add('editor', 'Q1 editor build and packaged client staged', 'the editor build and RunUAT BuildCookRun exited 0 and the packaged executable (the client) exists',
+      e && e.build?.exit === 0 && e.package?.exit === 0 && !!e.exe, e ? `editor build exit ${e.build?.exit}, package exit ${e.package?.exit}, client executable ${e.exe ?? 'not found'}` : 'the editor group did not run');
+    add('editor', 'Q1 editor server reports listening', `the editor-binary server log holds the engine's "IpNetDriver listening on port ${e?.port ?? DEFAULT_PORT}" line`,
+      server.listening && server.port === (e?.port ?? DEFAULT_PORT), server.listening ? `${server.listenLine}` : `no listening line (server ${e?.serverEnded ?? 'did not run'})`);
+    add('editor', 'Q1 editor server is a dedicated server', 'the module logs net mode DedicatedServer and IsRunningDedicatedServer 1',
+      server.netMode === 'DedicatedServer' && server.runningDedicatedServer === true, server.netMode ? `net mode ${server.netMode}, IsRunningDedicatedServer ${server.runningDedicatedServer ? 1 : 0}` : 'no net mode line in the server log');
+    add('editor', 'Q2 packaged client reports a connection', 'the client log holds "Welcomed by server" and the server log holds "Join succeeded"',
+      client.welcomed && serverSawJoin(e?.serverLog), client.welcomed ? `${client.welcomeLine}; server join lines: ${server.joins.length}` : `no welcome line${client.failure.length ? `; ${client.failure[0]}` : ''}${e?.clientEnded ? ` (client ${e.clientEnded})` : ''}`);
+    add('editor', 'Q2 replicated value reaches the client log', `the server set Value=${PROBE_VALUE} and the client log shows Value=${PROBE_VALUE}`,
+      server.setValue === PROBE_VALUE && client.received.includes(PROBE_VALUE), `server set ${server.setValue ?? 'nothing'}; client received [${client.received.join(', ')}], began with [${client.began.join(', ')}]`);
+    add('editor', 'Q1 editor server net mode (observed)', 'the net mode the module logged and how the server process ended, whatever they are', server.netMode === 'DedicatedServer',
+      `${server.netMode ? `net mode ${server.netMode}, IsRunningDedicatedServer ${server.runningDedicatedServer ? 1 : 0}` : 'no net mode line'}; listening ${server.listening ? 'yes' : 'no'}; server ${e?.serverEnded ?? 'did not run'}`, true);
   }
   return out;
 }
