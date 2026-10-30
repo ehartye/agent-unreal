@@ -4,7 +4,7 @@ Target: Unreal Engine 5.8, Windows. Companion to [Networking and replication](un
 
 ## Dedicated server
 
-Dedicated server (Epic): needs a source build and a C++ project. Add Server and Client `*.Target.cs` files, build Development Server and Client, cook each, set Server Default Map. Run `<Project>Server.exe -log` (port 7777, `-port=<N>`), then `<Project>Client.exe 127.0.0.1:7777 -WINDOWED` per client.
+Dedicated server (Epic): needs a source build and a C++ project. Add Server and Client `*.Target.cs` files, build Development Server and Client, cook each, set Server Default Map. Run `<Project>Server.exe -log` (port 7777, `-port=<N>`), then `<Project>Client.exe 127.0.0.1:7777 -WINDOWED` per client. What a Server target build and a packaged Game run as a server did on a Launcher install is in [Dedicated servers on an installed engine](../../unreal-native/references/unreal-native-dedicated-server.md).
 
 ## Workflow
 
