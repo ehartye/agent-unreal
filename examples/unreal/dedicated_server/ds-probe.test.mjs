@@ -1,12 +1,13 @@
 // node --test examples/unreal/dedicated_server/ds-probe.test.mjs  (no Unreal, no dependencies)
 // The server and client lines below are copied from the logs of the listen run (the engine's "listening on port", "Join succeeded" and "Welcomed by
 // server" lines and the probe module's own lines); the Server-target refusal is the build tool's log from question 1.
-// Each test changes one fact and expects the matching check to change.
+// Each test changes one fact and expects the matching check to change. The editor-group and `-server -game` cases use the same line shapes with
+// the facts the checks judge (listening line, net mode line, welcome line, replicated value) changed one at a time.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  serverTargetSource, captureBuildMessage, classifyServerBuild, serverArguments, clientArguments, parseServerLog, parseClientLog, evaluate, summarize,
-  PROBE_VALUE, DEFAULT_PORT,
+  serverTargetSource, captureBuildMessage, classifyServerBuild, serverArguments, clientArguments, editorExecutable, editorServerArguments, hardLimitSeconds, describeEnd,
+  parseServerLog, parseClientLog, evaluate, summarize, PROBE_VALUE, DEFAULT_PORT, VARIANTS,
 } from './ds-probe-checks.mjs';
 
 // The build tool's log of the refused Server-target build on an installed engine (the lines that matter).
@@ -154,4 +155,78 @@ test('target group: a refusal and a build are both definite answers; another fai
 
 test('the default port is the engine default', () => {
   assert.equal(DEFAULT_PORT, 7777);
+});
+
+test('the packaged -server -game variant adds -game after -server and keeps the rest of the command line', () => {
+  const plain = serverArguments({ port: 7777, log: 'x.log', variant: 'server' });
+  const both = serverArguments({ port: 7777, log: 'x.log', variant: 'server-game' });
+  assert.deepEqual(both.filter((a) => !plain.includes(a)), ['-game']);
+  assert.equal(both.indexOf('-game'), both.indexOf('-server') + 1);
+  assert.ok(!both[0].includes('?listen'));
+  assert.ok(VARIANTS.includes('server-game'));
+});
+
+test('the editor-binary server: the project file first, the same map URL, -server -game -log -nullrhi -port, its own log', () => {
+  const args = editorServerArguments({ uproject: 'C:/t/DsProbe.uproject', port: 7777, log: 'C:/t/server.log' });
+  assert.equal(args[0], 'C:/t/DsProbe.uproject');
+  assert.equal(args[1], serverArguments({ log: 'x' })[0]);
+  for (const a of ['-server', '-game', '-log', '-nullrhi', '-port=7777', '-abslog=C:/t/server.log', '-unattended', '-nosplash', '-nosound', '-notraceserver', '-NoGamepad']) assert.ok(args.includes(a), a);
+  assert.ok(!args.includes('-RenderOffScreen'));
+  assert.equal(editorExecutable('C:/Program Files/Epic Games/UE_5.8/'), 'C:/Program Files/Epic Games/UE_5.8/Engine/Binaries/Win64/UnrealEditor.exe');
+  assert.equal(editorExecutable('C:\\UE\\'), 'C:\\UE/Engine/Binaries/Win64/UnrealEditor.exe');
+});
+
+test('every process has a hard limit longer than the wait it serves, and an end is described for the report', () => {
+  const limit = hardLimitSeconds(90);
+  assert.ok(limit.server > 2 * 90 && limit.client > 90);
+  assert.equal(describeEnd({ done: false }), 'still running when the probe stopped it');
+  assert.equal(describeEnd({ done: true, exit: 3 }), 'exited with code 3');
+  assert.equal(describeEnd({ done: true }), 'exited (no exit code)');
+  assert.match(describeEnd({ done: true, error: 'spawn ENOENT' }), /did not start \(spawn ENOENT\)/);
+  assert.match(describeEnd({ done: true, exit: 1, limited: true }), /hard time limit/);
+});
+
+const editorRun = (over = {}) => ({ build: { exit: 0 }, package: { exit: 0 }, exe: 'C:/a/DsProbe.exe', port: 7777, serverEnded: 'still running when the probe stopped it', clientEnded: 'exited with code 0', serverLog: SERVER_LOG, clientLog: CLIENT_LOG, ...over });
+
+test('editor group: every asserted check passes on a complete run, and the net mode is recorded as well', () => {
+  const checks = evaluate({ editor: editorRun(), groups: ['editor'] });
+  assert.deepEqual(summarize(checks), { passed: 5, total: 5, observed: 1 });
+  const seen = byName(checks, 'net mode (observed)');
+  assert.equal(seen.observe, true);
+  assert.match(seen.detail, /net mode DedicatedServer, IsRunningDedicatedServer 1; listening yes; server still running/);
+});
+
+test('editor group: each missing fact fails exactly its check', () => {
+  const fail = (over, part) => {
+    const checks = evaluate({ editor: editorRun(over), groups: ['editor'] });
+    assert.equal(byName(checks, part).pass, false, part);
+    assert.equal(checks.filter((c) => !c.observe && !c.pass).length >= 1, true);
+    return checks;
+  };
+  fail({ serverLog: SERVER_LOG.replace('listening on port', 'listening at') }, 'server reports listening');
+  fail({ serverLog: SERVER_LOG.replace('net mode DedicatedServer, IsRunningDedicatedServer 1', 'net mode Standalone, IsRunningDedicatedServer 0') }, 'is a dedicated server');
+  fail({ serverLog: SERVER_LOG.replace('net mode DedicatedServer, IsRunningDedicatedServer 1', 'net mode DedicatedServer, IsRunningDedicatedServer 0') }, 'is a dedicated server');
+  fail({ clientLog: CLIENT_LOG.replace('Welcomed by server', 'Welcome') }, 'client reports a connection');
+  fail({ clientLog: CLIENT_LOG.replace(/Value=4242/g, 'Value=0') }, 'replicated value');
+  fail({ exe: undefined }, 'packaged client staged');
+  fail({ build: { exit: 1 } }, 'packaged client staged');
+});
+
+test('editor group: a server that never listened is recorded with the net mode it logged and how it ended', () => {
+  const standalone = SERVER_LOG.replace('IpNetDriver listening on port 7777', 'nothing').replace('net mode DedicatedServer, IsRunningDedicatedServer 1', 'net mode Standalone, IsRunningDedicatedServer 0');
+  const checks = evaluate({ editor: editorRun({ serverLog: standalone, clientLog: '', serverEnded: 'exited with code 1' }), groups: ['editor'] });
+  assert.match(byName(checks, 'reports listening').detail, /no listening line \(server exited with code 1\)/);
+  const seen = byName(checks, 'net mode (observed)');
+  assert.match(seen.detail, /net mode Standalone, IsRunningDedicatedServer 0; listening no; server exited with code 1/);
+  assert.equal(summarize(checks).passed, 1);
+  assert.match(evaluate({ editor: undefined, groups: ['editor'] })[0].detail, /did not run/);
+});
+
+test('packaged -server -game run is labelled Q3, records the net mode and fails the listening check when it does not listen', () => {
+  const standalone = SERVER_LOG.replace('IpNetDriver listening on port 7777', 'nothing').replace('net mode DedicatedServer, IsRunningDedicatedServer 1', 'net mode Standalone, IsRunningDedicatedServer 0');
+  const checks = evaluate({ packaged: packaged({ variant: 'server-game', serverLog: standalone, clientLog: '', serverEnded: 'still running when the probe stopped it' }), groups: ['packaged'] });
+  assert.ok(checks.every((c) => c.name.startsWith('Q3 ')));
+  assert.match(byName(checks, 'net mode').detail, /net mode Standalone, IsRunningDedicatedServer 0/);
+  assert.match(byName(checks, 'reports listening').detail, /variant server-game; server still running/);
+  assert.equal(byName(checks, 'reports listening').pass, false);
 });
