@@ -16,6 +16,7 @@ Unreal 5.8 on Windows. Pick the feature from the goal, then read that system's r
 | Replace a linked or dynamic input, or get past a hidden-input refusal | [Toolset inputs](references/unreal-niagara-toolset-inputs.md) |
 | Add a renderer (such as a Light renderer) to an emitter and address it by index; use local space, `SortOrderHint` or a ribbon material flag | [Toolset renderers](references/unreal-niagara-toolset-renderers.md) |
 | Bring a sprite atlas, a mesh or a user parameter into Niagara: a flipbook, a mesh renderer, Direct Frame Index linked to a user parameter, a Static Mesh user parameter | [Niagara generated assets](references/unreal-niagara-generated-assets.md) |
+| Give a particle, ribbon or mesh particle an ink or cel outline, or ask what the look costs in frame time | [Niagara ink looks](references/unreal-niagara-ink-looks.md) |
 | Delete and recreate a Niagara system saved by an earlier process, or read the NiagaraToolsets start-up log | [Toolsets lifecycle](references/unreal-niagara-toolsets-lifecycle.md) |
 | Choose cheap Niagara families, set scalability and instance caps, bake a flipbook, or find which stock Niagara and fluid content was tested | [Niagara families and stock content](references/unreal-niagara-stock-content.md) |
 | Keep or convert existing Cascade particle content (Cascade on in the editor; converter off, beta) | [Cascade](references/unreal-cascade.md) |
