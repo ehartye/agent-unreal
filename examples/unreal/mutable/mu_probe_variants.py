@@ -1,5 +1,5 @@
-"""Mutable probe, variants half (question 2): an Instance of the saved object set to each option in turn, a frame of each, in a Play-In-Editor viewport.
-Prepared 2026-10-29.
+"""Mutable probe, variants half (question 3): an Instance of the saved object set to each option in turn, a frame of each, in a Play-In-Editor viewport.
+Prepared 2026-10-29, updated 2026-10-30 (waits for each Instance update to report back).
 
   UnrealEditor.exe Project.uproject -RenderOffScreen -ExecCmds="py <abs path to this file>" -abslog=<log> -notraceserver -nosplash -unattended -nosound
 Environment: MU_PROBE_DIR, MU_REPORT, MU_CO, MU_COMPILE_TIMEOUT_S, MU_COMPILE_MODE, MU_PREFIX (screenshot name prefix, default mu).
@@ -21,6 +21,7 @@ sys.path.insert(0, os.environ["MU_PROBE_DIR"])
 import mu_probe_common as c  # noqa: E402
 
 PREFIX = os.environ.get("MU_PREFIX", "mu")
+MESH_WAIT_S = float(os.environ.get("MU_MESH_WAIT_S", "90"))      # how long one Instance update may take before its frame is taken anyway
 MAP = "/Game/Maps/MuVariants"
 WIDTH, HEIGHT = 1280, 720
 probe = c.Probe("variants")
@@ -82,6 +83,10 @@ def load_object():
     if co is None:
         return {"instance_created": False, "error": "could not load " + c.CO_PATH}
     out = {"loaded": True, "is_compiled": bool(co.is_compiled())}
+    bridge = getattr(unreal, "MutableBridgeLibrary", None)
+    if bridge is not None:
+        out["graph_nodes_on_load"] = len(list(bridge.get_graph_nodes(co)))      # the saved graph reloaded from disk
+        out["graph_links_on_load"] = len(list(bridge.get_graph_links(co)))
     out.update({k: v for k, v in c.read_back(co).items() if k != "is_compiled"})
     out["instance_created"] = False
     return out
@@ -92,16 +97,37 @@ def first_swap_parameter(parameters):
 
 
 def show(label, option):
-    """Set (when option is not None) and update the Instance, then take a frame. Returns the variant fields."""
+    """Generator: set (when option is not None) and update the Instance, wait for the update to report back (or for the wait limit), return the variant
+    fields. The update is asynchronous; its callback is bound when the dynamic delegate type is reachable from Python, else the wait is a fixed one."""
     inst, param = ctx["inst"], ctx["param"]
     out = {"option": option, "parameter": param["name"] if param else None, "shot": None}
+    state = {"done": False}
     try:
         if option is not None:
-            inst.set_int_parameter_selected_option(param["name"], option)
-            out["selected_after"] = str(inst.get_int_parameter_selected_option(param["name"]))
-        inst.update_skeletal_mesh_async(True, True)
+            setter = getattr(inst, "set_enum_parameter_selected_option", None) or inst.set_int_parameter_selected_option
+            getter = getattr(inst, "get_enum_parameter_selected_option", None) or inst.get_int_parameter_selected_option
+            setter(param["name"], option)
+            out["selected_after"] = str(getter(param["name"]))
+        callback = None
+        try:
+            callback = unreal.InstanceUpdateDelegate()
+            callback.bind_callable(lambda *_: state.__setitem__("done", True))
+        except Exception:
+            callback = None
+        out["used_callback"] = callback is not None
+        if callback is not None:
+            inst.update_skeletal_mesh_async_result(callback, True, True)
+        else:
+            inst.update_skeletal_mesh_async(True, True)
     except Exception:
         out["error"] = traceback.format_exc()[-500:]
+        return out
+    waited = 0.0
+    while waited < MESH_WAIT_S and not (state["done"] if out["used_callback"] else waited >= 10.0):
+        waited += 0.5
+        yield 0.5
+    out["update_wait_s"] = waited
+    out["update_reported"] = state["done"]
     return out
 
 
@@ -169,8 +195,8 @@ def task():
     # the default Instance first, then each option of the first parameter that has two or more
     variants = [("default", None)] + ([(o, o) for o in ctx["param"]["options"]] if ctx["param"] else [])
     for label, option in variants:
-        out = show(label, option)
-        yield 6.0
+        out = yield from show(label, option)
+        yield 4.0
         try:
             out["has_skeletal_mesh"] = bool(ctx["inst"].has_any_skeletal_mesh())
         except Exception:

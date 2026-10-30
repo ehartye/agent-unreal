@@ -13,7 +13,7 @@ Target: Unreal Engine 5.8 on Windows. This page lists what Epic's tracker and th
 
 - [general] A compile that hangs when the graph holds Extension Data constants: a forum report. Bound every compile with a timeout ([Build and compile](unreal-mutable-build-compile.md)) and take the constants out of a graph that hangs, to see whether they are the cause.
 - [general] A compile that needs very large memory with many morph targets and child objects: a forum report. Keep morph targets and child objects few in a first graph, and watch memory on the compiling machine.
-- [general] Both are anecdotal. Neither was seen or ruled out; the compile that ran had an empty graph.
+- [general] Both are anecdotal. Neither was seen or ruled out; the compiles that ran had an empty graph or three small meshes with no Extension Data constants.
 
 ## Missing or empty documentation
 
@@ -23,9 +23,8 @@ Target: Unreal Engine 5.8 on Windows. This page lists what Epic's tracker and th
 
 ## Not established
 
-- [tested] 2026-10-29: whether a script can build a graph with swappable options. Build by script is invalidated as run: two runs found no route (no add-node, no link-pin from Python) and a third repeated them.
-- [general] The smallest next experiment is an editor C++ bridge with add-node, link-pins and reconstruct-pins, or one hand-authored object.
-- [general] Not run: whether an Instance's option change draws a different mesh, and whether frames of variants differ (variants invalidated as run: nothing to set).
-- [general] Not run: the cost of a real graph's compile, in time and memory, in the editor or headless (headless partial).
+- [tested] 2026-10-29: Python alone found no route to add a node or link a pin: two runs found none and a third repeated them.
+- [tested] 2026-10-30, bridge runs 1 and 2: with an editor C++ bridge a script built a graph with swappable options, its Instance drew a different part for each option, and it compiled headless; see [Authoring the graph](unreal-mutable-graph.md).
+- [general] Not run: the cost of a large graph's compile, in time and memory, in the editor or headless. The three-mesh graph compiled in under a second.
 - [general] Replication, packaging and cooking of Mutable content, Game Feature use and memory limits per platform. Not covered or run here; read Epic's pages.
 - [general] A MetaHuman as a Mutable object (Epic's sample builds one as a dataless object): see unreal-metahuman and the sample.
