@@ -12,7 +12,7 @@ What it does, in order:
   play       a blank saved map (a black scene), Play In Editor (the viewport of a rendering editor with no window), settle
   frames     a frame with no widget, by two routes: the console command `Shot showui filename=<stem>` (the viewport with its UI) and
              AutomationLibrary.take_high_res_screenshot (a shot without UI, as the engine documents the high-resolution shot)
-  widget     WidgetLibrary.create (Python's name for UWidgetBlueprintLibrary::Create) and add_to_viewport; commonui also reads is_activated(), calls
+  widget     unreal.new_object on the generated widget class (the creation call the counted run used) and add_to_viewport; commonui also reads is_activated(), calls
              activate_widget() and reads it again; then the same two frames with the widget
 The report lists each frame (label, route, file stem) so the runner can find the PNGs under Saved/Screenshots. Files are written by the engine with its own
 suffix (a 00000 after the stem for the console command), so the runner matches on the stem. Nothing here writes a machine name or a user path into a report.
