@@ -14,7 +14,7 @@ repository is marked as tested.
 
 ## Status
 
-Early (0.28.0). Thirteen skills.
+Early (0.29.0). Fourteen skills.
 
 The skills moved here from agent-engine 0.14.0, where their history up to that tag lives; `unreal-import` and its importer scripts followed in 0.2.0. The scripts in `examples/`
 were run on Windows against the engine build pinned in `engine-version.json` unless their README says an earlier build or a hand run; other platforms were not run. The sample scene, the `compare.ps1` example set and the showcase hand runs are earlier-build observations.
@@ -90,6 +90,7 @@ from current Fortnite cook, navigation and performance acceptance.
 | `unreal-mutable` | Mutable runtime character customization: Customizable Objects, Instances and the actor component, compiling from a script under a timeout, headless versus editor, and what Python cannot author (the graph) with the C++ bridge as the route. |
 | `unreal-import` | Import agent-sprites atlases, agent-meshes GLBs and agent-beeps WAVs into an Unreal 5.8 project from a script: Interchange and Paper2D notes, FBX clips and Epic's MCP server, a per-mesh import policy read back from the saved asset, guarded reuse and regenerated projects. The importer scripts are in the skill. |
 | `unreal-metahuman` | Create, assemble and drive a MetaHuman from a script: the core data, Epic's cloud and the one-time sign-in, a character from a preset (edit, commit, auto-rig, textures), `build_meta_human` and its retry rule, the spawned Blueprint, and the face moved with control curves, with what was run and what was not. |
+| `unreal-umg` | UMG, MVVM and Common UI: Epic's MCP UMG toolset, building and compiling a Widget Blueprint from a script, a widget frame captured offscreen, the Common UI setup pieces and input routing, and UMG cost rules and focus traps, with what was run and what was not. |
 | `uefn` | Author and import into UEFN from an agent: Epic's MCP tools and their gaps, native Python and Sequence authoring, WAV and FBX import, saved controls and capture, with the evidence behind each claim. |
 
 ## Examples
