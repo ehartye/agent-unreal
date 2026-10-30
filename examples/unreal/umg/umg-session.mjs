@@ -3,17 +3,22 @@
 //                    block, a button and an image, properties set through the object toolset, compiled, saved, read back
 //   commonUiSession  the Common UI quickstart pieces that can be reached from a script (a data table, an input data Blueprint, two project settings) and an
 //                    activatable widget with a Common button
+//   baseSession also runs the animation and MVVM attempts when asked (each on its own small Widget Blueprint), readbackSession reads them back in a fresh editor, and
+//   slateSession is the half of the Play-In-Editor phase that calls the Slate inspector toolset from node while the stage script waits.
 // The tools are found by name in the lists the server returns and their argument names are matched against the schemas it describes, so a spelling difference
 // between builds is a recorded result and not a crash. A write is never sent twice: only a call refused because the tool name was not found is sent again, with the
 // other spelling of the name (short or qualified).
+import { readFileSync, existsSync } from 'node:fs';
+import { join } from 'node:path';
 import {
   norm, pickName, collectToolsetNames, collectTools, returnValue, getCI, setCI, readVec2, readColor, vec2Like, colorLike, textLike, readText,
-  hasTool, PROBE_TEXT, LAYOUT, BUTTON_COLOR, IMAGE_COLOR, WIDGET_ASSET, UMG_CORE_TOOLS,
+  hasTool, findSlateRef, PROBE_TEXT, LAYOUT, BUTTON_COLOR, IMAGE_COLOR, WIDGET_ASSET, UMG_CORE_TOOLS,
+  ANIMATION_ASSET, MVVM_ASSET, MVVM_NAMES, ANIMATION_NAME, ANIMATION_TOOLSET_PATTERN, summarizeAnimationTree,
 } from './umg-probe-checks.mjs';
 
 const PATTERNS = {
   umg: /(^|\.)UMGToolSet(\.|$)/i, mvvm: /mvvm/i, widget_animation: /widget.?animation|umg.?animation/i,
-  object: /ObjectTools$/i, asset: /AssetTools$/i, blueprint: /BlueprintTools$/i, data_table: /DataTableTools$/i, config: /ConfigSettings/i,
+  object: /ObjectTools$/i, asset: /AssetTools$/i, blueprint: /BlueprintTools$/i, data_table: /DataTableTools$/i, config: /ConfigSettings/i, slate: /SlateInspector/i,
 };
 const assetRef = (path) => ({ refPath: `${path}.${path.split('/').pop()}` });
 const classRef = (path) => ({ refPath: path });
@@ -47,7 +52,7 @@ class Session {
     let out;
     for (const form of forms) {
       out = await this.client.inner(set.name, form, shaped);
-      const refused = !out.ok && !out.timedOut && /not found|unknown tool|no such tool|unrecognized tool|invalid tool|does not exist/i.test(out.error || '');
+      const refused = !out.ok && !out.timedOut && /unknown tool|no such tool|unrecognized tool|invalid tool|tool [^.]{0,80}not found|not found[^.]{0,40}\btool\b/i.test(out.error || '');
       if (!refused) { this.nameForm = form === short ? 'short' : 'qualified'; if (form !== forms[0]) this.qualifiedFirst = form !== short; break; }
     }
     return { ...out, value: out.ok ? returnValue(out.decoded) : undefined };
@@ -93,7 +98,7 @@ const refOf = (x) => (x && typeof x === 'object' && typeof x.refPath === 'string
 // ---------------------------------------------------------------------------------------------------------------------------------
 // discovery
 
-async function discover(s, rec, keys) {
+async function discover(s, rec, keys, keepRaw = []) {
   const client = s.client;
   const meta = await rec.step('meta_tools', async () => { const t = await client.listTools(); return { names: t.names, call_tool_arguments_type: t.argumentsType, error: t.error }; });
   let names = [];
@@ -101,6 +106,7 @@ async function discover(s, rec, keys) {
     const out = await client.listToolsets();
     if (!out.ok) throw new Error(out.error);
     names = collectToolsetNames(out.decoded);
+    s.names = names;
     return { names, count: names.length, kind: out.decoded.json !== undefined ? 'json' : 'text', excerpt: cut(out.decoded.text, 300) };
   });
   const resolved = { toolset_count: names.length, sample: names.slice(0, 12), absent: [] };
@@ -117,6 +123,7 @@ async function discover(s, rec, keys) {
       const tools = collectTools(out.decoded);
       s.sets[key].tools = tools;
       const fields = { toolset: s.sets[key].name, tool_count: tools.length, tools: tools.map((t) => t.short) };
+      if (keepRaw.includes(key)) { fields.raw = String(out.decoded.text || '').slice(0, 60000); fields.raw_length = String(out.decoded.text || '').length; fields.tool_params = Object.fromEntries(tools.map((t) => [t.short, t.params])); }
       if (!tools.length) { fields.excerpt = cut(out.decoded.text, 400); fields.mentions_all = key === 'umg' && UMG_CORE_TOOLS.every((t) => hasTool([], out.decoded.text, t)); }
       return fields;
     });
@@ -185,13 +192,19 @@ async function readTree(s, bp) {
 // ---------------------------------------------------------------------------------------------------------------------------------
 // the session of the base project
 
-export async function baseSession({ client, say, build }) {
+export async function baseSession({ client, say, build, animation = false, mvvm = false, py }) {
   const rec = new Recorder('session', 'base');
   const s = new Session(client);
-  const keys = ['umg', 'mvvm', 'widget_animation', 'object', 'asset'];
+  const keys = ['umg', 'mvvm', 'widget_animation', 'object', 'asset', 'blueprint'];
   await discover(s, rec, keys);
-  if (!build) return rec.report;
+  if (build) await buildProbeWidget(s, rec, say);
+  if (animation) await animationAttempt(s, rec, py);
+  if (mvvm) await mvvmAttempt(s, rec);
+  return rec.report;
+}
 
+/** The widget of the capture group: a canvas, a text block, a button and an image, properties set, compiled, saved and read back. */
+async function buildProbeWidget(s, rec, say) {
   const bpRef = assetRef(WIDGET_ASSET);
   const refs = {};
   say('  building the widget through the toolsets');
@@ -252,7 +265,6 @@ export async function baseSession({ client, say, build }) {
     await read('description', async () => { const d = await s.need('umg', 'GetWidgetDescription', { widgetBlueprint: bpRef }); out.description = cut(getCI(d, ['description']), 1500); });
     return out;
   });
-  return rec.report;
 }
 
 // ---------------------------------------------------------------------------------------------------------------------------------
@@ -370,6 +382,320 @@ export async function commonUiSession({ client, say }) {
   await rec.step('save', async () => {
     const out = await s.invoke('asset', 'save_assets', { assetPaths: saved });
     return { returned: out.ok ? out.value : undefined, error: out.ok ? undefined : out.error, assets: saved };
+  });
+  return rec.report;
+}
+
+// ---------------------------------------------------------------------------------------------------------------------------------
+// widget animation and MVVM: attempts in the base session, the read-back in a fresh editor
+
+/** The argument object for a tool from its described parameter names: the first hint whose pattern matches a name supplies its value. Required names with no hint are listed. */
+export function fillArgs(tool, hints) {
+  const args = {}, unfilled = [];
+  for (const p of tool ? tool.params : []) {
+    const hit = hints.find(([re]) => re.test(p));
+    if (hit) args[p] = typeof hit[1] === 'function' ? hit[1](p) : hit[1];
+  }
+  for (const r of tool ? tool.required : []) if (!(r in args)) unfilled.push(r);
+  return { args, unfilled };
+}
+
+/** Call a described tool once with arguments filled from hints; the call is recorded whether it works or not and never sent again. */
+async function tryCall(s, key, shortName, hints, calls) {
+  const set = s.sets[key], tool = set && set.tools.find((t) => norm(t.short) === norm(shortName));
+  const label = `${set ? set.name : key}.${shortName}`;
+  if (!tool) { calls.push({ tool: label, ok: false, error: 'the tool is not in the described list' }); return undefined; }
+  const { args, unfilled } = fillArgs(tool, hints);
+  const out = await s.invoke(key, shortName, args);
+  calls.push({ tool: label, ok: out.ok, args, unfilled, error: out.ok ? undefined : (out.timedOut ? 'timed out (read the state back before sending it again)' : out.error), value: out.ok ? cut(out.value, 500) : undefined });
+  return out;
+}
+
+/** A small Widget Blueprint (canvas, text block) compiled and saved, for the animation and MVVM attempts. */
+async function smallWidget(s, assetPath) {
+  const folder = assetPath.slice(0, assetPath.lastIndexOf('/')), name = assetPath.split('/').pop(), bp = assetRef(assetPath);
+  try { await s.need('asset', 'create_folder', { path: folder }); } catch { /* the UMG tool makes the folder itself, or says so */ }
+  await s.need('umg', 'CreateWidgetBlueprint', { folderPath: folder, assetName: name, parentClass: classRef('/Script/UMG.UserWidget') });
+  const root = await addWidget(s, bp, '/Script/UMG.CanvasPanel', 'ProbeRoot');
+  const text = await addWidget(s, bp, '/Script/UMG.TextBlock', MVVM_NAMES.widget, root.widget);
+  await setText(s, text.widget, 'MVVM PROBE', 32);
+  const compiled = (await s.need('umg', 'CompileWidgetBlueprint', { widgetBlueprint: bp })) === true;
+  const saved = (await s.need('asset', 'save_assets', { assetPaths: [assetPath] })) === true;
+  return { created: true, compiled, saved, asset: assetPath, text_widget: text.widget.refPath };
+}
+
+async function describeAnimationToolsets(s, rec) {
+  await rec.step('animation_toolsets', async () => {
+    const names = (s.names || []).filter((n) => ANIMATION_TOOLSET_PATTERN.test(n));
+    const toolsets = [];
+    for (const name of names) {
+      const out = await s.client.describeToolset(name);
+      if (!out.ok) { toolsets.push({ name, tool_count: 0, tools: [], raw_length: 0, error: out.error }); continue; }
+      const tools = collectTools(out.decoded), text = String(out.decoded.text || '');
+      s.sets[`anim:${name}`] = { name, tools };
+      toolsets.push({ name, tool_count: tools.length, tools: tools.map((t) => t.short), tool_params: Object.fromEntries(tools.map((t) => [t.short, t.params])), raw_length: text.length, raw: text.slice(0, 60000) });
+    }
+    return { toolsets, count: toolsets.length, listed: names };
+  });
+}
+
+const hereDir = import.meta.dirname;
+const ZERO_GUID = '00000000-0000-0000-0000-000000000000';
+
+/**
+ * Question 1. The eight animation toolsets are described first. A widget animation has to exist before a track can go on it, and no tool of the eight (or of the UMG toolset)
+ * makes one, so editor Python makes the container (umg_anim_container.py, run through the stage script's rpc mode) and tries to link it; then the Sequencer tools are called on
+ * it: the ones typed for a level sequence, and the one whose binding is typed for any movie scene sequence. Every call is made once and recorded with its message.
+ */
+async function animationAttempt(s, rec, py) {
+  await describeAnimationToolsets(s, rec);
+  let made;
+  await rec.step('animation_blueprint', async () => { made = await smallWidget(s, ANIMATION_ASSET); return made; });
+  await rec.step('animation_attempt', async () => {
+    const calls = [];
+    const out = { calls, track_added: false, key_added: false };
+    const all = Object.entries(s.sets).filter(([k]) => k.startsWith('anim:')).flatMap(([, v]) => v.tools.map((t) => ({ set: v.name, short: t.short })));
+    out.track_tools = all.filter((t) => /add.*track/i.test(t.short)).map((t) => `${t.set}.${t.short}`);
+    out.key_tools = all.filter((t) => /add.*key/i.test(t.short)).map((t) => `${t.set}.${t.short}`);
+    out.widget_tools = all.filter((t) => /widget|umg/i.test(t.short)).map((t) => `${t.set}.${t.short}`);
+    const animName = ANIMATION_NAME, assetName = ANIMATION_ASSET.split('/').pop();
+    const animRef = { refPath: `${ANIMATION_ASSET}.${assetName}:${animName}` };
+    if (py) {
+      const header = `ASSET = ${JSON.stringify(ANIMATION_ASSET)}\nANIM_NAME = ${JSON.stringify(animName)}\nTEXT_WIDGET = ${JSON.stringify(made ? made.text_widget : '')}\n`;
+      const code = header + readFileSync(join(hereDir, 'umg_anim_container.py'), 'utf8');
+      const answer = await py(code, { timeoutMs: 120000 });
+      const steps = (answer.result && answer.result.steps) || [];
+      out.container = { ok: answer.ok, error: answer.error, steps };
+      out.note = answer.ok ? `editor Python, outside the toolsets: ${steps.map((x) => `${x.step}: ${x.ok ? 'ok' : `FAILED ${x.error}`}`).join('; ')}` : `the container script failed: ${answer.error}`;
+    } else out.note = 'no editor Python was available beside the server, so no animation container was made';
+    const key = (shortName) => Object.keys(s.sets).find((k) => k.startsWith('anim:') && s.sets[k].tools.some((t) => norm(t.short) === norm(shortName)));
+    const floatTrack = classRef('/Script/MovieSceneTracks.MovieSceneFloatTrack');
+    const seqKey = key('add_track_to_sequence'), bindKey = key('add_track_to_binding');
+    if (seqKey) await tryCall(s, seqKey, 'add_track_to_sequence', [[/sequence/i, animRef], [/track.?type/i, floatTrack]], calls);
+    if (bindKey) {
+      const added = await tryCall(s, bindKey, 'add_track_to_binding', [[/binding/i, { bindingId: ZERO_GUID, sequence: animRef }], [/track.?type/i, floatTrack]], calls);
+      out.track_added = Boolean(added && added.ok && refOf(added.value));
+    }
+    return out;
+  });
+}
+
+const vmParent = '/Script/ModelViewViewModel.MVVMViewModelBase';
+
+/**
+ * Question 2: the MVVM tools in the order the toolset allows, read back with the three List tools, then compile and save. The argument shapes are the toolset's own
+ * (run A-Q2 run 1 recorded them): CreateViewModel takes a name, a package path and a parent class; AddViewModelProperty a view model asset, a name, a pin type and a default
+ * value; AddViewModelToWidget the widget blueprint and the generated view model class; CreateViewBinding the widget blueprint, a source context (the view model class), a
+ * source property path, a destination context (the widget) and a destination property path; ListViewModels a search path.
+ */
+async function mvvmAttempt(s, rec) {
+  let made;
+  await rec.step('mvvm_blueprint', async () => { made = await smallWidget(s, MVVM_ASSET); return made; });
+  const bp = assetRef(MVVM_ASSET), calls = [];
+  const out = { calls, view_model_created: false, property_added: false, added_to_widget: false, binding_created: false };
+  const vmPath = `${MVVM_NAMES.viewModelFolder}/${MVVM_NAMES.viewModel}`;
+  let vmAsset = assetRef(vmPath);
+  const widgetRef = { refPath: made ? made.text_widget : `${MVVM_ASSET}.WBP_ProbeMvvm:WidgetTree.${MVVM_NAMES.widget}` };
+  await rec.step('mvvm_calls', async () => {
+    const created = await tryCall(s, 'mvvm', 'CreateViewModel', [
+      [/package|folder|directory/i, MVVM_NAMES.viewModelFolder], [/name/i, MVVM_NAMES.viewModel], [/parent|base|class/i, classRef(vmParent)],
+    ], calls);
+    if (created && created.ok) {
+      out.view_model_created = true;
+      vmAsset = refOf(created.value) || vmAsset;
+    }
+    const vmClass = classRef(`${vmAsset.refPath}_C`);
+    if (out.view_model_created) {
+      for (const pinType of ['text', 'string']) {
+        const prop = await tryCall(s, 'mvvm', 'AddViewModelProperty', [
+          [/default/i, 'Probe'], [/view.?model|blueprint|asset/i, vmAsset], [/property.?name|^name$/i, MVVM_NAMES.property], [/type/i, pinType],
+        ], calls);
+        out.property_added = Boolean(prop && prop.ok && prop.value !== false);
+        out.property_type = pinType;
+        if (out.property_added) break;
+      }
+      // the generated class holds the property only after the view model blueprint is compiled (A-Q2 run 3: CreateViewBinding said "Property does not exist in 'VM_ProbeScore_C'" before it)
+      if (out.property_added) {
+        const compiled = await tryCall(s, 'blueprint', 'compile_blueprint', [[/blueprint/i, vmAsset], [/warnings/i, false]], calls);
+        out.view_model_compiled = Boolean(compiled && compiled.ok);
+      }
+      const added = await tryCall(s, 'mvvm', 'AddViewModelToWidget', [[/view.?model/i, vmClass], bpHint0(bp)], calls);
+      out.added_to_widget = Boolean(added && added.ok);
+      const bound = await tryCall(s, 'mvvm', 'CreateViewBinding', [
+        [/source.*context/i, vmClass], [/dest.*context/i, widgetRef], [/source.*(property|path)/i, MVVM_NAMES.property], [/dest.*(property|path)/i, MVVM_NAMES.widgetProperty], [/conversion/i, ''], bpHint0(bp),
+      ], calls);
+      out.binding_created = Boolean(bound && bound.ok);
+      out.binding_id = bound && bound.ok ? cut(bound.value, 80) : undefined;
+    }
+    return out;
+  });
+  await rec.step('mvvm_lists', async () => {
+    const lists = [];
+    const a = await tryCall(s, 'mvvm', 'ListViewModels', [[/search|path/i, MVVM_NAMES.viewModelFolder]], lists);
+    const b = await tryCall(s, 'mvvm', 'ListWidgetViewModels', [bpHint0(bp)], lists);
+    const c = await tryCall(s, 'mvvm', 'ListWidgetViewBindings', [bpHint0(bp)], lists);
+    const has = (r, words) => Boolean(r && r.ok) && words.every((w) => JSON.stringify(r.value ?? '').includes(w));
+    return {
+      view_model_listed: has(a, [MVVM_NAMES.viewModel]), widget_view_model_listed: has(b, [MVVM_NAMES.viewModel]), binding_listed: has(c, [MVVM_NAMES.property]),
+      calls: lists, excerpt: `ListViewModels ${cut(a && a.value, 300)} | ListWidgetViewModels ${cut(b && b.value, 300)} | ListWidgetViewBindings ${cut(c && c.value, 600)}`,
+    };
+  });
+  await rec.step('mvvm_compile', async () => {
+    const compile = await s.invoke('umg', 'CompileWidgetBlueprint', { widgetBlueprint: bp });
+    const saveAssets = [MVVM_ASSET, ...(out.view_model_created ? [vmAsset.refPath.split('.')[0]] : [])];
+    const save = await s.invoke('asset', 'save_assets', { assetPaths: saveAssets });
+    return { returned: compile.ok ? compile.value : undefined, error: compile.ok && compile.value === true ? undefined : compile.error || `returned ${cut(compile.value, 200)}`, saved: save.ok ? save.value : undefined, saved_assets: saveAssets, save_error: save.ok ? undefined : save.error };
+  });
+}
+const bpHint0 = (bp) => [/widget.?blueprint|^blueprint$|^widget$/i, bp];
+
+// ---------------------------------------------------------------------------------------------------------------------------------
+// the fresh editor: read the saved blueprints back
+
+const CRAWL_NAMES = ['Animations', 'MovieScene', 'AnimationBindings', 'ObjectBindings', 'Tracks', 'MasterTracks', 'Sections', 'Channels', 'FloatCurve', 'Times', 'Values', 'Keys', 'PropertyName', 'PropertyPath', 'Possessables'];
+
+/** Walk object references from a blueprint through its animations, a bounded number of objects deep, recording what each object lists and what was read. */
+async function crawl(s, root, limit = 60) {
+  const seen = new Set(), queue = [{ ref: root, depth: 0 }], visited = [];
+  while (queue.length && visited.length < limit) {
+    const { ref, depth } = queue.shift();
+    if (seen.has(ref.refPath) || depth > 8) continue;
+    seen.add(ref.refPath);
+    const entry = { ref: ref.refPath, depth };
+    visited.push(entry);
+    try {
+      const listed = await s.need('object', 'list_properties', { instance: ref });
+      const text = typeof listed === 'string' ? listed : JSON.stringify(listed);
+      entry.listed = cut(text, 600);
+      const names = CRAWL_NAMES.filter((n) => new RegExp(`"?\\b${n}\\b"?`).test(text));
+      if (!names.length) continue;
+      const got = await s.getProps(ref, names);
+      entry.read = got;
+      const found = [];
+      const scan = (v) => { if (Array.isArray(v)) v.forEach(scan); else if (v && typeof v === 'object') { if (typeof v.refPath === 'string') found.push(v); else Object.values(v).forEach(scan); } else if (typeof v === 'string' && /^\/(Game|Engine|Script)\//.test(v)) found.push({ refPath: v }); };
+      scan(got);
+      for (const f of found) queue.push({ ref: f, depth: depth + 1 });
+    } catch (error) { entry.error = message(error); }
+  }
+  return visited;
+}
+
+export async function readbackSession({ client, say, animation, mvvm, projectDir }) {
+  const rec = new Recorder('readback', 'base');
+  const s = new Session(client);
+  await discover(s, rec, ['umg', 'mvvm', 'object']);
+  if (animation) {
+    say('  reading the animation back from the saved Widget Blueprint');
+    await rec.step('animation_readback', async () => {
+      const visited = await crawl(s, assetRef(ANIMATION_ASSET));
+      const trees = visited.map((v) => v.read).filter(Boolean);
+      const counts = summarizeAnimationTree(trees);
+      const animations = visited.filter((v) => v.depth === 1).map((v) => v.ref);   // the references the blueprint's Animations list holds
+      // an asset reference resolves to the class default object, which has no animation list, so the saved file is also searched for the names a widget animation writes
+      const file = projectDir ? join(projectDir, 'Content', ...ANIMATION_ASSET.replace('/Game/', '').split('/')) + '.uasset' : '';
+      const markers = {};
+      if (file && existsSync(file)) {
+        const bytes = readFileSync(file);
+        for (const name of ['WidgetAnimation', 'MovieScene', 'MovieSceneFloatTrack', 'MovieSceneFloatSection', ANIMATION_NAME]) markers[name] = bytes.toString('latin1').split(name).length - 1;
+      }
+      const foundInFile = (markers.WidgetAnimation || 0) > 0 && (markers[ANIMATION_NAME] || 0) > 0;
+      return {
+        animation_found: animations.length > 0 || counts.tracks > 0 || foundInFile, animations: animations.length ? animations : foundInFile ? [`${ANIMATION_NAME} (named in the saved asset)`] : [],
+        track_count: counts.tracks + ((markers.MovieSceneFloatTrack || 0) > 0 ? 1 : 0), key_count: counts.keys, section_count: counts.sections, file_markers: markers, visited: visited.length, crawl: visited,
+        note: `walked ${visited.length} objects from ${ANIMATION_ASSET}; names in the saved file: ${JSON.stringify(markers)}`,
+      };
+    });
+  }
+  if (mvvm && s.sets.mvvm) {
+    say('  reading the view models and the binding back from the saved Widget Blueprint');
+    await rec.step('mvvm_readback', async () => {
+      const calls = [];
+      const bp = assetRef(MVVM_ASSET);
+      const a = await tryCall(s, 'mvvm', 'ListWidgetViewModels', [bpHint0(bp)], calls);
+      const b = await tryCall(s, 'mvvm', 'ListWidgetViewBindings', [bpHint0(bp)], calls);
+      const bindingText = JSON.stringify((b && b.value) ?? '');
+      return { binding_present: Boolean(b && b.ok) && bindingText.includes(MVVM_NAMES.property), view_model_present: Boolean(a && a.ok) && JSON.stringify(a.value ?? '').includes(MVVM_NAMES.viewModel), calls, excerpt: `ListWidgetViewModels ${cut(a && a.value, 300)} | ListWidgetViewBindings ${cut(b && b.value, 400)}` };
+    });
+  }
+  return rec.report;
+}
+
+// ---------------------------------------------------------------------------------------------------------------------------------
+// the Slate inspector, called from node while the stage script waits in Play In Editor
+
+const sleepMs = (ms) => new Promise((r) => setTimeout(r, ms));
+const MODS = { bShift: false, bCtrl: false, bAlt: false, bCmd: false };
+
+/** The click counter and the button state the stage script publishes once a second while it waits (null when it has not written them). */
+function readWait(readStage) {
+  const stage = readStage && readStage();
+  const wait = stage && stage.steps && stage.steps.input_wait;
+  return wait ? { clicks: wait.clicks, state: wait.state, mouse: wait.mouse } : { clicks: null, state: null, mouse: null };
+}
+
+/**
+ * Describe the Slate inspector toolset (kept word for word), call its tools that need no argument, then, when the stage script is publishing the click counter, drive the
+ * active Common button through it: Observe all windows, Snapshot, find the "GO" widget's ref, Hover, Click and PressKey it, and read the counter and the button state after
+ * each; the Content Drawer button of the editor is clicked last as the control that a Slate click reaches editor widgets (the snapshot must grow). Each call is made once.
+ */
+export async function slateSession({ client, say, readStage, settleMs = 1500 }) {
+  const rec = new Recorder('slate', 'commonui');
+  const s = new Session(client);
+  await discover(s, rec, ['slate'], ['slate']);
+  const described = rec.report.steps.find((x) => x.step === 'describe_slate') || {};
+  rec.report.steps.push({ step: 'slate_describe', toolset: described.toolset, tool_count: described.tool_count || 0, tools: described.tools || [], tool_params: described.tool_params, raw_length: described.raw_length || 0, raw: described.raw, error: described.error || (s.sets.slate ? undefined : 'the Slate inspector toolset is not listed') });
+  if (!s.sets.slate) return rec.report;
+  say('  calling the Slate inspector tools that need no argument');
+  await rec.step('slate_routes', async () => {
+    const routes = [];
+    for (const tool of s.sets.slate.tools) {
+      const input = /click|press|key|simulate|input|focus|navigate|mouse|type|send|hover|drag|fill/i.test(tool.short);
+      if (tool.required.length || input) {
+        routes.push({ route: `slate inspector ${tool.short}`, kind: input ? 'input' : 'read', tried: false, delivered: false, observed: false, detail: `not called in this step: ${tool.required.length ? `needs ${tool.required.join(', ')}` : 'an input-like tool'}` });
+        continue;
+      }
+      const out = await s.invoke('slate', tool.short, {});
+      routes.push({ route: `slate inspector ${tool.short}`, kind: 'read', tried: true, delivered: false, observed: false, detail: out.ok ? cut(out.value, 800) : undefined, error: out.ok ? undefined : (out.timedOut ? 'timed out' : out.error) });
+    }
+    return { routes };
+  });
+  if (!readStage) return rec.report;
+  say('  driving the Common button through the Slate inspector');
+  await rec.step('slate_input', async () => {
+    const routes = [];
+    const snapshot = async () => { const r = await s.invoke('slate', 'Snapshot', { ref: '', maxDepth: 60, bIncludeSourceLocations: false }); return r.ok && typeof r.value === 'string' ? r.value : ''; };
+    const observed = await s.invoke('slate', 'Observe', { ref: '', maxDepth: 60 });
+    await sleepMs(settleMs);
+    const tree = await snapshot();
+    const goRef = findSlateRef(tree, /generic "GO"/) || findSlateRef(tree, /text "GO"/), drawerRef = findSlateRef(tree, /button "Content Drawer"/);
+    const excerpt = tree.split('\n').filter((l) => /COMMON UI|"GO"|Content Drawer/.test(l)).map((l) => l.trim()).slice(0, 8);
+    const shown = { observe: observed.ok ? cut(observed.value, 80) : observed.error, lines: tree ? tree.split('\n').length : 0, button_ref: goRef, drawer_ref: drawerRef, excerpt };
+    const drive = async (route, kind, tool, args) => {
+      const before = readWait(readStage);
+      const out = await s.invoke('slate', tool, args);
+      await sleepMs(settleMs);
+      const after = readWait(readStage);
+      const clicked = after.clicks !== null && before.clicks !== null && after.clicks > before.clicks;
+      const changed = Object.keys(after.state || {}).filter((k) => JSON.stringify((before.state || {})[k]) !== JSON.stringify(after.state[k]));
+      routes.push({
+        route, kind, tried: true, delivered: out.ok && out.value === true, observed: kind !== 'precondition' && (clicked || changed.length > 0),
+        detail: `${tool} returned ${out.ok ? cut(out.value, 60) : out.error}; click counter ${before.clicks} to ${after.clicks}; button state changed ${JSON.stringify(changed)}; the game viewport sees the cursor at ${JSON.stringify(before.mouse)} then ${JSON.stringify(after.mouse)}`,
+        error: out.ok ? undefined : (out.timedOut ? 'timed out' : out.error),
+      });
+    };
+    if (goRef) {
+      await drive(`slate inspector Hover on the Common button (${goRef})`, 'precondition', 'Hover', { ref: goRef });
+      await drive(`slate inspector Click on the Common button (${goRef})`, 'input', 'Click', { ref: goRef, button: 'left', doubleClick: false, modifiers: MODS });
+      await drive('slate inspector PressKey Enter', 'input', 'PressKey', { key: 'Enter' });
+    } else routes.push({ route: 'slate inspector Click on the Common button', kind: 'input', tried: true, delivered: false, observed: false, error: `no widget named GO in the snapshot (${shown.lines} lines)` });
+    if (drawerRef) {
+      const before = tree.split('\n').length;
+      const out = await s.invoke('slate', 'Click', { ref: drawerRef, button: 'left', doubleClick: false, modifiers: MODS });
+      await sleepMs(settleMs);
+      const after = (await snapshot()).split('\n').length;
+      routes.push({ route: `control: slate inspector Click on the editor's Content Drawer button (${drawerRef})`, kind: 'control', tried: true, delivered: out.ok && out.value === true, observed: after > before + 10, detail: `Click returned ${out.ok ? cut(out.value, 60) : out.error}; snapshot lines ${before} to ${after}` });
+    }
+    return { routes, ...shown };
   });
   return rec.report;
 }

@@ -5,44 +5,60 @@
 //   widget    a Widget Blueprint with a canvas, a text block, a button and an image, properties set, compiled, saved and read back
 //   capture   that widget added to the viewport of a Play-In-Editor session run offscreen, frames saved with and without it, regions compared
 //   commonui  Common UI: the quickstart's requirements set from a script, an activatable widget with a Common button created, activated, captured
+//   animation a widget animation of a saved Widget Blueprint: the Sequencer and Control Rig toolsets described, a track and a key added through them, read back by a fresh editor
+//   mvvm      the MVVM toolset: a view model with a property, added to a widget, bound to a text block, read back with the List tools, compiled, loaded by a fresh editor
+//   viewport  the class of the game viewport client that runs in a Play-In-Editor session, against the class the project settings saved
+//   input     a simulated key or click delivered to the active Common button in a Play-In-Editor session: every route tried, and whether anything observable changed
 import { decodePng } from '../niagara_toolsets/nts-probe-assets.mjs';
 
 export { decodePng };
-export const GROUPS = ['toolsets', 'widget', 'capture', 'commonui'];
+export const GROUPS = ['toolsets', 'widget', 'capture', 'commonui', 'animation', 'mvvm', 'viewport', 'input'];
 
-/** The engine phases. `mcp` starts a rendering editor with Epic's MCP server and drives it from node; `editor` plays the map offscreen and quits itself. */
+/**
+ * The engine phases. `mcp` starts a rendering editor with Epic's MCP server and drives it from node; `editor` plays the map offscreen and quits itself; `play` does both
+ * in one editor (the stage script plays and waits at a barrier file while node calls the server). `key` is where a phase's report lands in the reports of its project.
+ */
 export const PHASES = {
-  session: { name: 'session', mode: 'mcp', project: 'base' },
-  capture: { name: 'capture', mode: 'editor', project: 'base', script: 'umg_stage.py', stage: 'widget', prefix: 'umg' },
-  'commonui-session': { name: 'commonui-session', mode: 'mcp', project: 'commonui' },
-  'commonui-capture': { name: 'commonui-capture', mode: 'editor', project: 'commonui', script: 'umg_stage.py', stage: 'commonui', prefix: 'umgc' },
+  session: { name: 'session', key: 'session', mode: 'mcp', project: 'base' },
+  capture: { name: 'capture', key: 'capture', mode: 'editor', project: 'base', script: 'umg_stage.py', stage: 'widget', prefix: 'umg' },
+  readback: { name: 'readback', key: 'readback', mode: 'mcp', project: 'base' },
+  'commonui-session': { name: 'commonui-session', key: 'session', mode: 'mcp', project: 'commonui' },
+  'commonui-capture': { name: 'commonui-capture', key: 'capture', mode: 'editor', project: 'commonui', script: 'umg_stage.py', stage: 'commonui', prefix: 'umgc' },
+  play: { name: 'play', key: 'play', mode: 'play', project: 'commonui', script: 'umg_stage.py', stage: 'input', prefix: 'umgi' },
 };
 
-/** The phases a list of groups needs, in order: toolsets and widget share one session, capture needs the session's saved widget, commonui has its own project. */
+/**
+ * The phases a list of groups needs, in order: toolsets, widget, animation and mvvm share one session, capture needs the session's saved widget, animation and mvvm are read
+ * back by a fresh editor (the readback), the Common UI groups have their own project, and viewport and input share the one Play-In-Editor session that follows its session.
+ */
 export function planPhases(groups) {
-  const want = new Set(groups);
+  const want = new Set(groups), any = (names) => names.some((g) => want.has(g));
   const out = [];
-  if (want.has('toolsets') || want.has('widget') || want.has('capture')) out.push(PHASES.session);
+  if (any(['toolsets', 'widget', 'capture', 'animation', 'mvvm'])) out.push(PHASES.session);
   if (want.has('capture')) out.push(PHASES.capture);
-  if (want.has('commonui')) out.push(PHASES['commonui-session'], PHASES['commonui-capture']);
+  if (any(['animation', 'mvvm'])) out.push(PHASES.readback);
+  if (any(['commonui', 'viewport', 'input'])) out.push(PHASES['commonui-session']);
+  if (want.has('commonui')) out.push(PHASES['commonui-capture']);
+  if (any(['viewport', 'input'])) out.push(PHASES.play);
   return out;
 }
 
-export const USAGE = 'usage: node umg_probe.mjs --engine <UE_5.8 folder> [--only <group>[,<group>...]] [--keep] [--plan] [--port <number>]'
+export const USAGE = 'usage: node umg_probe.mjs --engine <UE_5.8 folder> [--only <group>[,<group>...]] [--keep] [--plan] [--hold] [--port <number>]'
   + `   groups: ${GROUPS.join(', ')}   (no --only: every group; capture runs the widget session first)`;
 
 /**
  * @param {string[]} argv  process.argv without node and the script
  * @param {Record<string, string|undefined>} [env]  UE_ROOT supplies the engine folder
- * @returns {{ error?: string, engine?: string, keep?: boolean, plan?: boolean, groups?: string[], named?: boolean, port?: number }}
+ * @returns {{ error?: string, engine?: string, keep?: boolean, plan?: boolean, hold?: boolean, groups?: string[], named?: boolean, port?: number }}
  */
 export function parseProbeOptions(argv, env = {}) {
   const values = {}, valued = { '--engine': 'engine', '--only': 'only', '--port': 'port' };
-  let keep = false, plan = false;
+  let keep = false, plan = false, hold = false;
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
     if (arg === '--keep') keep = true;
     else if (arg === '--plan') plan = true;
+    else if (arg === '--hold') hold = true;
     else if (valued[arg]) {
       const value = argv[i + 1];
       if (value === undefined || value.startsWith('--')) return { error: `${arg} needs a value` };
@@ -67,7 +83,7 @@ export function parseProbeOptions(argv, env = {}) {
     port = Number(values.port);
     if (!Number.isInteger(port) || port < 1024 || port > 65535) return { error: `--port needs a number from 1024 to 65535, got ${values.port}` };
   }
-  return { engine, keep, plan, groups, named, port };
+  return { engine, keep, plan, hold, groups, named, port };
 }
 
 /** True when an engine log says the process stopped for lack of video memory (the run is then recorded as not run because of memory). */
@@ -555,8 +571,152 @@ function commonUiChecks(session, stage, images, check) {
     table.created === true && inputData.created === true && inputData.click_set === true && inputData.back_set === true && unset.length === 0, unset.length ? `could not be set and saved from a script: ${unset.join(', ')}` : 'all four pieces were set from a script');
 }
 
+// ---------------------------------------------------------------------------------------------------------------------------------
+// Widget animation, MVVM, the running viewport client and simulated input
+
+/** The Widget Blueprints the session builds for the animation and MVVM groups (each holds a canvas and a text block), and the names the MVVM calls use. */
+export const ANIMATION_ASSET = '/Game/UI/WBP_ProbeAnim';
+export const MVVM_ASSET = '/Game/UI/WBP_ProbeMvvm';
+export const MVVM_NAMES = { viewModelFolder: '/Game/UI', viewModel: 'VM_ProbeScore', property: 'ScoreText', widget: 'ProbeText', widgetProperty: 'Text' };
+export const ANIMATION_NAME = 'ProbeFade';
+export const ANIMATION_TOOLSET_PATTERN = /(^|\.)animation_toolset\./i;
+
 /**
- * @param {{ groups: string[], reports: { base?: { session?: any, capture?: any, images?: Record<string, any> }, commonui?: { session?: any, capture?: any, images?: Record<string, any> } } }} input
+ * Count what an animation holds in a property tree read back from a Widget Blueprint: arrays under Tracks (and MasterTracks) are tracks, arrays under Keys, Times or
+ * Keyframes are keys, arrays under Sections are sections. A tree that holds only references to other objects counts nothing, so the reader walks the references first.
+ * @returns {{ tracks: number, keys: number, sections: number }}
+ */
+export function summarizeAnimationTree(tree) {
+  const count = { tracks: 0, keys: 0, sections: 0 };
+  const walk = (v, key) => {
+    if (Array.isArray(v)) {
+      if (/^(master)?tracks$/i.test(key || '')) count.tracks += v.length;
+      else if (/^(keys|keyframes|times)$/i.test(key || '')) count.keys += v.length;
+      else if (/^sections$/i.test(key || '')) count.sections += v.length;
+      for (const item of v) walk(item, undefined);
+    } else if (v && typeof v === 'object') for (const [k, x] of Object.entries(v)) walk(x, k);
+  };
+  walk(tree, undefined);
+  return count;
+}
+
+/**
+ * True when a route record counts as observed: an input route (not a control or a precondition) for which the click counter or a button state read back changed. A frame that
+ * differs is not counted: A-Q4 run 3 had a frame that differed by 248,649 pixels because the control that opens the editor's Content Drawer had changed the layout (the drawer was open
+ * in the frame before and closed in the frame after), with no change to the button; the count is kept in the detail only.
+ */
+export const routeObserved = (route) => Boolean(route) && route.kind === 'input' && route.observed === true;
+
+/**
+ * The game viewport client objects an `obj list class=GameViewportClient` console command printed into the log: lines of the form "<Class> /Path.Outer:Name_0 <sizes>"; the
+ * summary line (class, count, sizes) has no object path and is skipped.
+ * @returns {{ cls: string, path: string }[]}
+ */
+export function viewportClientsFromLog(lines) {
+  const out = [];
+  for (const line of Array.isArray(lines) ? lines : []) {
+    const m = /\s(\w*GameViewportClient\w*)\s+(\/[^\s:]+:\S+)\s/.exec(String(line));
+    if (m) out.push({ cls: m[1], path: m[2] });
+  }
+  return out;
+}
+
+/** The class that ran: the stage script's own read when it got one, else the one class the engine listed (not when two differ). */
+export function runningViewportClass(play) {
+  const vp = (play && play.steps && play.steps.viewport_client) || {};
+  if (typeof vp.running_class === 'string' && vp.running_class) return { cls: vp.running_class, how: 'read by the stage script' };
+  const listed = [...new Set(viewportClientsFromLog(play && play.log_viewport).map((c) => c.cls))];
+  return listed.length === 1 ? { cls: listed[0], how: 'listed by the engine (obj list class=GameViewportClient) in the session log' } : { cls: null, how: listed.length ? `the engine listed ${listed.join(', ')}` : 'no class' };
+}
+
+/** The ref ("[ref=g5]") of the first snapshot line the pattern matches, or undefined. */
+export function findSlateRef(snapshot, pattern) {
+  for (const line of String(snapshot ?? '').split(/\r?\n/)) {
+    if (pattern.test(line)) { const m = /\[ref=([^\]]+)\]/.exec(line); if (m) return m[1]; }
+  }
+  return undefined;
+}
+
+const callLine = (c) => `${c.tool}${c.ok ? ' ok' : ` FAILED: ${short(c.error, 300)}`}`;
+
+function animationChecks(session, readback, check) {
+  const described = step(session, 'animation_toolsets'), attempt = step(session, 'animation_attempt'), back = step(readback, 'animation_readback');
+  const sets = list(described.toolsets);
+  check('animation', 'the animation toolsets are described and each description is saved',
+    'describe_toolset returns the tools of each of the eight animation_toolset.* toolsets, and the report keeps each description',
+    ok(described) && sets.length >= 8 && sets.every((t) => t.tool_count > 0 && t.raw_length > 0),
+    described.error ? short(described.error) : `${sets.length} toolsets: ${sets.map((t) => `${t.name} ${t.tool_count} tools`).join('; ')}`);
+  const calls = list(attempt.calls);
+  check('animation', 'a track is added to a widget animation of a saved Widget Blueprint through the described tools',
+    'A tool of a Sequencer or Control Rig toolset adds a track to a widget animation of the Widget Blueprint and the call succeeds',
+    ok(attempt) && attempt.track_added === true, attempt.error ? short(attempt.error) : `${calls.map(callLine).join(' | ') || 'no call was made'}${attempt.note ? `; ${short(attempt.note, 300)}` : ''}`);
+  check('animation', 'a key on a widget property is added through the described tools',
+    'A tool adds a key to the track of a widget property and the call succeeds', ok(attempt) && attempt.key_added === true, `key added ${attempt.key_added}`);
+  check('animation', 'a fresh editor reads the animation back from the saved Widget Blueprint with the track and the key',
+    'After a new editor process loads the saved blueprint, its animation list holds the animation, and the animation holds at least one track and one key',
+    ok(back) && back.animation_found === true && back.track_count > 0 && back.key_count > 0,
+    back.error ? short(back.error) : `animations ${JSON.stringify(back.animations ?? [])}; tracks ${back.track_count}; keys ${back.key_count}${back.note ? `; ${short(back.note, 300)}` : ''}`);
+}
+
+function mvvmChecks(session, readback, check) {
+  const calls = step(session, 'mvvm_calls'), lists = step(session, 'mvvm_lists'), compile = step(session, 'mvvm_compile'), back = step(readback, 'mvvm_readback');
+  const line = list(calls.calls).map(callLine).join(' | ') || calls.error || 'no call was made';
+  check('mvvm', 'a view model with a property is created through the MVVM toolset',
+    'CreateViewModel makes a view model and AddViewModelProperty adds a property to it', ok(calls) && calls.view_model_created === true && calls.property_added === true, line);
+  check('mvvm', 'the view model is added to the widget',
+    'AddViewModelToWidget adds the view model to the Widget Blueprint that holds a text block', ok(calls) && calls.added_to_widget === true, `added ${calls.added_to_widget}`);
+  check('mvvm', 'a binding from the property to the text block is created',
+    'CreateViewBinding binds the view model property to the text block Text property and the call succeeds', ok(calls) && calls.binding_created === true, `binding ${calls.binding_created}`);
+  check('mvvm', 'ListViewModels, ListWidgetViewModels and ListWidgetViewBindings read the view model and the binding back',
+    'The three List tools return the view model, its place on the widget and the binding', ok(lists) && lists.view_model_listed === true && lists.widget_view_model_listed === true && lists.binding_listed === true,
+    lists.error ? short(lists.error) : `view model ${lists.view_model_listed}; on widget ${lists.widget_view_model_listed}; binding ${lists.binding_listed}; ${short(lists.excerpt, 400)}`);
+  check('mvvm', 'the Widget Blueprint compiles with no error after the binding',
+    'CompileWidgetBlueprint returns true after the binding was added', compile.returned === true, compile.error ? short(compile.error, 300) : `compile ${compile.returned}`);
+  check('mvvm', 'a fresh editor loads the saved Widget Blueprint with the binding present',
+    'After a new editor process loads the saved blueprint, ListWidgetViewBindings still names the view model property and the text block',
+    ok(back) && back.binding_present === true, back.error ? short(back.error) : `binding present ${back.binding_present}; ${short(back.excerpt, 400)}`);
+}
+
+function viewportChecks(play, check) {
+  const vp = stageStep(play, 'viewport_client'), settings = stageStep(play, 'settings');
+  const saved = JSON.stringify((settings.engine && (settings.engine.values || settings.engine)) || {});
+  const running = runningViewportClass(play);
+  check('viewport', 'the class of the running game viewport client is read in the Play-In-Editor session',
+    'The class name of the game viewport client of the running Play-In-Editor world is read by the stage script or listed by the engine in the session log', typeof running.cls === 'string',
+    `${running.cls ? `${running.cls} (${running.how})` : running.how}; routes: ${list(vp.routes).map((r) => `${r.route} ${r.error ? `FAILED ${short(r.error, 120)}` : JSON.stringify(r.value)}`).join(' | ') || 'none'}`);
+  const logged = list(play && play.log_viewport).filter((l) => /\[umg_stage\] viewport_client class=\S+/.test(l) || viewportClientsFromLog([l]).length > 0);
+  check('viewport', 'the session log holds the class the stage script logged',
+    'The engine log of the Play-In-Editor session holds the stage script line "viewport_client class=<name>" or the object line the engine printed for the console command the stage script ran', logged.length > 0, logged.join(' | ') || 'no such line in the log');
+  check('viewport', 'the running class equals the saved Game Viewport Client Class',
+    'The running game viewport client class is CommonGameViewportClient, the class the project settings saved and the fresh editor read back',
+    /CommonGameViewportClient/.test(saved) && running.cls === 'CommonGameViewportClient', `running ${JSON.stringify(running.cls)} (${running.how}); saved setting read in this session ${saved.slice(0, 160)}`);
+}
+
+function inputChecks(play, images, check) {
+  const input = stageStep(play, 'input'), mcp = (play && play.mcp && play.mcp.steps) || [], mstep = (name) => mcp.find((s) => s.step === name) || {};
+  const slate = mstep('slate_describe'), routes = [...list(input.routes), ...list(mstep('slate_routes').routes), ...list(mstep('slate_input').routes)];
+  const table = shotTable(play), before = images && images[table.before && table.before.showui], after = images && images[table.after && table.after.showui];
+  const diff = before && after ? Math.max(0, changedInRegion(before, after, { min: [0, 0], max: [1, 1] })) : 0;
+  check('input', 'the Slate inspector toolset is described before any route uses it',
+    'describe_toolset lists the tools of the Slate inspector toolset and the report keeps the description', slate.step === 'slate_describe' && !slate.error && slate.tool_count > 0 && slate.raw_length > 0,
+    slate.error ? short(slate.error) : `${slate.toolset}: ${slate.tool_count} tools (${list(slate.tools).join(', ')})`);
+  check('input', 'every route tried is recorded with its result',
+    'At least three routes (Python reach, the Slate inspector toolset, a direct control) are listed, each with what was tried and what came back',
+    routes.length >= 3 && routes.every((r) => r.route && (r.detail || r.error)), routes.map((r) => `${r.route}: ${r.kind || '?'} delivered ${r.delivered} observed ${r.observed}`).join('; ') || 'none');
+  check('input', 'a control shows that the observable is wired',
+    'Calling the Common button click delegate directly runs the log handler the other routes rely on', routes.some((r) => r.kind === 'control' && /broadcast/.test(r.route) && r.observed === true),
+    routes.filter((r) => r.kind === 'control' && /broadcast/.test(r.route)).map((r) => `${r.route}: observed ${r.observed}; ${short(r.detail || r.error, 160)}`).join('; ') || 'no control route');
+  check('input', 'a Slate inspector click reaches an editor widget (control)',
+    'Clicking the editor Content Drawer button through the Slate inspector grows the snapshot, so the tool delivers clicks to Slate widgets', routes.some((r) => r.kind === 'control' && /slate inspector/.test(r.route) && r.observed === true),
+    routes.filter((r) => r.kind === 'control' && /slate inspector/.test(r.route)).map((r) => `${r.route}: observed ${r.observed}; ${short(r.detail || r.error, 160)}`).join('; ') || 'no Slate control route');
+  const worked = routes.filter((r) => routeObserved(r));
+  check('input', 'a simulated key or click delivered to the active Common button changes an observable state',
+    'One route delivers a key or click to the button and a log line, a state read back or a differing frame shows it', worked.length > 0,
+    `${worked.length ? `worked: ${worked.map((r) => r.route).join(', ')}; ` : 'no route changed the button (log counter or state read back); '}frame pixels that differ before and after ${diff} (recorded, not counted: the frames also hold whatever else changed in the editor window)`);
+}
+
+/**
+ * @param {{ groups: string[], reports: { base?: { session?: any, capture?: any, readback?: any, images?: Record<string, any> }, commonui?: { session?: any, capture?: any, play?: any, images?: Record<string, any>, playImages?: Record<string, any> } } }} input
  * @returns {{ group: string, name: string, claim: string, pass: boolean, detail: string }[]}
  */
 export function evaluateProbes({ groups, reports }) {
@@ -568,6 +728,10 @@ export function evaluateProbes({ groups, reports }) {
     else if (group === 'widget') widgetChecks(base.session, base.capture, check);
     else if (group === 'capture') captureChecks(base.session, base.capture, base.images, check);
     else if (group === 'commonui') commonUiChecks(ui.session, ui.capture, ui.images, check);
+    else if (group === 'animation') animationChecks(base.session, base.readback, check);
+    else if (group === 'mvvm') mvvmChecks(base.session, base.readback, check);
+    else if (group === 'viewport') viewportChecks(ui.play, check);
+    else if (group === 'input') inputChecks(ui.play, ui.playImages, check);
   }
   return out;
 }
