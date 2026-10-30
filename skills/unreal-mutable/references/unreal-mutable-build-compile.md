@@ -1,6 +1,6 @@
 # Build and compile a Customizable Object from a script
 
-Target: Unreal Engine 5.8 on Windows. The probe in [examples/unreal/mutable](../../../examples/unreal/mutable/README.md) ran this on a throwaway project with the Mutable, PythonScriptPlugin, EditorScriptingUtilities and Interchange plugins, in a rendering editor started with `-RenderOffScreen` and in a `-nullrhi` commandlet. Everything marked tested here was run on 2026-10-29, and only up to the point where the graph stayed empty.
+Target: Unreal Engine 5.8 on Windows. The probe in [examples/unreal/mutable](../../../examples/unreal/mutable/README.md) ran this on a throwaway project with the Mutable, PythonScriptPlugin, EditorScriptingUtilities and Interchange plugins, in a rendering editor started with `-RenderOffScreen` and in a `-nullrhi` commandlet. Lines dated 2026-10-29 come from the first spike, which compiled an object whose graph stayed empty; lines dated 2026-10-30 come from the bridge probe, which compiled a real graph.
 
 ## Create the object
 
@@ -22,12 +22,13 @@ Target: Unreal Engine 5.8 on Windows. The probe in [examples/unreal/mutable](../
 ## The timeout rule
 
 - [general] Give every compile a wall-clock limit and poll against it, and give the editor or commandlet process that runs it a limit a little longer than the compile's. The probe default is 240 seconds for the compile. A timeout is a recorded result and is not retried; stop the process by its project path, never by name alone.
-- [general] The empty object's half second says nothing about a real graph. Forum reports, not run here, describe a compile that hangs when the graph holds Extension Data constants and one that needs very large memory with many morph targets and child objects. Treat the limit as the protection, not the estimate.
+- [general] The half second of the small graphs says nothing about a large one. Forum reports, not run here, describe a compile that hangs when the graph holds Extension Data constants and one that needs very large memory with many morph targets and child objects. Treat the limit as the protection, not the estimate.
 - [general] Compile in a throwaway process when possible: a hung compile then costs a process and not an open editor session of yours. Keep the compiled object out of source control; the project's `.uasset` files are generated.
 
 ## What this does not give you
 
-- [tested] 2026-10-29: the compiled object had 0 parameters and 0 components, because no node could be added to its graph from Python (build/compile invalidated as run). Compiling a graph with real options was not run. See [Authoring the graph](unreal-mutable-graph.md).
+- [tested] 2026-10-29: the compiled object had 0 parameters and 0 components, because no node could be added to its graph from Python alone. See [Authoring the graph](unreal-mutable-graph.md).
+- [tested] 2026-10-30, bridge probe runs 1 and 2: with the bridge's nodes and links the compile ran asynchronously in 0.52 s in the rendering editor with `compiled` true, 0 errors and 0 warnings, and read back 1 parameter `Hat` (INT) with options `Cap|Tall` and 1 component. The graph was three small meshes; the cost of a large graph was not run.
 - [general] Compile options such as `optimization_level` and `texture_compression` change cost and quality. Their effect was not measured.
 
 ## Related

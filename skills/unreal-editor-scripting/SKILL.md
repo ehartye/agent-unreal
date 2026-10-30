@@ -15,6 +15,7 @@ Unreal 5.8 on Windows. Pick the feature from the goal, then read that system's r
 | Script the editor from Python: run modes, cameras, input, process cleanup | [Editor Python](references/unreal-editor-python.md) |
 | Build a whole map from Python: recreate a map, set properties, make materials and meshes, run stages, trace to the ground | [Editor Python: maps, materials and meshes](references/unreal-editor-python-maps.md) |
 | Add what Python lacks, such as Landscape creation, with an editor C++ module | [Python to C++ bridge](references/unreal-python-cpp-bridge.md) |
+| Add a node to a Mutable Customizable Object's graph or link a pin from Python (bridge functions) | [Mutable graph bridge](references/unreal-mutable-bridge.md) |
 | Attach a Landmass brush to a Landscape edit layer from Python (bridge functions) | [Landscape bridge brushes](references/unreal-landscape-bridge-brushes.md) |
 | Read back what was saved: a callable's signature, a saved Niagara system, saved meshes and materials | [Editor Python](references/unreal-editor-python.md#read-back-what-was-saved), [editor_probes](../../examples/unreal/editor_probes/README.md) |
 

@@ -1,5 +1,5 @@
-"""Mutable probe, build half (question 1): import the parts, create a Customizable Object, try to reach its graph, compile it under a limit.
-Prepared 2026-10-29.
+"""Mutable probe, build half: import the parts, create a Customizable Object, show what Python alone reaches in its graph, compile it under a limit.
+Prepared 2026-10-29, updated 2026-10-30 (the graph step is the premise of the bridge: what a script cannot do without it).
 
   UnrealEditor.exe Project.uproject -RenderOffScreen -ExecCmds="py <abs path to this file>" -abslog=<log> -notraceserver -nosplash -unattended -nosound
 Environment: MU_PROBE_DIR, MU_REPORT, MU_CO, MU_COMPILE_TIMEOUT_S, MU_COMPILE_MODE (see mu_probe_common.py), MU_PARTS (JSON list of {"id", "path"}).

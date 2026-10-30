@@ -1,5 +1,5 @@
-"""Mutable probe, headless half (question 3): load the saved Customizable Object and compile it in a commandlet.
-Prepared 2026-10-29.
+"""Mutable probe, headless half (question 4): load the saved Customizable Object and compile it in a commandlet.
+Prepared 2026-10-29, updated 2026-10-30 (it reports the graph that reloads from disk).
 
   UnrealEditor-Cmd.exe Project.uproject -run=pythonscript -script=<abs path to this file> -abslog=<log> -unattended -nullrhi -nosplash -nopause -nosound -notraceserver
 Environment: MU_PROBE_DIR, MU_REPORT, MU_CO, MU_COMPILE_TIMEOUT_S (see mu_probe_common.py). The compile is blocking here (MU_COMPILE_MODE=sync): a commandlet
@@ -21,7 +21,10 @@ probe.write()   # the report exists from the start, so a later hang still leaves
 co = None
 try:
     co = c.eal.load_asset(c.CO_PATH)
-    probe.step("load", loaded=co is not None, is_compiled_on_load=bool(co.is_compiled()) if co else None, parameters_on_load=int(co.get_parameter_count()) if co else None)
+    bridge = getattr(unreal, "MutableBridgeLibrary", None)       # the bridge module loads in the commandlet too; it reads back the graph that was saved
+    nodes = len(list(bridge.get_graph_nodes(co))) if (bridge is not None and co is not None) else None
+    probe.step("load", loaded=co is not None, is_compiled_on_load=bool(co.is_compiled()) if co else None, parameters_on_load=int(co.get_parameter_count()) if co else None,
+               bridge_present=bridge is not None, graph_nodes_on_load=nodes)
 except Exception:
     probe.step("load", loaded=False, error=traceback.format_exc()[-600:])
 probe.write()

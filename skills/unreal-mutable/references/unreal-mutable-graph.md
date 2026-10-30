@@ -1,6 +1,6 @@
-# Authoring the Customizable Object graph: what Python cannot do, and the routes around it
+# Authoring the Customizable Object graph: what Python cannot do, and the bridge that does
 
-Target: Unreal Engine 5.8 on Windows. The graph is where parts become swappable options: a base node, an object group, and a mesh node per part, linked by pins. The [mutable probe](../../../examples/unreal/mutable/README.md) tried every way into it from editor Python on 2026-10-29. This is the reference for the result that decides the skill: a script alone cannot build the graph.
+Target: Unreal Engine 5.8 on Windows. The graph is where parts become swappable options: a base node, an object group, and a mesh node per part, linked by pins. The [mutable probe](../../../examples/unreal/mutable/README.md) tried every way into it from editor Python on 2026-10-29. A second spike on 2026-10-30 added an editor C++ bridge and built a graph that way. This is the reference for both results: a script alone cannot build the graph, and a script with the bridge can.
 
 ## What Python reached
 
@@ -13,25 +13,27 @@ Target: Unreal Engine 5.8 on Windows. The graph is where parts become swappable 
 - [tested] 2026-10-29: the result was an object with 0 parameters and 0 components, and an Instance of it drew nothing. Runs 1 and 2 reached this result and run 3 repeated it.
 - [tested] 2026-10-29: 144 `CustomizableObjectNode*` and `CONode*` classes appear in the `unreal` module; the five sampled (SkeletalMesh, Object, ObjectGroup, SkeletalMeshParameter, EnumParameter) add no member over `EdGraphNode`.
 
-## Routes that remain
+## The bridge route
 
-| Route | What it needs | Status |
+- [tested] 2026-10-30, runs 1 and 2 of the bridge probe: the editor module `MutableBridge` added nodes by class name and linked pins through the graph's own schema, and the graph read back with the nodes and links in place. Module, calls and the messages are in [Mutable graph bridge](../../unreal-editor-scripting/references/unreal-mutable-bridge.md).
+- [tested] 2026-10-30, runs 1 and 2: on a fresh object the bridge added a skeletal-mesh node and a mesh-section node and linked one to the other (1 link, 3 nodes with the base node), and 11 invalid requests were refused with a reason and the graph unchanged.
+- [tested] 2026-10-30, run 2: a swappable-parts graph of 19 added nodes and 27 added links compiled with one parameter `Hat`, options `Cap` and `Tall`, and one component. The base object takes a component node, then a skeletal-mesh object-make node, then a skeletal-mesh make node whose `LOD 0` pin takes one mesh-section node per mesh pin of each skeletal-mesh node; an enum parameter feeds one switch per accessory section slot.
+- [tested] 2026-10-30, run 1: the first attempt linked only section 0 of each part (11 nodes, 11 links), so its frames showed one section of each part. Run 2 linked every section (the body has 6, each hat 2) and its frames showed the whole figure.
+- [tested] 2026-10-30, runs 1 and 2: the switch was added with `PinType` `material` (adding one without it was not run); linking the enum to its `Switch Parameter` input then gave it one input per value.
+- [general] Other node kinds, such as materials, textures and modifiers, were not added. Read their class and pin names from the installed headers and from `get_node_pins`, as the runs did.
+
+| Other route | What it needs | Status |
 |---|---|---|
-| Author the object in the editor, once, by hand | a person in a rendering editor; the Mutable Sample's Showcase level shows finished graphs | [documented] by Epic; the probe has not loaded one |
-| An editor C++ bridge exposing add-node, link-pins by name and reconstruct-pins to Python | a small editor module like the plugin's other bridges | [general] not built, so not tested |
+| Author the object in the editor, once, by hand | a person in a rendering editor; the Mutable Sample's Showcase level shows finished graphs | [documented] by Epic; the probes have not loaded one |
 | Duplicate an object from the sample or from a hand-authored one and change it | Python reaches `set_editor_property` on existing node properties | [general] not run |
-
-- [general] The bridge is the route that keeps an agent in the loop. Build it as the plugin does elsewhere: [Python to C++ bridge](../../unreal-editor-scripting/references/unreal-python-cpp-bridge.md) for the module layout and build loop, and [AnimGraph from C++](../../unreal-animation/references/unreal-animgraph-from-cpp.md) for the same gap on another graph, where `FGraphNodeCreator` created a node, its pins were connected with the graph schema's `TryCreateConnection`, and the asset was marked structurally modified and compiled. The runnable counterpart is [anim_bridge](../../../examples/unreal/anim_bridge/README.md).
-- [general] A Mutable bridge would follow the same shape: three statics taking the object, a node class and a name, then two pins and a node to rebuild. The node classes, their pin names and the Mutable editor module's dependency name have to be read from the installed headers; none was verified.
-- [general] With the bridge, the same probe groups can run unchanged, because build, variants and headless judge only the object's parameters, frames and compile.
 
 ## Parts the graph will need
 
 - [tested] 2026-10-29: three agent-meshes GLBs (one fixed body and two hats bound to the head bone) imported as one skeletal mesh each, on three separate skeletons (`person_body_Skeleton`, `hat_cap_Skeleton`, `hat_tall_Skeleton`). See [Mutable overview](unreal-mutable-overview.md).
-- [general] Whether the graph needs the parts on one shared skeleton was not run; import them on one skeleton if a first graph rejects them.
+- [tested] 2026-10-30, runs 1 and 2: the three parts were imported each with its own skeleton, and the graph compiled and drew them; a shared skeleton was not run, so whether a graph needs one is not established. Import them on one skeleton if a first graph rejects them.
 - [documented] Epic's 5.8 release notes and the updated Mutable sample: in 5.8 the graph can work at skeletal-mesh level with the Skeletal Mesh pin, so a part is a skeletal mesh rather than a per-section assembly.
 - [general] Name parts differently from bones: agent-meshes refuses a part and a bone with one name.
 
 ## Decide
 
-- [general] If the task is only a quick look at what Mutable does, open Epic's sample and read its objects. If the task is to build many objects by script, build the bridge first; hand-authoring does not scale and Python alone yields an empty object.
+- [general] To build many objects by script, use the bridge; hand-authoring does not scale and Python alone yields an empty object. For a quick look at what Mutable does, open Epic's sample and read its objects.

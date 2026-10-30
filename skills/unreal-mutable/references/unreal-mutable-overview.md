@@ -7,7 +7,7 @@ Target: Unreal Engine 5.8 on Windows. Mutable is Epic's real-time character cust
 - [documented] A **Customizable Object** is the authored asset: a graph of nodes that name parts (skeletal meshes, materials, textures, clothing, hair), groups of options and the parameters that choose between them. It is edited in the editor and compiled.
 - [documented] Epic's 5.8 release notes: a **dataless** Customizable Object, new in 5.8, evaluates parameter inputs at runtime instead of compile time, for faster iteration, graph reuse and patching.
 - [general] **Compiling** turns the graph into data Mutable evaluates at runtime, and it is an editor-time step: a packaged game assembles instances and does not compile. No page the wiki holds states this, and it was not run.
-- [general] An **Instance** (`CustomizableObjectInstance`) holds one choice of parameter values for an object; setting a parameter and updating the instance is expected to build the skeletal mesh and materials for that choice. This was not run: the instance drew nothing because the object had no parameters.
+- [tested] 2026-10-30, bridge probe run 2: an **Instance** (`CustomizableObjectInstance`) of a compiled object with the parameter `Hat` was set to `Cap` and then `Tall`, read both back, reported `has_any_skeletal_mesh` true each time, and drew a different part for each. The 2026-10-29 spike's instance drew nothing because its object had no parameters.
 - [documented] An **actor component** shows the result: `CustomizableSkeletalComponent` on a `CustomizableSkeletalMeshActor`, or `CustomizableObjectInstanceUsage`, which Epic's 5.8 upgrade notes recommend over the wrapper component.
 - [tested] 2026-10-29: the Python names found on the installed plugin were `CustomizableObjectEditorFunctionLibrary.new_customizable_object`, `CompileParams`, `CustomizableObject.compile`, `create_instance`, `set_int_parameter_selected_option`, `get_int_parameter_selected_option`, `update_skeletal_mesh_async`, `has_any_skeletal_mesh`, and the actor and component classes. The installed plugin shipped no Python stubs and no Python example scripts, only binaries, config, one clip-mesh material and source.
 
@@ -30,4 +30,4 @@ Target: Unreal Engine 5.8 on Windows. Mutable is Epic's real-time character cust
 
 ## Next
 
-- [general] [Build and compile](unreal-mutable-build-compile.md) for what a script can create; [Authoring the graph](unreal-mutable-graph.md) for what it cannot; [Known bugs and open questions](unreal-mutable-bugs.md) for what is not established.
+- [general] [Build and compile](unreal-mutable-build-compile.md) for what a script can create; [Authoring the graph](unreal-mutable-graph.md) for what Python cannot do alone and the bridge that does; [Known bugs and open questions](unreal-mutable-bugs.md) for what is not established.
