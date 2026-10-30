@@ -1,6 +1,6 @@
 # UMG, MVVM and Common UI in 5.8: what they are and their status
 
-Target: Unreal Engine 5.8 on Windows. Run A and run B (both 2026-10-30; [the probe](../../../examples/unreal/umg/README.md)) started a rendering editor with `-RenderOffScreen -unattended` in a throwaway project with Epic's Unreal MCP, AllToolsets, UMG and MVVM toolset plugins enabled, and read the MCP server's toolset list.
+Target: Unreal Engine 5.8 on Windows. Run A and run B (both 2026-10-30, with later runs named A-Q1 to A-Q4 below; [the probe](../../../examples/unreal/umg/README.md)) started a rendering editor with `-RenderOffScreen -unattended` in a throwaway project with Epic's Unreal MCP, AllToolsets, UMG and MVVM toolset plugins enabled, and read the MCP server's toolset list.
 
 ## What each one is
 
@@ -25,9 +25,15 @@ Target: Unreal Engine 5.8 on Windows. Run A and run B (both 2026-10-30; [the pro
 - [tested] Runs A and B: none of the 53 toolsets was for widget animations. The list held eight `animation_toolset.*` toolsets for Sequencer and Control Rig, and nothing named for a widget animation. The list also held `SlateInspectorToolset.SlateInspectorToolset`, `ConfigSettingsToolset.ConfigSettingsToolset` and the object, asset, Blueprint and data table toolsets that [Scripting a widget](unreal-umg-script-widget.md) and [Common UI setup](unreal-umg-common-ui.md) use.
 - [general] A UEFN editor's MCP server was reported on 2026-10-29 to list a widget-animation toolset. That is a different editor, was not re-run, and does not change the Unreal result above; for UEFN see [uefn](../../uefn/SKILL.md).
 
+## What the later runs showed
+
+- [tested] A-Q1 run 1, 2026-10-30: the eight `animation_toolset.*` toolsets were described. Tool counts: Control Rig 44, Sequencer 140, keyframing 22, Control Rig in Sequencer 72, outliner 18, conditions 9, custom bindings 8, import and export 6. The Sequencer toolset's own description opens "Core tools for creating and editing Level Sequences in Sequencer", and no tool of the eight has "widget" or "umg" in its name. What the later runs did with them is in [MVVM and widget animation](unreal-umg-mvvm-animation.md).
+- [tested] A-Q2 runs 1 to 3: the MVVM toolset's tools were called, and a binding from a view model property to a text block was created and read back. The calls and refusals are in [MVVM and widget animation](unreal-umg-mvvm-animation.md).
+- [tested] A-Q4 run 2: `SlateInspectorToolset.SlateInspectorToolset` was described. It opens "Playwright-style Slate UI automation toolset", lists 14 tools (`Windows`, `WaitFor`, `Unobserve`, `Type`, `Snapshot`, `SelectOption`, `Screenshot`, `PressKey`, `Observe`, `ListObservers`, `Hover`, `FillForm`, `Drag`, `Click`) and says its input uses direct Slate event calls because the Automation Driver's synchronous API deadlocks on the game thread. `Observe` gives a window deep coverage and `Snapshot` returns the element references the other tools take. What it did to a Common button is in [Common UI setup](unreal-umg-common-ui.md).
+
 ## What this does not establish
 
-- [tested] Run B: only the UMG toolset was called. The MVVM toolset was listed and described, and none of its tools was called.
-- [general] Authoring a widget animation from a script was not run; no tool in either listed toolset is named for it, so a Sequencer toolset or another route would be the next experiment.
+- [tested] A-Q2 runs 1 to 3: `RemoveWidgetViewBinding` and `ListConversionFunctions` were not called; the other seven MVVM tools were.
+- [tested] A-Q1 runs 1 to 3: no widget animation was authored; the cause and the next experiment are in [MVVM and widget animation](unreal-umg-mvvm-animation.md).
 - [general] Whether the same toolset list appears in an editor without the AllToolsets plugin, or in a `-nullrhi` editor or a commandlet, was not run.
 - [general] Epic's MCP server runs inside the editor process and listens on loopback; the editor's own scripting routes are in [unreal-editor-scripting](../../unreal-editor-scripting/SKILL.md).

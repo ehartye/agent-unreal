@@ -1,6 +1,6 @@
 # Scripting a widget: Epic's MCP toolsets, then a running instance
 
-Target: Unreal Engine 5.8 on Windows. Everything marked tested was run in run B on 2026-10-30 (the full probe run, [the probe](../../../examples/unreal/umg/README.md)), in a rendering editor started with `-RenderOffScreen -unattended` in a throwaway project, unless it names run A. The route that worked is Epic's MCP server driven from a script over loopback. No other authoring route was run.
+Target: Unreal Engine 5.8 on Windows. Everything marked tested was run in run B on 2026-10-30 (the full probe run, [the probe](../../../examples/unreal/umg/README.md)), in a rendering editor started with `-RenderOffScreen -unattended` in a throwaway project, unless it names run A (the later MVVM and animation runs are in [MVVM and widget animation](unreal-umg-mvvm-animation.md)). The route that worked is Epic's MCP server driven from a script over loopback. No other authoring route was run.
 
 ## Start the server and the session
 
@@ -38,5 +38,6 @@ Target: Unreal Engine 5.8 on Windows. Everything marked tested was run in run B 
 ## Not established
 
 - [general] A widget built from Python alone, without the MCP server, was not run, so this skill cannot say that route works or fails.
-- [tested] Run B: `BindToEventProperty`, named slots, `MoveWidget`, the replace-widget tools, UI components, fonts beyond the size, a texture on the image (the image was tinted only) and every MVVM tool were not called.
+- [tested] Run B: `BindToEventProperty`, named slots, `MoveWidget`, the replace-widget tools, UI components, fonts beyond the size and a texture on the image (the image was tinted only) were not called.
+- [tested] MVVM and widget animation: see [MVVM and widget animation](unreal-umg-mvvm-animation.md) for what A-Q1 and A-Q2 ran and did not run.
 - [general] Whether the toolsets run the same in a `-nullrhi` editor or a commandlet was not run; the editor scripting run modes are in [unreal-editor-scripting](../../unreal-editor-scripting/SKILL.md).

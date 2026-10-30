@@ -11,9 +11,13 @@ import {
   GROUPS, PHASES, planPhases, parseProbeOptions, looksLikeMemoryFailure, takeSseEvents, decodeToolResult, returnValue, collectToolsetNames, collectTools, hasTool,
   getCI, setCI, readVec2, readColor, vec2Like, colorLike, textLike, readText, regionCount, changedInRegion, judgeFrames, judgeRoutes, shotTable, shotNames,
   evaluateProbes, summarize, decodePng, LAYOUT, PROBE_TEXT, UMG_CORE_TOOLS, isBright, isRed,
+  ANIMATION_ASSET, MVVM_ASSET, MVVM_NAMES, summarizeAnimationTree, routeObserved, USAGE, viewportClientsFromLog, runningViewportClass, findSlateRef,
 } from './umg-probe-checks.mjs';
 import { McpClient, waitForServer } from './umg-mcp.mjs';
-import { baseSession, commonUiSession, partialFrom } from './umg-session.mjs';
+import { baseSession, commonUiSession, readbackSession, slateSession, fillArgs, partialFrom } from './umg-session.mjs';
+import { pyCall, holdLoop, answerRequest } from './umg-hold.mjs';
+import { mkdtempSync, mkdirSync, writeFileSync, readFileSync as readFile, existsSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 
 const here = import.meta.dirname;
 const passed = (checks) => checks.every((c) => c.pass);
@@ -61,6 +65,13 @@ function goodSession() {
       { step: 'properties', errors: [] },
       { step: 'compile', returned: true },
       { step: 'save', returned: true },
+      { step: 'animation_toolsets', count: 8, toolsets: Array.from({ length: 8 }, (_, i) => ({ name: `animation_toolset.part${i}.Toolset`, tool_count: 3, tools: ['A', 'B', 'C'], raw_length: 900 })) },
+      { step: 'animation_blueprint', created: true, compiled: true, saved: true },
+      { step: 'animation_attempt', calls: [{ tool: 'animation_toolset.sequencer.SequencerToolset.AddTrack', ok: true }, { tool: 'animation_toolset.sequencer.SequencerToolset.AddKey', ok: true }], track_added: true, key_added: true },
+      { step: 'mvvm_blueprint', created: true, compiled: true, saved: true },
+      { step: 'mvvm_calls', view_model_created: true, property_added: true, added_to_widget: true, binding_created: true, calls: [{ tool: 'MVVMToolset.CreateViewModel', ok: true }] },
+      { step: 'mvvm_lists', view_model_listed: true, widget_view_model_listed: true, binding_listed: true, excerpt: 'listed' },
+      { step: 'mvvm_compile', returned: true, saved: true },
       { step: 'read_back', widget_count: 5, widgets, text_value: PROBE_TEXT, button_color: [1, 0, 0, 1], image_color: [0, 1, 0, 1],
         anchors: Object.fromEntries(Object.entries(LAYOUT).map(([k, b]) => [k, { min: b.min, max: b.max }])), errors: [] },
     ],
@@ -79,7 +90,12 @@ function goodStage(extra = {}) {
   };
 }
 const goodImages = () => ({ umg_base_showui: without(), umg_widget_showui: withWidget(), umg_base_hires: without(), umg_widget_hires: withWidget() });
-const goodBase = () => ({ session: goodSession(), capture: goodStage(), images: goodImages() });
+const goodReadback = () => ({
+  probe: 'readback', project: 'base',
+  steps: [{ step: 'animation_readback', animation_found: true, animations: ['/Game/UI/WBP_ProbeAnim.WBP_ProbeAnim:ProbeFade'], track_count: 1, key_count: 2 },
+    { step: 'mvvm_readback', binding_present: true, view_model_present: true, excerpt: 'ScoreText -> ProbeText' }],
+});
+const goodBase = () => ({ session: goodSession(), capture: goodStage(), readback: goodReadback(), images: goodImages() });
 
 function goodCommonSession() {
   return {
@@ -101,7 +117,23 @@ function goodCommonStage() {
     },
   });
 }
-const goodCommon = () => ({ session: goodCommonSession(), capture: goodCommonStage(), images: goodImages() });
+const playShots = () => [{ label: 'before', route: 'showui', stem: 'umgi_before_showui' }, { label: 'after', route: 'showui', stem: 'umgi_after_showui' }];
+const inputRoute = (route, kind, extra = {}) => ({ route, kind, tried: true, delivered: false, observed: false, detail: 'nothing happened', ...extra });
+function goodPlay() {
+  return {
+    probe: 'stage', mode: 'input',
+    steps: {
+      settings: { engine: { values: { GameViewportClientClassName: '/Script/CommonUI.CommonGameViewportClient' } } },
+      viewport_client: { routes: [{ route: 'viewport client object, get_class()', value: '/Script/CommonUI.CommonGameViewportClient' }], running_class: 'CommonGameViewportClient' },
+      input: { routes: [inputRoute('control: OnButtonBaseClicked.broadcast() on the Common button', 'control', { delivered: true, observed: true }), inputRoute('player controller input_key(Enter)', 'input', { delivered: true, observed: true })] },
+    },
+    shots: playShots(), events: [], log_viewport: ['LogPython: [umg_stage] viewport_client class=CommonGameViewportClient path=/Script/CommonUI.CommonGameViewportClient'],
+    mcp: { steps: [{ step: 'slate_describe', toolset: 'SlateInspectorToolset.SlateInspectorToolset', tool_count: 4, tools: ['GetWidgets'], raw_length: 500 }, { step: 'slate_routes', routes: [inputRoute('slate inspector GetWidgets', 'read', { tried: true })] },
+      { step: 'slate_input', routes: [inputRoute('control: slate inspector Click on the editor Content Drawer button (b16)', 'control', { delivered: true, observed: true })] }] },
+  };
+}
+const goodPlayImages = () => ({ umgi_before_showui: without(), umgi_after_showui: without() });
+const goodCommon = () => ({ session: goodCommonSession(), capture: goodCommonStage(), play: goodPlay(), images: goodImages(), playImages: goodPlayImages() });
 const everything = () => evaluateProbes({ groups: GROUPS, reports: { base: goodBase(), commonui: goodCommon() } });
 const mutateSession = (fn) => { const base = goodBase(); fn(base.session.steps, base); return base; };
 const setStep = (steps, name, patch) => Object.assign(steps.find((s) => s.step === name), patch);
@@ -277,6 +309,136 @@ test('commonui: each required piece has its own check and the unset ones are lis
   assert.deepEqual(failing(evaluateProbes({ groups: ['commonui'], reports: { commonui: dark } })), ['a saved frame shows the Common UI widget']);
 });
 
+
+// ---------------------------------------------------------------- animation, mvvm, viewport, input
+const only = (group, reports) => evaluateProbes({ groups: [group], reports });
+
+test('animation: the descriptions, the track, the key and the fresh read-back each have a check', () => {
+  const run = (fn) => { const base = goodBase(); fn(base.session.steps, base.readback.steps); return failing(only('animation', { base })); };
+  const stepOf = (steps, name) => steps.find((x) => x.step === name);
+  assert.deepEqual(run(() => {}), []);
+  assert.deepEqual(run((s) => { stepOf(s, 'animation_toolsets').toolsets.length = 7; }), ['the animation toolsets are described and each description is saved']);
+  assert.deepEqual(run((s) => { stepOf(s, 'animation_toolsets').toolsets[3].raw_length = 0; }), ['the animation toolsets are described and each description is saved']);
+  assert.deepEqual(run((s) => { Object.assign(stepOf(s, 'animation_attempt'), { track_added: false, key_added: false }); }),
+    ['a track is added to a widget animation of a saved Widget Blueprint through the described tools', 'a key on a widget property is added through the described tools']);
+  assert.deepEqual(run((s) => { stepOf(s, 'animation_attempt').key_added = false; }), ['a key on a widget property is added through the described tools']);
+  assert.deepEqual(run((s, r) => { stepOf(r, 'animation_readback').key_count = 0; }), ['a fresh editor reads the animation back from the saved Widget Blueprint with the track and the key']);
+  assert.deepEqual(run((s, r) => { stepOf(r, 'animation_readback').animation_found = false; }), ['a fresh editor reads the animation back from the saved Widget Blueprint with the track and the key']);
+  const none = goodBase();
+  Object.assign(none.session.steps.find((x) => x.step === 'animation_attempt'), { track_added: false, key_added: false, calls: [{ tool: 'animation_toolset.sequencer.SequencerToolset.AddTrack', ok: false, error: 'the sequence is not a level sequence' }] });
+  assert.match(only('animation', { base: none }).find((c) => c.name.startsWith('a track is added')).detail, /FAILED: the sequence is not a level sequence/, 'the failing call and its message are in the detail');
+});
+
+test('animation: tracks, keys and sections are counted in a property tree and nothing is counted in a bare reference', () => {
+  const tree = [{ MovieScene: { Tracks: [{ Sections: [{ Channels: [{ Times: [0, 1, 2] }] }] }], ObjectBindings: [{ Tracks: [{ Sections: [{}, {}] }] }] } }, { refPath: '/Game/X.X' }];
+  assert.deepEqual(summarizeAnimationTree(tree), { tracks: 2, keys: 3, sections: 3 });
+  assert.deepEqual(summarizeAnimationTree({ Animations: [{ refPath: '/Game/UI/WBP.WBP:ProbeFade' }] }), { tracks: 0, keys: 0, sections: 0 });
+  assert.deepEqual(summarizeAnimationTree(undefined), { tracks: 0, keys: 0, sections: 0 });
+});
+
+test('mvvm: each call, the three List tools, the compile and the fresh read-back have a check, and a failing call is quoted', () => {
+  const run = (fn) => { const base = goodBase(); fn(base.session.steps, base.readback.steps); return failing(only('mvvm', { base })); };
+  const stepOf = (steps, name) => steps.find((x) => x.step === name);
+  assert.deepEqual(run(() => {}), []);
+  assert.deepEqual(run((s) => { stepOf(s, 'mvvm_calls').property_added = false; }), ['a view model with a property is created through the MVVM toolset']);
+  assert.deepEqual(run((s) => { stepOf(s, 'mvvm_calls').added_to_widget = false; }), ['the view model is added to the widget']);
+  assert.deepEqual(run((s) => { stepOf(s, 'mvvm_calls').binding_created = false; }), ['a binding from the property to the text block is created']);
+  assert.deepEqual(run((s) => { stepOf(s, 'mvvm_lists').binding_listed = false; }), ['ListViewModels, ListWidgetViewModels and ListWidgetViewBindings read the view model and the binding back']);
+  assert.deepEqual(run((s) => { stepOf(s, 'mvvm_compile').returned = false; }), ['the Widget Blueprint compiles with no error after the binding']);
+  assert.deepEqual(run((s, r) => { stepOf(r, 'mvvm_readback').binding_present = false; }), ['a fresh editor loads the saved Widget Blueprint with the binding present']);
+  const failed = goodBase();
+  Object.assign(failed.session.steps.find((x) => x.step === 'mvvm_calls'), { view_model_created: false, calls: [{ tool: 'MVVMToolset.MVVMToolset.CreateViewModel', ok: false, error: 'parentClass is required' }] });
+  assert.match(only('mvvm', { base: failed }).find((c) => c.name.startsWith('a view model with a property')).detail, /CreateViewModel FAILED: parentClass is required/);
+});
+
+test('viewport: the running class is read, logged, and compared with the saved setting', () => {
+  const run = (fn) => { const ui = goodCommon(); fn(ui.play); return only('viewport', { commonui: ui }); };
+  assert.equal(passed(run(() => {})), true);
+  const other = run((p) => { p.steps.viewport_client.running_class = 'GameViewportClient'; });
+  assert.deepEqual(failing(other), ['the running class equals the saved Game Viewport Client Class']);
+  assert.match(other.find((c) => !c.pass).detail, /running "GameViewportClient"/, 'the class that ran is in the detail');
+  assert.deepEqual(failing(run((p) => { p.steps.viewport_client.running_class = null; })), ['the class of the running game viewport client is read in the Play-In-Editor session', 'the running class equals the saved Game Viewport Client Class']);
+  assert.deepEqual(failing(run((p) => { p.log_viewport = ['GameViewportClient_0']; })), ['the session log holds the class the stage script logged']);
+  assert.deepEqual(failing(run((p) => { p.steps.settings.engine.values.GameViewportClientClassName = ''; })), ['the running class equals the saved Game Viewport Client Class']);
+});
+
+test('input: a route counts only when an input (not a control) changed something observable, and every route is listed', () => {
+  const run = (fn, images) => { const ui = goodCommon(); fn(ui.play); if (images) ui.playImages = images; return only('input', { commonui: ui }); };
+  assert.equal(passed(run(() => {})), true);
+  const control = (p) => p.steps.input.routes.find((r) => r.kind === 'control' && /broadcast/.test(r.route));
+  const inputR = (p) => p.steps.input.routes.find((r) => r.kind === 'input');
+  const none = run((p) => { inputR(p).observed = false; });
+  assert.deepEqual(failing(none), ['a simulated key or click delivered to the active Common button changes an observable state']);
+  assert.match(none.find((c) => !c.pass).detail, /no route changed the button/);
+  assert.deepEqual(failing(run((p) => { control(p).observed = false; })), ['a control shows that the observable is wired']);
+  assert.deepEqual(failing(run((p) => { p.mcp.steps.find((x) => x.step === 'slate_input').routes[0].observed = false; })), ['a Slate inspector click reaches an editor widget (control)']);
+  const onlyControl = run((p) => { inputR(p).observed = false; inputR(p).delivered = false; });
+  assert.equal(onlyControl.find((c) => c.name.startsWith('a simulated key')).pass, false, 'the control route alone is not a simulated input');
+  assert.deepEqual(failing(run((p) => { p.mcp.steps[0] = { step: 'slate_describe', error: 'the Slate inspector toolset is not listed' }; })), ['the Slate inspector toolset is described before any route uses it']);
+  assert.deepEqual(failing(run((p) => { p.steps.input.routes = [control(p)]; p.mcp.steps[1].routes = []; p.mcp.steps[2].routes = []; })), ['every route tried is recorded with its result', 'a Slate inspector click reaches an editor widget (control)', 'a simulated key or click delivered to the active Common button changes an observable state']);
+  // a delivered key with no log line or state does not count, even when the frames differ (the editor layout can change between them: A-Q4 run 3)
+  const framed = run((p) => { inputR(p).observed = false; inputR(p).delivered = true; }, { umgi_before_showui: without(), umgi_after_showui: withWidget() });
+  assert.deepEqual(failing(framed), ['a simulated key or click delivered to the active Common button changes an observable state']);
+  assert.match(framed.find((c) => !c.pass).detail, /frame pixels that differ before and after [1-9]\d* \(recorded, not counted/);
+  assert.equal(routeObserved({ kind: 'input', delivered: true, observed: false }), false);
+  assert.equal(routeObserved({ kind: 'input', delivered: true, observed: true }), true);
+  assert.equal(routeObserved({ kind: 'precondition', delivered: true, observed: true }), false);
+  assert.equal(routeObserved({ kind: 'control', delivered: true, observed: true }), false);
+});
+
+test('a ref is found in a Slate snapshot by the line it labels', () => {
+  const snapshot = ['window "Editor" [pos=0,0 size=1280,720] [ref=w1]', '  text "COMMON UI" [pos=308,178 size=797,173] [ref=x19]', '  generic "GO" [pos=359,365 size=598,173] [ref=g5]', '    text "GO" [pos=367,367 size=566,166] [ref=x20]', '  button "Content Drawer" [pos=3,690 size=126,28] [ref=b16]'].join('\n');
+  assert.equal(findSlateRef(snapshot, /generic "GO"/), 'g5');
+  assert.equal(findSlateRef(snapshot, /text "GO"/), 'x20');
+  assert.equal(findSlateRef(snapshot, /button "Content Drawer"/), 'b16');
+  assert.equal(findSlateRef(snapshot, /nothing/), undefined);
+  assert.equal(findSlateRef(undefined, /x/), undefined);
+});
+
+test('fillArgs names only the parameters a tool describes and lists the required ones it could not fill', () => {
+  const tool = { name: 'X.Create', short: 'Create', params: ['folderPath', 'assetName', 'extra'], required: ['folderPath', 'extra'] };
+  const { args, unfilled } = fillArgs(tool, [[/folder/i, '/Game/UI'], [/asset.?name/i, 'VM'], [/nothing/i, 1]]);
+  assert.deepEqual(args, { folderPath: '/Game/UI', assetName: 'VM' });
+  assert.deepEqual(unfilled, ['extra']);
+  assert.deepEqual(fillArgs(undefined, []).args, {});
+});
+
+test('options: --hold is a flag and the usage line shows it', () => {
+  assert.equal(parseProbeOptions(['--engine', 'E', '--hold']).hold, true);
+  assert.equal(parseProbeOptions(['--engine', 'E']).hold, false);
+  assert.ok(USAGE.includes('--hold'));
+});
+
+test('the viewport client objects are read from the engine object listing, and two different classes are not guessed between', () => {
+  const lines = [
+    '[2026.10.30-16.49.42:855][872]Obj List: class=GameViewportClient',
+    '[2026.10.30-16.49.42:860][872]                       CommonGameViewportClient /Engine/Transient.UnrealEdEngine_0:CommonGameViewportClient_0      1.27       1.27       0.00',
+    '[2026.10.30-16.49.42:860][872]                       CommonGameViewportClient        1       1.27       1.27       0.00',
+  ];
+  assert.deepEqual(viewportClientsFromLog(lines), [{ cls: 'CommonGameViewportClient', path: '/Engine/Transient.UnrealEdEngine_0:CommonGameViewportClient_0' }]);
+  assert.deepEqual(runningViewportClass({ log_viewport: lines }), { cls: 'CommonGameViewportClient', how: 'listed by the engine (obj list class=GameViewportClient) in the session log' });
+  assert.equal(runningViewportClass({ log_viewport: [...lines, '   GameViewportClient /Engine/Transient.UnrealEdEngine_0:GameViewportClient_0 1 1 1'] }).cls, null);
+  assert.equal(runningViewportClass({ steps: { viewport_client: { running_class: 'GameViewportClient' } }, log_viewport: lines }).cls, 'GameViewportClient', 'the stage script own read comes first');
+  assert.deepEqual(viewportClientsFromLog(undefined), []);
+});
+
+test('the usage line lists every group, including the four added for animation, MVVM, the viewport client and input', () => {
+  for (const group of ['animation', 'mvvm', 'viewport', 'input']) { assert.ok(GROUPS.includes(group)); assert.ok(USAGE.includes(group)); }
+  assert.deepEqual(parseProbeOptions(['--engine', 'E', '--only', 'input,animation']).groups, ['animation', 'input']);
+});
+
+test('phases: animation and mvvm add a fresh-editor read-back, viewport and input share the one play phase after the Common UI session', () => {
+  assert.deepEqual(planPhases(['animation']).map((p) => p.name), ['session', 'readback']);
+  assert.deepEqual(planPhases(['mvvm', 'animation']).map((p) => p.name), ['session', 'readback']);
+  assert.deepEqual(planPhases(['viewport']).map((p) => p.name), ['commonui-session', 'play']);
+  assert.deepEqual(planPhases(['input', 'viewport']).map((p) => p.name), ['commonui-session', 'play']);
+  assert.deepEqual(planPhases(['commonui', 'input']).map((p) => p.name), ['commonui-session', 'commonui-capture', 'play']);
+  assert.deepEqual(planPhases(['toolsets', 'animation']).map((p) => p.name), ['session', 'readback']);
+  assert.equal(PHASES.play.project, 'commonui');
+  assert.equal(PHASES.play.mode, 'play');
+  for (const phase of Object.values(PHASES)) assert.ok(phase.key, `${phase.name} has a report key`);
+});
+
 // ---------------------------------------------------------------- options and phases
 test('options: groups, the engine, the port', () => {
   assert.deepEqual(parseProbeOptions(['--engine', 'E']).groups, GROUPS);
@@ -296,7 +458,7 @@ test('phases: toolsets and widget share one session, capture follows it, commonu
   assert.deepEqual(planPhases(['widget']).map((p) => p.name), ['session']);
   assert.deepEqual(planPhases(['capture']).map((p) => p.name), ['session', 'capture']);
   assert.deepEqual(planPhases(['commonui']).map((p) => p.name), ['commonui-session', 'commonui-capture']);
-  assert.deepEqual(planPhases(GROUPS).map((p) => p.name), ['session', 'capture', 'commonui-session', 'commonui-capture']);
+  assert.deepEqual(planPhases(GROUPS).map((p) => p.name), ['session', 'capture', 'readback', 'commonui-session', 'commonui-capture', 'play']);
   assert.notEqual(PHASES.capture.project, PHASES['commonui-capture'].project);
 });
 
@@ -443,7 +605,7 @@ test('the client waits for a server that is not up yet, gives up on a dead one a
 
 // ---------------------------------------------------------------- the session against a fake editor
 /** A fake editor behind the MCP server: the toolsets of a build with the UMG, object, asset, blueprint, data table and settings tools, over an in-memory model. */
-function fakeEditor({ withMvvm = true, refuseFirstForm = false } = {}) {
+function fakeEditor({ withMvvm = true, refuseFirstForm = false, failMvvm = '', withSlate = true, ignoreCompile = false } = {}) {
   const widgets = new Map();   // name -> { path, cls, parent, props }
   let blueprint;
   const sets = {
@@ -453,16 +615,29 @@ function fakeEditor({ withMvvm = true, refuseFirstForm = false } = {}) {
     'editor_toolset.toolsets.blueprint.BlueprintTools': ['create', 'compile_blueprint'],
     'editor_toolset.toolsets.data_table.DataTableTools': ['create', 'add_rows'],
     'ConfigSettingsToolset.ConfigSettingsToolset': ['ListContainers', 'ListCategories', 'ListSections', 'GetSectionSchema', 'GetSectionPropertyValues', 'SetSectionProperties', 'SaveSection'],
-    ...(withMvvm ? { 'MVVMToolset.MVVMToolset': ['CreateViewModel'] } : {}),
+    ...(withMvvm ? { 'MVVMToolset.MVVMToolset': ['CreateViewModel', 'AddViewModelProperty', 'AddViewModelToWidget', 'CreateViewBinding', 'RemoveWidgetViewBinding', 'ListViewModels', 'ListWidgetViewModels', 'ListWidgetViewBindings', 'ListConversionFunctions'] } : {}),
+    ...(withSlate ? { 'SlateInspectorToolset.SlateInspectorToolset': ['GetWidgetTree', 'ClickWidget', 'Observe', 'Snapshot', 'Hover', 'Click', 'PressKey'] } : {}),
+    ...Object.fromEntries(['sequencer.SequencerToolset', 'sequencer.TrackToolset', 'sequencer.KeyToolset', 'sequencer.BindingToolset', 'control_rig.ControlRigToolset', 'control_rig.RigHierarchyToolset', 'control_rig.RigVMToolset', 'control_rig.RigUnitToolset']
+      .map((n) => [`animation_toolset.${n}`, n === 'sequencer.SequencerToolset' ? ['ListThings', 'add_track_to_sequence', 'add_track_to_binding'] : ['ListThings', 'AddThing']])),
   };
+  const mvvm = { calls: [], viewModels: [], properties: [], onWidget: [], bindings: [], compiled: false }, slateCalls = [], animCalls = [];
+  // a small Slate model: the editor has a Content Drawer button that opens a drawer, the game viewport has the Common button GO, which the click does not reach
+  const slate = { drawer: false, onInput: (tool, args) => { if (tool === 'Click' && args.ref === 'b16') slate.drawer = true; if (slate.clicksReachButton && tool === 'Click' && args.ref === 'g5') slate.clicks++; }, clicks: 0, clicksReachButton: false };
+  const slateTree = () => ['window "Editor" [pos=0,0 size=1280,720] [ref=w1]', '  text "COMMON UI" [pos=308,178 size=797,173] [ref=x19]', '  generic "GO" [pos=359,365 size=598,173] [ref=g5]', '    text "GO" [pos=367,367 size=566,166] [ref=x20]',
+    '  button "Content Drawer" [pos=3,690 size=126,28] [ref=b16]', ...(slate.drawer ? Array.from({ length: 40 }, (_, i) => `    button "Asset ${i}" [ref=a${i}]`) : [])].join('\n');
   const params = {
     AddWidget: ['widgetBlueprint', 'widgetClass', 'widgetDisplayName', 'parentWidget', 'childIndex'], CreateWidgetBlueprint: ['folderPath', 'assetName', 'parentClass'],
     get_properties: ['instance', 'properties'], set_properties: ['instance', 'values'], save_assets: ['assetPaths'],
+    CreateViewModel: ['viewModelName', 'packagePath', 'parentClass'], AddViewModelProperty: ['viewModel', 'propertyName', 'propertyType', 'defaultValue'], AddViewModelToWidget: ['widgetBlueprint', 'viewModelClass'],
+    CreateViewBinding: ['widgetBlueprint', 'sourceContext', 'sourcePropertyPath', 'destinationContext', 'destinationPropertyPath', 'conversionName'], ListViewModels: ['searchPath'], ListWidgetViewModels: ['widgetBlueprint'], ListWidgetViewBindings: ['widgetBlueprint'],
+    add_track_to_sequence: ['sequence', 'track_type'], add_track_to_binding: ['binding', 'track_type'],
+    Observe: ['ref', 'maxDepth'], Snapshot: ['ref', 'maxDepth', 'bIncludeSourceLocations'], Hover: ['ref'], Click: ['ref', 'button', 'doubleClick', 'modifiers'], PressKey: ['key'],
   };
+  const requiredOf = (t) => (t === 'CreateViewBinding' ? ['widgetBlueprint', 'sourceContext', 'sourcePropertyPath', 'destinationContext', 'destinationPropertyPath'] : /View/.test(t) ? params[t] : ['Observe', 'Snapshot', 'Hover', 'Click'].includes(t) ? ['ref'] : t === 'PressKey' ? ['key'] : undefined);
   const settings = { GameViewportClientClassName: '', InputData: '' };
   const slotOf = (name) => `${blueprint}:WidgetTree.${name}.Slot`;
   const find = (path) => [...widgets.values()].find((w) => path === w.path || path === slotOf(w.name));
-  const toolDescriptions = (toolset) => sets[toolset].map((t) => ({ name: `${toolset}.${t}`, description: t, inputSchema: { type: 'object', properties: Object.fromEntries((params[t] || []).map((p) => [p, {}])) } }));
+  const toolDescriptions = (toolset) => sets[toolset].map((t) => ({ name: `${toolset}.${t}`, description: t, inputSchema: { type: 'object', properties: Object.fromEntries((params[t] || []).map((p) => [p, {}])), required: requiredOf(t) } }));
   let widgetAttempts = 0;
   const call = (toolset, tool, args) => {
     const short = tool.split('.').pop();
@@ -495,8 +670,27 @@ function fakeEditor({ withMvvm = true, refuseFirstForm = false } = {}) {
         merge(w.props, values);
         return { returnValue: true };
       }
+      case 'MVVMToolset.CreateViewModel': case 'MVVMToolset.AddViewModelProperty': case 'MVVMToolset.AddViewModelToWidget': case 'MVVMToolset.CreateViewBinding':
+      case 'MVVMToolset.ListViewModels': case 'MVVMToolset.ListWidgetViewModels': case 'MVVMToolset.ListWidgetViewBindings': {
+        mvvm.calls.push(short);
+        if (failMvvm === short) return { error: 'propertyType Text is not a type of this build' };
+        if (short === 'CreateViewModel') { mvvm.viewModels.push(args.viewModelName); return { returnValue: ref(`${args.packagePath}/${args.viewModelName}.${args.viewModelName}`) }; }
+        if (short === 'AddViewModelProperty') { if (typeof args.defaultValue !== 'string') return { error: 'input param "defaultValue" is required' }; mvvm.properties.push(args.propertyName); return { returnValue: true }; }
+        if (short === 'AddViewModelToWidget') { if (!/_C$/.test(args.viewModelClass.refPath)) return { error: `${args.viewModelClass.refPath} is not valid Class for property 'ViewModelClass'.` }; mvvm.onWidget.push(args.viewModelClass.refPath); return { returnValue: true }; }
+        if (short === 'CreateViewBinding') { if (!mvvm.compiled) return { error: "Failed to create view binding. Invalid property path 'ScoreText'. Property does not exist in 'VM_ProbeScore_C'" }; if (!args.destinationContext) return { error: 'input param "destinationContext" is required' }; mvvm.bindings.push({ source: args.sourcePropertyPath, destination: args.destinationContext.refPath, property: args.destinationPropertyPath }); return { returnValue: 'E05FCC13-4D37-9D7A-E238-83859F29AD74' }; }
+        if (short === 'ListViewModels') return { returnValue: JSON.stringify(mvvm.viewModels) };
+        if (short === 'ListWidgetViewModels') return { returnValue: JSON.stringify(mvvm.onWidget) };
+        return { returnValue: JSON.stringify(mvvm.bindings) };
+      }
+      case 'SequencerToolset.add_track_to_sequence': animCalls.push(short); return { error: `Parameter error: ${args.sequence.refPath} is not valid LevelSequence for property 'sequence'.` };
+      case 'SequencerToolset.add_track_to_binding': animCalls.push(short); return { error: "Failed to add track of type 'MovieSceneFloatTrack' to binding." };
+      case 'SlateInspectorToolset.GetWidgetTree': slateCalls.push(short); return { returnValue: 'SWindow > SOverlay > SButton' };
+      case 'SlateInspectorToolset.ClickWidget': slateCalls.push(short); return { returnValue: true };
+      case 'SlateInspectorToolset.Observe': slateCalls.push(short); return { returnValue: 'observer_2' };
+      case 'SlateInspectorToolset.Snapshot': slateCalls.push(short); return { returnValue: slateTree() };
+      case 'SlateInspectorToolset.Hover': case 'SlateInspectorToolset.Click': case 'SlateInspectorToolset.PressKey': slateCalls.push(`${short}${args.ref ? ' ' + args.ref : ''}`); slate.onInput(short, args); return { returnValue: true };
       case 'BlueprintTools.create': return { returnValue: ref(`${args.folderPath}/${args.assetName}.${args.assetName}`) };
-      case 'BlueprintTools.compile_blueprint': return { returnValue: null };
+      case 'BlueprintTools.compile_blueprint': if (!ignoreCompile) mvvm.compiled = true; return { returnValue: null };
       case 'DataTableTools.create': return { returnValue: ref(`${args.folderPath}/${args.assetName}.${args.assetName}`) };
       case 'DataTableTools.add_rows': return { returnValue: null };
       case 'ConfigSettingsToolset.ListContainers': return { returnValue: ['Editor', 'Project'] };
@@ -518,7 +712,7 @@ function fakeEditor({ withMvvm = true, refuseFirstForm = false } = {}) {
     const out = call(a.toolset_name, a.tool_name, a.arguments);
     return out.error ? { isError: true, content: [{ type: 'text', text: out.error }] } : textResult(out);
   };
-  return { handler, widgets, settings, attempts: () => widgetAttempts };
+  return { handler, widgets, settings, slate, mvvm, attempts: () => widgetAttempts, mvvmCalls: () => mvvm.calls, slateCalls: () => slateCalls, animCalls: () => animCalls };
 }
 
 test('the base session builds the widget through the tools it finds and the checks pass on what it read back', async () => {
@@ -587,6 +781,230 @@ test('the Common UI session sets the settings it can find, builds both widgets a
     assert.equal(get('activatable').has_common_button, true, JSON.stringify(get('activatable')));
     assert.equal(get('save').returned, true);
   } finally { server.close(); }
+});
+
+
+// ---------------------------------------------------------------- the new sessions against the fake editor
+test('the animation and MVVM attempts describe the eight toolsets, call each MVVM tool once in order, and the List tools read the binding back', async () => {
+  const editor = fakeEditor();
+  const { server, port } = await fakeServer(editor.handler);
+  try {
+    const client = new McpClient({ port });
+    await client.connect();
+    const report = await baseSession({ client, say: () => {}, build: false, animation: true, mvvm: true });
+    const get = (n) => report.steps.find((s) => s.step === n);
+    assert.equal(get('animation_toolsets').toolsets.length, 8);
+    assert.ok(get('animation_toolsets').toolsets.every((t) => t.tool_count > 0 && t.raw_length > 0), 'each description is kept');
+    assert.equal(get('animation_blueprint').saved, true);
+    assert.equal(get('animation_attempt').track_added, false);
+    assert.match(get('animation_attempt').note, /no editor Python was available/);
+    assert.equal(get('animation_attempt').calls.length, 2, 'the two track tools are still called once each');
+    assert.deepEqual(editor.mvvmCalls(), ['CreateViewModel', 'AddViewModelProperty', 'AddViewModelToWidget', 'CreateViewBinding', 'ListViewModels', 'ListWidgetViewModels', 'ListWidgetViewBindings'], 'each tool once, in the order the toolset allows');
+    const calls = get('mvvm_calls');
+    assert.deepEqual([calls.view_model_created, calls.property_added, calls.added_to_widget, calls.binding_created], [true, true, true, true], JSON.stringify(calls.calls));
+    assert.deepEqual([get('mvvm_lists').view_model_listed, get('mvvm_lists').widget_view_model_listed, get('mvvm_lists').binding_listed], [true, true, true]);
+    assert.equal(get('mvvm_compile').returned, true);
+    assert.ok(get('mvvm_compile').saved_assets.includes(MVVM_ASSET));
+    assert.ok(get('mvvm_compile').saved_assets.some((a) => a.endsWith(MVVM_NAMES.viewModel)), 'the view model asset is saved too');
+    const back = await readbackSession({ client, say: () => {}, animation: true, mvvm: true });
+    assert.equal(back.steps.find((s) => s.step === 'mvvm_readback').binding_present, true);
+    assert.equal(back.steps.find((s) => s.step === 'animation_readback').animation_found, false, 'a blueprint with no animation reads back none');
+    const checks = evaluateProbes({ groups: ['mvvm'], reports: { base: { session: report, readback: back } } });
+    assert.equal(passed(checks), true, failing(checks).join(' | '));
+  } finally { server.close(); }
+});
+
+test('the animation attempt makes the container with editor Python, calls the two track tools once each, and records the refusals word for word', async () => {
+  const editor = fakeEditor();
+  const { server, port } = await fakeServer(editor.handler);
+  try {
+    const client = new McpClient({ port });
+    await client.connect();
+    let sent;
+    const py = async (code) => { sent = code; return { ok: true, result: { steps: [{ step: 'new_object WidgetAnimation inside the blueprint', ok: true }, { step: "animation.set_editor_property('movie_scene')", ok: false, error: "Failed to find property 'movie_scene'" }] } }; };
+    const report = await baseSession({ client, say: () => {}, build: false, animation: true, py });
+    const attempt = report.steps.find((x) => x.step === 'animation_attempt');
+    assert.match(sent, /^ASSET = "\/Game\/UI\/WBP_ProbeAnim"\nANIM_NAME = "ProbeFade"\nTEXT_WIDGET = "[^"]+ProbeText"\n/, 'the runner supplies the names in front of the container script');
+    assert.match(sent, /new_object\(unreal.WidgetAnimation/);
+    assert.match(attempt.note, /outside the toolsets: new_object WidgetAnimation inside the blueprint: ok; animation.set_editor_property\('movie_scene'\): FAILED Failed to find property 'movie_scene'/);
+    assert.deepEqual(editor.animCalls(), ['add_track_to_sequence', 'add_track_to_binding'], 'each tool once');
+    assert.equal(attempt.calls[0].error, "Parameter error: /Game/UI/WBP_ProbeAnim.WBP_ProbeAnim:ProbeFade is not valid LevelSequence for property 'sequence'.");
+    assert.equal(attempt.calls[1].error, "Failed to add track of type 'MovieSceneFloatTrack' to binding.");
+    assert.equal(attempt.track_added, false);
+    assert.equal(attempt.key_added, false);
+    const checks = evaluateProbes({ groups: ['animation'], reports: { base: { session: report } } });
+    assert.match(checks.find((c) => c.name.startsWith('a track is added')).detail, /add_track_to_sequence FAILED: Parameter error: .* is not valid LevelSequence/);
+  } finally { server.close(); }
+});
+
+test('the animation read-back also looks in the saved asset for the names a widget animation writes', async () => {
+  const editor = fakeEditor();
+  const { server, port } = await fakeServer(editor.handler);
+  const project = mkdtempSync(join(tmpdir(), 'umg-asset-'));
+  try {
+    mkdirSync(join(project, 'Content', 'UI'), { recursive: true });
+    const client = new McpClient({ port });
+    await client.connect();
+    const none = await readbackSession({ client, say: () => {}, animation: true, projectDir: project });
+    assert.equal(none.steps.find((x) => x.step === 'animation_readback').animation_found, false, 'no saved file, no animation');
+    writeFileSync(join(project, 'Content', 'UI', 'WBP_ProbeAnim.uasset'), Buffer.from('xx WidgetAnimation yy ProbeFade zz MovieSceneFloatTrack', 'latin1'));
+    const found = await readbackSession({ client, say: () => {}, animation: true, projectDir: project });
+    const back = found.steps.find((x) => x.step === 'animation_readback');
+    assert.equal(back.animation_found, true);
+    assert.equal(back.track_count, 1);
+    assert.equal(back.key_count, 0, 'keys are not counted from file names');
+    assert.equal(back.file_markers.WidgetAnimation, 1);
+  } finally { server.close(); rmSync(project, { recursive: true, force: true }); }
+});
+
+test('a refused MVVM call is recorded word for word with the tool, the chain stops there and nothing is sent twice', async () => {
+  const editor = fakeEditor({ failMvvm: 'AddViewModelProperty' });
+  const { server, port } = await fakeServer(editor.handler);
+  try {
+    const client = new McpClient({ port });
+    await client.connect();
+    const report = await baseSession({ client, say: () => {}, build: false, mvvm: true });
+    const calls = report.steps.find((s) => s.step === 'mvvm_calls');
+    assert.equal(calls.property_added, false);
+    const failed = calls.calls.find((c) => !c.ok);
+    assert.match(failed.tool, /AddViewModelProperty$/);
+    assert.equal(failed.error, 'propertyType Text is not a type of this build');
+    assert.equal(editor.mvvmCalls().filter((c) => c === 'AddViewModelProperty').length, 2, 'two pin types are tried once each and neither is sent again');
+    assert.deepEqual(calls.calls.filter((c) => /AddViewModelProperty$/.test(c.tool)).map((c) => c.args.propertyType), ['text', 'string']);
+    const checks = evaluateProbes({ groups: ['mvvm'], reports: { base: { session: report } } });
+    assert.match(checks.find((c) => c.name.startsWith('a view model with a property')).detail, /AddViewModelProperty FAILED: propertyType Text is not a type of this build/);
+  } finally { server.close(); }
+});
+
+test('a binding refused for a missing property is recorded with the tool own message and is not sent again under the other spelling of the tool name', async () => {
+  const editor = fakeEditor({ ignoreCompile: true });
+  const { server, port } = await fakeServer(editor.handler);
+  try {
+    const client = new McpClient({ port });
+    await client.connect();
+    const report = await baseSession({ client, say: () => {}, build: false, mvvm: true });
+    const calls = report.steps.find((x) => x.step === 'mvvm_calls');
+    assert.equal(calls.binding_created, false);
+    assert.equal(editor.mvvmCalls().filter((c) => c === 'CreateViewBinding').length, 1, 'a message that says "does not exist" is the answer, not a refused tool name');
+    assert.equal(calls.calls.find((c) => /CreateViewBinding$/.test(c.tool)).error, "Failed to create view binding. Invalid property path 'ScoreText'. Property does not exist in 'VM_ProbeScore_C'");
+    assert.equal(calls.view_model_compiled, true, 'the compile was called');
+  } finally { server.close(); }
+});
+
+test('the Slate inspector session describes the toolset, calls the tools that need no argument and leaves the input-like tools uncalled', async () => {
+  const editor = fakeEditor();
+  const { server, port } = await fakeServer(editor.handler);
+  try {
+    const client = new McpClient({ port });
+    await client.connect();
+    const report = await slateSession({ client, say: () => {} });
+    const describe = report.steps.find((s) => s.step === 'slate_describe');
+    assert.equal(describe.tool_count, 7);
+    assert.ok(describe.raw_length > 0);
+    const routes = report.steps.find((s) => s.step === 'slate_routes').routes;
+    assert.equal(routes.find((r) => r.route.endsWith('GetWidgetTree')).tried, true);
+    assert.equal(routes.find((r) => r.route.endsWith('ClickWidget')).tried, false);
+    assert.equal(report.steps.some((x) => x.step === 'slate_input'), false, 'without the stage report the Common button is not driven');
+    assert.equal(routes.every((r) => r.observed === false), true);
+    assert.deepEqual(editor.slateCalls(), ['GetWidgetTree']);
+  } finally { server.close(); }
+});
+
+test('the Slate inspector session drives the Common button, reads the click counter and the state after each call, and clicks the editor control last', async () => {
+  for (const reaches of [false, true]) {
+    const editor = fakeEditor();
+    editor.slate.clicksReachButton = reaches;
+    const { server, port } = await fakeServer(editor.handler);
+    try {
+      const client = new McpClient({ port });
+      await client.connect();
+      const wait = (clicks) => ({ steps: { input_wait: { clicks, state: { is_hovered: false, is_pressed: false } } } });
+      const report = await slateSession({ client, say: () => {}, settleMs: 5, readStage: () => wait(editor.slate.clicks) });
+      const input = report.steps.find((s) => s.step === 'slate_input');
+      assert.equal(input.button_ref, 'g5');
+      assert.equal(input.drawer_ref, 'b16');
+      const by = (re) => input.routes.find((r) => re.test(r.route));
+      assert.equal(by(/Hover/).kind, 'precondition');
+      assert.equal(by(/Click on the Common button/).delivered, true);
+      assert.equal(by(/Click on the Common button/).observed, reaches, 'observed follows the counter the stage script publishes');
+      assert.equal(by(/PressKey/).observed, false);
+      assert.equal(by(/Content Drawer/).kind, 'control');
+      assert.equal(by(/Content Drawer/).observed, true, 'the drawer opens and the snapshot grows');
+      assert.equal(input.routes.at(-1).route.includes('Content Drawer'), true, 'the control is clicked last, after the routes on the button');
+      assert.deepEqual(editor.slateCalls().filter((c) => /^(Observe|Hover|Click|PressKey)/.test(c)), ['Observe', 'Hover g5', 'Click g5', 'PressKey', 'Click b16']);
+    } finally { server.close(); }
+  }
+});
+
+test('without the Slate inspector toolset the session records its absence', async () => {
+  const editor = fakeEditor({ withSlate: false });
+  const { server, port } = await fakeServer(editor.handler);
+  try {
+    const client = new McpClient({ port });
+    await client.connect();
+    const report = await slateSession({ client, say: () => {} });
+    assert.match(report.steps.find((s) => s.step === 'slate_describe').error, /not listed/);
+  } finally { server.close(); }
+});
+
+test('the stage script keeps the input routes recorded and never writes a user path', () => {
+  const stage = readFileSync(join(here, 'umg_stage.py'), 'utf8');
+  for (const word of ['viewport_client', 'input_ready', 'UMG_CONTINUE', 'OnButtonBaseClicked.broadcast', 'input_key', 'CLICKED']) assert.ok(stage.includes(word), word);
+  assert.equal(stage.includes('Users'), false);
+});
+
+// ---------------------------------------------------------------- calling into an open editor
+test('pyCall writes the request once, waits for the result and reports a timeout without sending again', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'umg-rpc-'));
+  try {
+    const answering = (async () => {   // the stage script: take request.py, write result.json
+      for (let i = 0; i < 100; i++) {
+        if (existsSync(join(dir, 'request.py'))) { const code = readFile(join(dir, 'request.py'), 'utf8'); rmSync(join(dir, 'request.py')); writeFileSync(join(dir, 'result.json'), JSON.stringify({ ok: true, result: code.toUpperCase() })); return; }
+        await new Promise((r) => setTimeout(r, 20));
+      }
+    })();
+    const out = await pyCall(dir, 'result = 1', { timeoutMs: 3000, pollMs: 20 });
+    await answering;
+    assert.deepEqual(out, { ok: true, result: 'RESULT = 1' });
+    const late = await pyCall(dir, 'nobody answers', { timeoutMs: 80, pollMs: 20 });
+    assert.equal(late.timedOut, true);
+    assert.match(late.error, /read the state back before sending anything again/);
+  } finally { rmSync(dir, { recursive: true, force: true }); }
+});
+
+test('the hold loop answers each request file once, in name order, and stops at end.flag', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'umg-hold-'));
+  const seen = [];
+  const client = {
+    inner: async (toolset, tool, args) => { seen.push(`${toolset}.${tool}`); return { ok: true, decoded: { text: JSON.stringify({ returnValue: args }) } }; },
+    describeToolset: async (name) => ({ ok: true, decoded: { text: `described ${name}` } }),
+    listToolsets: async () => ({ ok: true, decoded: { text: '- A.B: x' } }),
+  };
+  try {
+    writeFileSync(join(dir, 'req-02.json'), JSON.stringify({ describe: 'X.Y' }));
+    writeFileSync(join(dir, 'req-01.json'), JSON.stringify({ call: { toolset: 'T.T', tool: 'Do', arguments: { a: 1 } } }));
+    writeFileSync(join(dir, 'req-03.json'), JSON.stringify({ py: 'print(1)' }));
+    writeFileSync(join(dir, 'req-04.json'), JSON.stringify({ nothing: true }));
+    const loop = holdLoop({ dir, ctx: { client, py: async (code) => ({ ok: true, result: code }) }, pollMs: 20, limitMs: 5000 });
+    for (let i = 0; i < 100 && !existsSync(join(dir, 'res-04.json')); i++) await new Promise((r) => setTimeout(r, 20));
+    writeFileSync(join(dir, 'end.flag'), '');
+    assert.equal(await loop, 4);
+    const res = (n) => JSON.parse(readFile(join(dir, `res-${n}.json`), 'utf8'));
+    assert.equal(res('01').ok, true);
+    assert.match(res('01').text, /"a":1/);
+    assert.equal(res('02').text, 'described X.Y');
+    assert.equal(res('03').result, 'print(1)');
+    assert.equal(res('04').ok, false);
+    assert.deepEqual(seen, ['T.T.Do'], 'each call is sent once');
+    assert.equal(existsSync(join(dir, 'req-01.json')), false, 'a request file is removed when taken');
+  } finally { rmSync(dir, { recursive: true, force: true }); }
+});
+
+test('answerRequest reports a timed-out call as a timeout and a stage read as the stage report', async () => {
+  const client = { inner: async () => ({ ok: false, timedOut: true, error: 'timed out', decoded: undefined }) };
+  const out = await answerRequest({ call: { toolset: 'T', tool: 'W', arguments: {} } }, { client });
+  assert.deepEqual([out.ok, out.timedOut, out.error], [false, true, 'timed out']);
+  assert.deepEqual((await answerRequest({ stage: true }, { stage: () => ({ steps: { a: 1 } }) })).stage, { steps: { a: 1 } });
 });
 
 // ---------------------------------------------------------------- hygiene

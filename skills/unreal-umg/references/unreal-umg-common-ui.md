@@ -1,6 +1,6 @@
 # Common UI: setup from a script and how input reaches a widget
 
-Target: Unreal Engine 5.8 on Windows. Everything marked tested was run in run B on 2026-10-30 ([the probe](../../../examples/unreal/umg/README.md)), in a second throwaway project with the Common UI plugin, in a rendering editor started with `-RenderOffScreen -unattended`. The pieces were set through Epic's MCP toolsets (see [Scripting a widget](unreal-umg-script-widget.md)); the widget was shown with the capture route in [Capturing a widget offscreen](unreal-umg-capture.md).
+Target: Unreal Engine 5.8 on Windows. Everything marked tested was run in run B on 2026-10-30, or in the viewport run A-Q3 (same date, same kind of editor) ([the probe](../../../examples/unreal/umg/README.md)), in a second throwaway project with the Common UI plugin, in a rendering editor started with `-RenderOffScreen -unattended`. The pieces were set through Epic's MCP toolsets (see [Scripting a widget](unreal-umg-script-widget.md)); the widget was shown with the capture route in [Capturing a widget offscreen](unreal-umg-capture.md).
 
 ## The setup pieces
 
@@ -33,9 +33,13 @@ Target: Unreal Engine 5.8 on Windows. Everything marked tested was run in run B 
 - [documented] Epic's 5.8 release notes: `CommonUI.DumpActivatableTree` now prints each node's `SupportsActivationFocus`, which helps to see why an activatable widget is not receiving focus; `FCommonInputTypeInfo::AdditionalKeys` adds extra keys to an input action.
 - [general] Enhanced Input action bindings and mapping contexts are in [unreal-gameplay](../../unreal-gameplay/SKILL.md); this skill covers only Common UI's own data tables and input data.
 
+## The running viewport client
+
+- [tested] A-Q3 runs 1 to 3, 2026-10-30: in an offscreen Play In Editor session of the Common UI project the running game viewport client was `CommonGameViewportClient`, equal to the saved setting (`/Script/CommonUI.CommonGameViewportClient`, read by the same editor). The engine's own listing, the console command `obj list class=GameViewportClient` issued from the stage script, named one object of that class, `/Engine/Transient.UnrealEdEngine_0:CommonGameViewportClient_0`, in all three runs. From run 2 the stage script also read the class itself, with `unreal.find_object(None, <that path>)` and `get_class()`, and logged `viewport_client class=CommonGameViewportClient`.
+- [tested] A-Q3 runs 1 and 2: reading the client by reflection (the controller's `Player` property, then its viewport client) returned an empty result, so Python could not reach it that way; the console listing and the object path did.
+
 ## Not established
 
-- [tested] Run B: that the running viewport client is the Common one. Only the saved setting was read back, by a new editor process.
-- [tested] Run B: input routing was not run: no key, click or gamepad event was sent to the widget, so which widget receives input and how focus returns after a popup are not established.
+- [tested] A-Q4 runs 1 to 3: a simulated key or click changing a Common button is partial, not established ([Simulated key and click](unreal-umg-simulated-input.md)); which widget receives input and how focus returns after a popup are not established. Gamepad events were not sent, and button style assets and the quickstart's controller data assets (Platform Input) were not run.
 - [general] Epic's quickstart says Common UI's input action data tables "are not related to" Enhanced Input, while its 5.8 release notes say Enhanced Input and Common Input/UI are unified without duplicate data assets. Which describes 5.8 setup is not established; check the installed editor before building both.
 - [general] Gamepad and mouse behaviour on a physical device needs a person and was not run.

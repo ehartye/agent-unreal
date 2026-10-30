@@ -36,3 +36,4 @@ Target: Unreal Engine 5.8. The cost rules are Epic's; no run measured any UI cos
 ## Not established
 
 - [general] No UI cost was measured, no focus or navigation trap was reproduced, and none of the anecdotal reports was checked on 5.8. Input and focus behaviour on a physical gamepad or keyboard needs a person at the device.
+- [tested] A-Q4 runs 2 and 3, 2026-10-30: in the offscreen Play In Editor session `has_any_user_focus` on a Common button stayed false after `set_focus` (run 3), `set_user_focus` and `set_keyboard_focus` (run 2). It was seen in that session only and is not a reproduced trap; see [Simulated key and click](unreal-umg-simulated-input.md).
