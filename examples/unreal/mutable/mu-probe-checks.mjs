@@ -1,6 +1,6 @@
 // Pure options and checks of the Mutable probe (mu_probe.mjs). Prepared 2026-10-30. No Unreal, no files: mu-probe.test.mjs feeds it canned
 // reports and mu_probe.mjs feeds it real ones. The report shapes below are the ones the mu_probe_*.py scripts and the runner write.
-// Five groups answer the questions in order:
+// The original five groups and the scale/material experiments:
 //   bridge    Does the editor module MutableBridge (which depends on the Mutable plugin's editor module) build, load, and show up in Python?
 //   build     Do agent-meshes parts import and does a bare Customizable Object compile? (Python alone cannot author its graph: that gap is pinned.)
 //   graph     Does the bridge add a node and link a pin (and refuse an invalid pin), and does a graph with swappable parts compile with its parameter?
@@ -9,9 +9,9 @@
 // Every check returns { group, pass, name, claim, detail }.
 import { changedPixels } from '../niagara_toolsets/nts-probe-assets.mjs';
 
-export const PROBE_GROUPS = ['bridge', 'build', 'graph', 'variants', 'headless'];
+export const PROBE_GROUPS = ['bridge', 'build', 'graph', 'variants', 'headless', 'skeleton', 'scale', 'material', 'components'];
 /** What a group reads from the groups before it (the module must be built before any editor run; the graph is built on the imported parts). */
-export const GROUP_NEEDS = { graph: ['bridge', 'build'], variants: ['graph'], headless: ['graph'] };
+export const GROUP_NEEDS = { graph: ['bridge', 'build'], variants: ['graph'], headless: ['graph'], skeleton: ['bridge', 'build'], scale: ['bridge', 'build'], material: ['bridge', 'build'], components: ['bridge', 'build'] };
 /** Wall-clock limit of the Unreal Build Tool run that builds the module, in seconds. */
 export const MODULE_BUILD_TIMEOUT_S = 1200;
 /** The functions of unreal.MutableBridgeLibrary the probe expects (mu_probe_bridge.py lists the same names; a test pins that). */
@@ -33,6 +33,10 @@ export const PROBE_PHASES = {
   graph: [{ name: 'graph', mode: 'editor', script: 'mu_probe_graph.py', extraS: 600, co: SWAP_PATH }],
   variants: [{ name: 'variants', mode: 'editor', script: 'mu_probe_variants.py', extraS: 420, prefix: 'mu', co: SWAP_PATH }],
   headless: [{ name: 'headless', mode: 'commandlet', script: 'mu_probe_headless.py', extraS: 300, co: SWAP_PATH }],
+  skeleton: [{ name: 'skeleton', mode: 'editor', script: 'mu_probe_extended.py', extraS: 720 }],
+  scale: [{ name: 'scale', mode: 'editor', script: 'mu_probe_extended.py', extraS: 600 }],
+  material: [{ name: 'material', mode: 'editor', script: 'mu_probe_extended.py', extraS: 600 }],
+  components: [{ name: 'components', mode: 'editor', script: 'mu_probe_extended.py', extraS: 600 }],
 };
 export const USAGE = 'usage: node mu_probe.mjs --engine <UE_5.8 folder> --parts <folder of .glb files> [--only <group>[,<group>...]] [--keep] [--plan] [--compile-timeout <seconds>] [--compiler <x.y.z>] [--sdk <10.0.n.n>]'
   + `   groups: ${PROBE_GROUPS.join(', ')}   (no --only: every group; graph needs bridge and build, variants and headless need graph, because they read what those save)`;
@@ -114,6 +118,22 @@ const compileOk = (c) => Boolean(c.started) && Boolean(c.finished) && !c.timed_o
 const compileText = (c) => (c.started
   ? `${c.mode || '?'} compile ${c.timed_out ? `timed out after ${c.deadline_s} s` : c.finished ? `finished in ${c.seconds} s` : 'did not report'}; compiled ${c.compiled}; request_failed ${c.request_failed}; ${list(c.errors).length} errors${list(c.errors)[0] ? ` (${clip(list(c.errors)[0], 100)})` : ''}; ${list(c.warnings).length} warnings${c.error ? `; ${clip(c.error)}` : ''}`
   : `compile not started${c.error ? `: ${clip(c.error)}` : ''}`);
+
+/** The fixed camera's central character region, excluding borders and HUD corners. */
+export function materialRegion(a, b) {
+  if (!a || !b || a.width !== b.width || a.height !== b.height) return { changed: -1, red: 0, blue: 0 };
+  const result = { changed: 0, red: 0, blue: 0 };
+  for (let y = Math.floor(a.height * 0.1); y < Math.ceil(a.height * 0.95); y++) {
+    for (let x = Math.floor(a.width * 0.25); x < Math.ceil(a.width * 0.75); x++) {
+      const offset = (y * a.width + x) * 4;
+      const av = a.rgba.subarray(offset, offset + 3), bv = b.rgba.subarray(offset, offset + 3);
+      if (Math.max(...av.map((v, i) => Math.abs(v - bv[i]))) > 12) result.changed++;
+      if (av[0] > av[1] * 1.5 && av[0] > av[2] * 1.5 && av[0] > 40) result.red++;
+      if (bv[2] > bv[0] * 1.5 && bv[2] > bv[1] * 1.5 && bv[2] > 40) result.blue++;
+    }
+  }
+  return result;
+}
 
 function buildChecks(entry, check) {
   const report = reportOf(entry);
@@ -317,6 +337,64 @@ function graphChecks(entry, check) {
     `readback ${readback.is_compiled}; right after the compile ${compile.is_compiled_after}; saved ${save.saved}`);
 }
 
+function extendedChecks(group, entry, check) {
+  const report = reportOf(entry), rows = steps(report);
+  const add = (name, pass, detail) => check(group, name, name, pass, detail);
+  const exception = rows.find((s) => ['experiment_error', 'driver', 'layout_error'].includes(s.step));
+  add('the experiment writes a report without an unhandled error', Boolean(report) && !exception,
+    exception?.error || processNote(entry));
+  const compiles = rows.filter((s) => s.step === 'compile');
+  const labels = group === 'skeleton' ? ['separate', 'shared'] : group === 'scale' ? ['NONE', 'MAXIMUM'] : [group];
+  for (const label of labels) {
+    const compiled = compiles.find((s) => s.label === label) || {};
+    add(`${label} compile completes without errors within its limit`, compileOk(compiled), compileText(compiled));
+  }
+  if (group === 'scale') {
+    const graph = step(report, 'graph');
+    add('the graph has four enum parameters with six options and 25 parts', graph.part_count === 25 && list(graph.groups).length === 4 && graph.groups.every((g) => list(g.options).length === 6), JSON.stringify(graph.groups || []));
+    for (const label of labels) {
+      const memory = rows.find((s) => s.step === 'memory' && s.label === label) || {};
+      const readback = rows.find((s) => s.step === 'readback' && s.label === label) || {};
+      add(`${label} records nonempty working-set samples from the editor PID`, memory.interval_s === 1 && Number.isInteger(memory.pid) && list(memory.samples).length >= 2 && memory.samples.every((s) => s.pid === memory.pid && Number.isFinite(s.working_set_bytes) && s.working_set_bytes > 0) && memory.peak_sampled_working_set_bytes === Math.max(...list(memory.samples).map((s) => s.working_set_bytes)), `${list(memory.samples).length} samples; peak ${memory.peak_sampled_working_set_bytes} bytes; lifetime process peak ${memory.process_peak_working_set_bytes} bytes`);
+      const choices = list(readback.parameters).filter((p) => /^Choice[0-3]$/.test(p.name) && list(p.options).length === 6 && new Set(p.options).size === 6);
+      add(`${label} reads back the four six-option parameters`, choices.length === 4 && new Set(choices.map((p) => p.name)).size === 4, JSON.stringify(readback.parameters || []));
+    }
+  }
+  if (group === 'skeleton') {
+    const imports = rows.filter((s) => s.step === 'shared_import');
+    add('all three shared imports use the same skeleton', imports.length === 3 && imports.every((s) => s.returned && s.matches && s.skeleton === imports[0].skeleton), JSON.stringify(imports));
+    const separate = rows.find((s) => s.step === 'skeletons' && s.label === 'separate');
+    add('the separate layout has three distinct skeleton assets', new Set(list(separate?.paths)).size === 3, JSON.stringify(separate?.paths || []));
+  }
+  if (group === 'skeleton' || group === 'material') {
+    for (const label of group === 'skeleton' ? labels : ['material']) {
+      const variants = rows.filter((s) => s.step === 'variant' && s.label === label);
+      const images = images0(entry);
+      const control = rows.find((s) => s.step === 'control' && s.label === label);
+      const controlImage = images[control?.shot];
+      const lit = controlImage ? changedPixels(controlImage, { ...controlImage, rgba: Buffer.alloc(controlImage.width * controlImage.height * 4) }) : 0;
+      add(`${label} has a visible control and two generated variant frames`, lit > 500 && variants.length === 2 && variants.every((v) => v.has_skeletal_mesh && images[v.shot]), `${lit} control pixels; ${variants.length} variants`);
+      const difference = variants.length === 2 ? changedPixels(images[variants[0].shot], images[variants[1].shot]) : -1;
+      add(`${label} variant frames differ`, difference > 200, `${difference} changed pixels`);
+      if (group === 'skeleton') add(`${label} options read back`, variants.length === 2 && variants.every((v) => v.selected === v.option), JSON.stringify(variants.map(({ option, selected }) => ({ option, selected }))));
+    }
+    if (group === 'material') {
+      const parameters = rows.find((s) => s.step === 'readback' && s.label === 'material')?.parameters;
+      const route = step(report, 'parameter_route').kind;
+      add('the compiled object lists the selected material or texture parameter', ['material', 'texture'].includes(route) && list(parameters).some((p) => p.name === 'Finish' && p.type.toLowerCase().includes(route)), JSON.stringify(parameters || []));
+      const variants = rows.filter((s) => s.step === 'variant' && s.label === 'material');
+      const region = materialRegion(images0(entry)[variants[0]?.shot], images0(entry)[variants[1]?.shot]);
+      add('the part region changes from the red value to the blue value', region.changed > 200 && region.red > 200 && region.blue > 200, JSON.stringify(region));
+      add('both parameter assets read back after being set', variants.length === 2 && variants.every((v) => v.expected_asset && v.selected === v.expected_asset), JSON.stringify(variants.map(({ selected, expected_asset }) => ({ selected, expected_asset }))));
+    }
+  }
+  if (group === 'components') {
+    const readback = step(report, 'readback'), callback = step(report, 'callback');
+    add('the compiled object reports two distinct components', readback.component_count === 2 && new Set(list(readback.names)).size === 2, JSON.stringify(readback));
+    add('the Python update callback runs and the instance builds a mesh', callback.bound && list(callback.callbacks).length > 0 && callback.has_skeletal_mesh, JSON.stringify(callback));
+  }
+}
+
 /**
  * @param {{ groups: string[], reports: Record<string, { report?: any, process?: { exit?: number, timed_out?: boolean, seconds?: number }, images?: Record<string, any> }> }} input
  * @returns {{ group: string, pass: boolean, name: string, claim: string, detail: string }[]}
@@ -331,7 +409,8 @@ export function evaluateProbes({ groups, reports }) {
     else if (group === 'build') buildChecks(entry, make());
     else if (group === 'graph') graphChecks(entry, make());
     else if (group === 'variants') variantChecks(entry, make());
-    else headlessChecks(entry, make());
+    else if (group === 'headless') headlessChecks(entry, make());
+    else extendedChecks(group, entry, make());
   }
   return out;
 }

@@ -29,7 +29,7 @@ Target: Unreal Engine 5.8 on Windows. The probe in [examples/unreal/mutable](../
 
 - [tested] 2026-10-29: the compiled object had 0 parameters and 0 components, because no node could be added to its graph from Python alone. See [Authoring the graph](unreal-mutable-graph.md).
 - [tested] 2026-10-30, bridge probe runs 1 and 2: with the bridge's nodes and links the compile ran asynchronously in 0.52 s in the rendering editor with `compiled` true, 0 errors and 0 warnings, and read back 1 parameter `Hat` (INT) with options `Cap|Tall` and 1 component. The graph was three small meshes; the cost of a large graph was not run.
-- [general] Compile options such as `optimization_level` and `texture_compression` change cost and quality. Their effect was not measured.
+- [tested] B-Q2 run 2 (2026-10-31) measured NONE and MAXIMUM `optimization_level` on the four-by-six fixture; [results and qualifications](../../unreal-editor-scripting/references/unreal-mutable-scale.md). Quality, texture compression and a general cost comparison remain unestablished.
 
 ## Related
 

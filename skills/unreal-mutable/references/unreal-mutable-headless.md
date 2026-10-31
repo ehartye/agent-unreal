@@ -26,4 +26,5 @@ Target: Unreal Engine 5.8 on Windows. Two ways to run the same script: a renderi
 
 ## Not established
 
-- [general] The compile of a large graph, the object the forum hang and memory reports describe, was not run headless. The three-mesh graph says nothing about it. The smallest next experiment is the same headless phase on a large real asset, under the same timeout.
+- [tested] B-Q2 run 2 (2026-10-31) measured a four-by-six option fixture only in a rendering editor: [cost and memory qualifications](../../unreal-editor-scripting/references/unreal-mutable-scale.md). That fixture was not run headless.
+- [general] A production graph and the objects described by the forum hang/memory reports remain unrun headless. Neither the earlier three-mesh commandlet nor the newer rendering-editor measurement decides them; use the bounded headless phase on the actual asset.

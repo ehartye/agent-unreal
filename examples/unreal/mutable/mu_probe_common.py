@@ -91,7 +91,7 @@ def callback_fields(done):
     return fields
 
 
-def run_compile(co, record):
+def run_compile(co, record, optimization_level=None):
     """Generator: compile `co`, filling `record` (started, mode, deadline_s, callback_bound, finished, timed_out, seconds, compiled, ...).
     Yields seconds to wait between polls (0.0 in sync mode). The wall-clock limit is COMPILE_TIMEOUT_S, measured from the call."""
     state = {"done": None}
@@ -101,6 +101,9 @@ def run_compile(co, record):
 
     record.update(mode=COMPILE_MODE, deadline_s=COMPILE_TIMEOUT_S, started=False, finished=False, timed_out=False)
     params, bound, bind_error = new_compile_params(on_done)
+    if optimization_level is not None:
+        params.set_editor_property("optimization_level", optimization_level)
+        record["optimization_level"] = str(optimization_level)
     record.update(callback_bound=bound, bind_error=bind_error)
     started = time.monotonic()
     record["started"] = True
