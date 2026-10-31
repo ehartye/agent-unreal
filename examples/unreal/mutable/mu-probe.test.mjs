@@ -5,8 +5,9 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync, statSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
+import { fixtureParts } from './mu_parts.mjs';
 import {
-  evaluateProbes, summarize, parseProbeOptions, listParts, shotNames, summarizeBuildLog,
+  evaluateProbes, summarize, parseProbeOptions, listParts, shotNames, summarizeBuildLog, materialRegion,
   PROBE_GROUPS, PROBE_PHASES, GROUP_NEEDS, DEFAULT_COMPILE_TIMEOUT_S, MODULE_BUILD_TIMEOUT_S, BRIDGE_FUNCTIONS, NODE_CLASSES,
 } from './mu-probe-checks.mjs';
 
@@ -351,4 +352,55 @@ test('plugin content stays free of machine, GPU and home-path language', () => {
 test('no built binary, generated project or asset sits in the probe folder', () => {
   const bad = filesUnder(here).filter((f) => /\.(dll|lib|pdb|uasset|umap|obj|exp)$/i.test(f) || /(^|[\\/])(Intermediate|Binaries|Saved)([\\/]|$)/.test(f));
   assert.deepEqual(bad, []);
+});
+
+test('scale evidence requires both levels, four complete parameters and actual PID samples', () => {
+  const report = { steps: [{ step: 'graph', part_count: 25, groups: Array.from({ length: 4 }, (_, i) => ({ name: `Choice${i}`, options: ['0','1','2','3','4','5'] })) }] };
+  for (const label of ['NONE', 'MAXIMUM']) report.steps.push(
+    { step: 'compile', label, ...okCompile },
+    { step: 'readback', label, parameters: report.steps[0].groups },
+    { step: 'memory', label, pid: 10, interval_s: 1, peak_sampled_working_set_bytes: 200, process_peak_working_set_bytes: 250, samples: [{ pid: 10, working_set_bytes: 100 }, { pid: 10, working_set_bytes: 200 }] },
+  );
+  const run = (r) => evaluateProbes({ groups: ['scale'], reports: { scale: entry(r) } });
+  assert.ok(run(report).every((c) => c.pass));
+  for (const mutate of [
+    (r) => { r.steps[0].groups[0].options.pop(); },
+    (r) => { r.steps.find((s) => s.step === 'memory').samples = []; },
+    (r) => { r.steps.find((s) => s.step === 'memory').samples[0].pid = 11; },
+    (r) => { r.steps.find((s) => s.step === 'memory').peak_sampled_working_set_bytes = 300; },
+    (r) => { r.steps.find((s) => s.step === 'compile').timed_out = true; },
+    (r) => { r.steps.find((s) => s.step === 'readback').parameters[0].name = 'Choice1'; },
+    (r) => { r.steps.find((s) => s.step === 'readback').parameters[0].options[0] = '1'; },
+    (r) => { r.steps = r.steps.filter((s) => s.label !== 'MAXIMUM'); },
+  ]) {
+    const bad = structuredClone(report); mutate(bad);
+    assert.ok(run(bad).some((c) => !c.pass));
+  }
+});
+
+test('new groups require their inputs and cannot qualify missing or exception-only reports', () => {
+  for (const group of ['skeleton', 'scale', 'material', 'components']) {
+    assert.match(parseProbeOptions(['--engine', 'E', '--only', group]).error, /needs bridge and build/);
+    for (const report of [undefined, { steps: [{ step: 'experiment_error', error: 'native failure' }] }]) {
+      const checks = evaluateProbes({ groups: [group], reports: { [group]: entry(report) } });
+      assert.ok(checks.length > 1 && checks.every((c) => !c.pass));
+    }
+  }
+});
+
+test('the generated fixture inventory supplies four complete option groups on one bone layout', () => {
+  const parts = fixtureParts();
+  assert.equal(new Set(parts.map((p) => p.id)).size, 27);
+  for (const id of ['person_body', 'hat_cap', 'hat_tall']) assert.ok(parts.some((p) => p.id === id));
+  const skeleton = parts[0].operations.filter((op) => op.op === 'bone.add');
+  for (const part of parts) assert.deepEqual(part.operations.filter((op) => op.op === 'bone.add'), skeleton);
+  for (let group = 0; group < 4; group++) assert.deepEqual(parts.filter((p) => p.group === group).map((p) => p.option), [0, 1, 2, 3, 4, 5]);
+});
+
+test('material region refuses missing images and excludes changes outside the character region', () => {
+  assert.equal(materialRegion(undefined, solid(100, 100)).changed, -1);
+  const black = solid(100, 100), corner = withSquare(black, 8, [255, 0, 0]);
+  assert.equal(materialRegion(black, corner).changed, 0);
+  const measured = materialRegion(solid(100, 100, [255, 5, 5]), solid(100, 100, [5, 10, 255]));
+  assert.deepEqual(measured, { changed: 4250, red: 4250, blue: 4250 });
 });

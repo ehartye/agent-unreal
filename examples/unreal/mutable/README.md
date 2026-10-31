@@ -6,11 +6,41 @@ Status: Ran 2026-10-30, twice, 26 of 26 checks pass (`bridge` 3, `build` 5, `gra
 
 ## Run
 
+Status of the scale/material extension: ran 2026-10-31. The four scientific groups pass 30 of 30 checks in an explicitly composed ledger of identity-bound native reports. The final `bridge,build,components` invocation printed 12 of 12 and exited 0; its owned process Job drained to zero members. Earlier interrupted prerequisites and a monitor failure between completed material work and the unstarted component phase are retained separately. Completed scientific phases were not repeated. The unchanged bridge built in 33 s with no errors or warnings; no new native bridge function was needed.
+
+| Run | Result |
+|---|---|
+| B-Q1 run 2 | Separate/shared skeleton layouts compile in 0.41/0.52 s with zero errors or warnings. Both Cap/Tall pairs show the chosen hat and differ by 6,853 pixels. All three shared imports read back the same skeleton asset |
+| B-Q2 run 2 | 25 parts, four enum parameters with six options each. NONE/MAXIMUM compile in 0.39/0.50 s; maximum sampled working sets 3,404.38/3,406.14 MiB; zero errors or warnings. The lifetime process peak is separately recorded as 3,673.55 MiB |
+| B-Q3 runs 1 and 3 | The public node include fails with `fatal error C1083: Cannot open include file: 'MuCO/CustomizableObjectPrivate.h': No such file or directory`. The reflection material route compiles in 0.50 s, lists `Finish` as MATERIAL, reads back both asset values, and changes 23,558 pixels from red to blue in the character region. Texture fallback was not needed or run |
+| B-Q4 run 3 | Two components compile in 0.39 s and read back `Component0`, `Component1`; `updated_delegate.add_callable` logs the callback and the instance reports a generated skeletal mesh. LOD construction and the fallback callback baseline were not run |
+
+Every reported Mutable compile has a 240 s limit. The scale compiles last less than one second, so the one-second collector records only start/end samples for each. The sampled maximum can miss shorter peaks; the process lifetime peak includes startup. These measurements establish this small rigid fixture, not production character costs or a cold-cache optimization comparison.
+
 ```text
 node examples/unreal/mutable/mu_probe.mjs --engine "C:/Program Files/Epic Games/UE_5.8" --parts <folder of .glb files> [--only bridge,build,graph,variants,headless] [--keep] [--plan] [--compile-timeout <seconds>] [--compiler <x.y.z>] [--sdk <10.0.n.n>]
 ```
 
 Windows with Visual Studio 2022 Build Tools (the compiler and Windows SDK are found by `discoverToolchain` in `../native-build.mjs`; `--compiler` and `--sdk` override). `--parts` is a folder with two or more `.glb` files, here a fixed person body and two hats on the same three-bone skeleton (see "Making the parts"); `AGENT_UNREAL_MUTABLE_PARTS` sets it too. The groups run in order in one project: `bridge` builds the module and starts the editor, `build` imports the parts, `graph` builds on them, and `variants` and `headless` read what `graph` saved, so `--only` must name what a group needs (`graph` needs `bridge` and `build`; `variants` and `headless` need `graph`). `--plan` prints what would run. `--keep` leaves the project folder (a run with a failing check keeps it anyway; it holds `Saved/*.json` reports, `Saved/build.log`, `Saved/Logs` and `Saved/Screenshots`). Exit code 0 when every check of the groups that ran passes, 1 when a check fails, 2 on a usage error. It is not part of `node scripts/check.mjs`; the pure checks have node tests (`mu-probe.test.mjs`) in the merge lane.
+
+The four new groups each require `bridge,build` in the same invocation:
+
+| Group | Experiment and evidence |
+|---|---|
+| `skeleton` | Import body and two hats with separate skeleton assets and one shared skeleton; compile each layout, capture a control and two variants, read back the selected options and compare frames |
+| `scale` | Four independent enum parameters, six options each, 25 parts total; compile at `NONE` then `MAXIMUM`, recording callbacks and one-second samples of this editor PID's working set |
+| `material` | Material parameter through the existing bridge, texture parameter fallback if graph wiring is unreachable; two set/read-back values and red/blue evidence inside the fixed camera's character region |
+| `components` | Two named components and a separate Python `UpdatedDelegate.add_callable` binding attempt; retain exact exceptions and callback log lines |
+
+```text
+node examples/unreal/mutable/mu_parts.mjs <new-output-folder> <agent-meshes-plugin-root>
+node examples/unreal/mutable/mu_probe.mjs --engine <engine-folder> --parts <new-output-folder>/parts --only bridge,build,skeleton,scale,material,components --compile-timeout 240 --keep
+node examples/unreal/mutable/mu_internal_header.mjs <engine-folder>
+```
+
+Run the Internal-header command once, separately: it copies the module into another temporary project, adds the public node include there, and retains `internal-build.log` plus its JSON summary whether the build succeeds or fails. It does not alter the delivered module. The native build is bounded separately at 1200 seconds; every Mutable compile uses `run_compile` and the selected 240-second limit. Run native work only with exclusive engine access and the documented shared lock; preserve unrelated workloads and retain contention as disqualifying evidence.
+
+`Saved/run.json` holds checks and process launch identities/arguments alongside individual reports and screenshots. Working-set reports distinguish the maximum sampled during each compile from the process lifetime peak. `NONE` runs first and `MAXIMUM` second in the same editor, so cache state and order are part of the result, not a cold-cache performance comparison. Missing reports, samples, readbacks or frames fail their checks; a timeout or refusal remains explicit negative evidence.
 
 A run takes about four minutes: Unreal Build Tool builds the Editor target once, the editor starts four times (rendering, offscreen: `-RenderOffScreen`, no interactive session) and the commandlet once. **Every compile has a wall-clock limit** (`--compile-timeout`, default 240 s): the editor-mode compile is asynchronous and polled against that limit, every editor and commandlet phase has a process limit of the compile timeout plus a margin and is killed at it, and the module build has its own limit (1200 s). A timeout or a kill is a recorded result and is not retried. If the module does not build, the later phases do not run (the project names a module with no binary) and the check shows the compiler or linker message word for word. A node test pins that no compile call lacks its limit.
 
@@ -27,6 +57,9 @@ A run takes about four minutes: Unreal Build Tool builds the Editor target once,
 | `mu_probe_graph.py` | through the bridge: add and link on a throwaway object and ask for what must be refused; then build the swappable-parts graph, compile it, read its parameter, save |
 | `mu_probe_variants.py` | build a level (a Customizable Skeletal Mesh actor, a plain skeletal mesh as control, a camera), play it, attach an Instance, set each option, take a frame of each |
 | `mu_probe_headless.py` | load the saved object and compile it in a `-nullrhi` commandlet with a blocking call |
+| `mu_probe_extended.py` | shared/separate skeletons, bounded scale compiles and memory samples, material/texture route, two components and the update callback |
+| `mu_parts.mjs` | reproducible agent-meshes generator for the body, two hats and 24 scale options on the same three-bone layout |
+| `mu_internal_header.mjs` | isolated native include experiment in a temporary copy of the module, with exact build log and result |
 
 ## The bridge
 
@@ -51,8 +84,8 @@ Every result struct carries `ok` and `message`. To build the module into a proje
 - The compile reports `compiled` with no errors; the object lists one component and the parameter `Hat` (an INT) with its two options. The Instance set to each option builds a skeletal mesh, and the captured frames show the whole figure with the red cap and with the grey top hat.
 - The saved object reloads with its graph (20 nodes, 27 links): a fresh process reads `is_compiled` false and no parameter until it compiles, so each process compiles before it builds an Instance.
 - The headless compile of the real graph completes in the commandlet with a blocking call (an asynchronous compile needs the editor tick); the bridge module loads in the commandlet too.
-- `unreal.InstanceUpdateDelegate` is not reachable from Python, so the variants script waits a fixed time after each Instance update instead of for its callback.
-- Not established: the compile cost of a large object (the runs use three small meshes and a fraction of a second), the forum reports of a hang with Extension Data constants and of large memory use with many morph targets and child objects, more than one component or LOD, materials and textures, a graph that needs the nodes' own editor-only helpers.
+- The original variants script cannot construct `unreal.InstanceUpdateDelegate` and waits after updates. B-Q4 run 3 instead binds the instance's `updated_delegate` multicast property with `add_callable`; that callback runs and the instance builds a mesh.
+- Not established: production-scale character compile costs, the forum reports of a hang with Extension Data constants and of large memory use with many morph targets and child objects, LOD execution, texture parameters, or a graph that needs the nodes' own editor-only helpers. The four-by-six fixture and material route above answer only their specific experiments.
 
 ## What Python alone reaches (the premise)
 

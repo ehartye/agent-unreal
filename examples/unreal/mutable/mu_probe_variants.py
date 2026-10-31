@@ -208,5 +208,6 @@ def task():
         yield 2.0
 
 
-c.drive(probe, task)
-unreal.log("[mu_probe_variants] tick callback registered")
+if os.environ.get("MU_LIBRARY_ONLY") != "1":
+    c.drive(probe, task)
+    unreal.log("[mu_probe_variants] tick callback registered")

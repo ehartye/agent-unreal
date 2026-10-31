@@ -92,7 +92,7 @@ async function buildModule() {
 function launch(phase) {
   const env = {
     ...process.env, MU_PROBE_DIR: here, MU_REPORT: reportPath(phase.name), MU_CO: phase.co || OBJECT_PATH, MU_COMPILE_TIMEOUT_S: String(compileTimeoutS),
-    MU_COMPILE_MODE: phase.mode === 'commandlet' ? 'sync' : 'async', MU_PARTS: JSON.stringify(parts), MU_PREFIX: phase.prefix || 'mu',
+    MU_COMPILE_MODE: phase.mode === 'commandlet' ? 'sync' : 'async', MU_PARTS: JSON.stringify(parts), MU_PREFIX: phase.prefix || 'mu', MU_GROUP: phase.name,
   };
   const script = resolve(here, phase.script);
   const args = phase.mode === 'commandlet'
@@ -105,7 +105,7 @@ function launch(phase) {
   const timedOut = result.status === null;
   say(`  ${phase.name}: ${timedOut ? 'killed at the limit' : `exit ${result.status}`}${result.error && !timedOut ? ` (${result.error.message})` : ''}, ${seconds} s, report ${existsSync(reportPath(phase.name)) ? 'written' : 'NOT written'}`);
   if (timedOut) stopProjectProcesses();
-  return { exit: timedOut ? undefined : result.status, timed_out: timedOut, seconds };
+  return { exit: timedOut ? undefined : result.status, timed_out: timedOut, seconds, pid: result.pid, executable: phase.mode === 'commandlet' ? cmd : editor, args, started_utc: new Date(started).toISOString() };
 }
 
 function findFile(dir, name) {
@@ -134,7 +134,7 @@ for (const group of groups) {
     stopProjectProcesses();
     entry.report = readJson(reportPath(phase.name));
   }
-  if (group === 'variants') {
+  if (['variants', 'skeleton', 'material'].includes(group)) {
     for (const name of shotNames(entry.report)) {
       const file = findFile(join(saved, 'Screenshots'), name);
       if (!file) { say(`  screenshot ${name} not found under ${join(saved, 'Screenshots')}`); continue; }
@@ -148,6 +148,7 @@ say('  judging the reports');
 const checks = evaluateProbes({ groups, reports });
 for (const c of checks) say(`${c.pass ? 'PASS' : 'FAIL'}  [${c.group}] ${c.name}\n      claim: ${c.claim}\n      ${c.detail}`);
 const { passed, total } = summarize(checks);
+writeFileSync(join(saved, 'run.json'), JSON.stringify({ groups, compileTimeoutS, checks, passed, total, reports: Object.fromEntries(Object.entries(reports).map(([key, value]) => [key, { ...value, images: Object.keys(value.images) }])) }, null, 2));
 say(`${passed} of ${total} probe checks passed`);
 const clean = passed === total;
 if (keep || !clean) say(`kept ${root} (reports and logs under Saved; the module build log is Saved/build.log; screenshots under Saved/Screenshots)`);
