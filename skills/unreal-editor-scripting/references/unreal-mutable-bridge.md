@@ -11,7 +11,7 @@ Target: Unreal Engine 5.8, Windows. Python can create and compile a Customizable
 ## What the editor module exposes
 
 - [documented] In the installed engine, read before run 1: the Mutable plugin ships the Mutable editor module's Public, Internal and Private headers and `.cpp` files. The graph class `UCustomizableObjectGraph` and every concrete node class sit in `Private/`. The exported pieces are `UEdGraphSchema_CustomizableObject` (the `PC_*` constants, `CanCreateConnection`, `TryCreateConnection`) and the editor function library.
-- [general] The base node header `CustomizableObjectNode.h` includes `MuCO/CustomizableObjectPrivate.h` from the CustomizableObject module's `Internal` folder. The Unreal Build Tool source reads that a module gets another module's Internal include path only for the same scope or an engine module, so including the header from a project module is expected to stop with C1083. It was not tried; the module reaches the node classes by reflection instead.
+- [tested] B-Q3 run 1 (2026-10-31): a throwaway project-module include of `MuCOE/Nodes/CustomizableObjectNode.h` failed with `fatal error C1083: Cannot open include file: 'MuCO/CustomizableObjectPrivate.h': No such file or directory`. The delivered module continues to reach node classes by reflection.
 - [tested] 2026-10-30, runs 1 and 2: the module included `MuCOE/EdGraphSchema_CustomizableObject.h` and no other Mutable header, and built with no error.
 
 ## The calls
@@ -47,6 +47,6 @@ ok = unreal.MutableBridgeLibrary.link_pins(enum_node, "Enum", switch_node, "Swit
 
 ## Not established
 
-- [general] The compile cost and memory of a large object: the runs used three small meshes and a fraction of a second. Smallest next experiment: the same recipe on a real asset with several LODs, morph targets and textures under the same timeout.
-- [general] More than one component or LOD, materials and textures in the graph, Instance update callbacks from Python, and the forum reports of a hang with Extension Data constants and of large memory use with many morph targets and child objects.
+- [tested] B-Q1 run 2, B-Q2 run 2, B-Q3 run 3 and B-Q4 run 3 (2026-10-31) measured a four-by-six option fixture and validated shared skeletons, a material parameter, two components and the Instance's reflected update delegate: [results and recipes](unreal-mutable-scale.md).
+- [general] Not established: production-character compile cost, extra LODs, texture parameters, or the forum reports of a hang with Extension Data constants and large memory use with many morph targets and child objects.
 - [general] Whether another 5.x release keeps these class, property and pin names: they were read from the installed 5.8 headers and nodes, so check them with `get_node_pins` before reusing the recipe.

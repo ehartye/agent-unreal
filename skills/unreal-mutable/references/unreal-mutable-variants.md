@@ -25,6 +25,7 @@ Target: Unreal Engine 5.8 on Windows. An Instance holds one choice per parameter
 - [tested] 2026-10-30, bridge run 1: the frames differed in 2,711 pixels but showed one section of each part, a red disc above a blue leg and a grey cylinder above the same leg, because the graph linked only the first mesh section of each part.
 - [tested] 2026-10-30, bridge runs 1 and 2: `unreal.InstanceUpdateDelegate` was not reachable from Python, so each variant waited a fixed 10 s before its frame.
 
-## Not established
+## Callback and remaining limits
 
-- [general] Not run: whether the update completes within a bound on a large graph, an update callback from Python, and whether the Usage class draws the same. Graph recipe: [Authoring the graph](unreal-mutable-graph.md).
+- [tested] B-Q4 run 3 (2026-10-31) bound `inst.get_editor_property("updated_delegate").add_callable(updated)` on a compiled two-component fixture. After `update_skeletal_mesh_async(True, True)`, the callback logged the Instance and `has_any_skeletal_mesh` was true; [callback recipe](../../unreal-editor-scripting/references/unreal-mutable-scale.md). This uses the reflected Instance delegate, not the absent `unreal.InstanceUpdateDelegate` class queried by the older probe.
+- [general] Not established: bounded update time on a production-scale graph or whether the Usage class draws the same. The material/skeleton captures still used fixed waits; the callback was a separate experiment. Graph recipe: [Authoring the graph](unreal-mutable-graph.md).

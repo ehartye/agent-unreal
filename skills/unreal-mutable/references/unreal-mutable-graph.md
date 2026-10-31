@@ -20,7 +20,8 @@ Target: Unreal Engine 5.8 on Windows. The graph is where parts become swappable 
 - [tested] 2026-10-30, run 2: a swappable-parts graph of 19 added nodes and 27 added links compiled with one parameter `Hat`, options `Cap` and `Tall`, and one component. The base object takes a component node, then a skeletal-mesh object-make node, then a skeletal-mesh make node whose `LOD 0` pin takes one mesh-section node per mesh pin of each skeletal-mesh node; an enum parameter feeds one switch per accessory section slot.
 - [tested] 2026-10-30, run 1: the first attempt linked only section 0 of each part (11 nodes, 11 links), so its frames showed one section of each part. Run 2 linked every section (the body has 6, each hat 2) and its frames showed the whole figure.
 - [tested] 2026-10-30, runs 1 and 2: the switch was added with `PinType` `material` (adding one without it was not run); linking the enum to its `Switch Parameter` input then gave it one input per value.
-- [general] Other node kinds, such as materials, textures and modifiers, were not added. Read their class and pin names from the installed headers and from `get_node_pins`, as the runs did.
+- [tested] B-Q3 run 3 (2026-10-31) added `CustomizableObjectNodeMaterialParameter` through the existing bridge and linked its `materialAsset` output to the mesh sections. The compiled `Finish` parameter changed the captured figure from red to blue; [material recipe](../../unreal-editor-scripting/references/unreal-mutable-scale.md).
+- [general] Texture parameters and modifiers remain unrun. Read class and pin names from the installed headers and `get_node_pins`; source for an unneeded fallback is not native evidence.
 
 | Other route | What it needs | Status |
 |---|---|---|
@@ -30,7 +31,7 @@ Target: Unreal Engine 5.8 on Windows. The graph is where parts become swappable 
 ## Parts the graph will need
 
 - [tested] 2026-10-29: three agent-meshes GLBs (one fixed body and two hats bound to the head bone) imported as one skeletal mesh each, on three separate skeletons (`person_body_Skeleton`, `hat_cap_Skeleton`, `hat_tall_Skeleton`). See [Mutable overview](unreal-mutable-overview.md).
-- [tested] 2026-10-30, runs 1 and 2: the three parts were imported each with its own skeleton, and the graph compiled and drew them; a shared skeleton was not run, so whether a graph needs one is not established. Import them on one skeleton if a first graph rejects them.
+- [tested] B-Q1 run 2 (2026-10-31) compiled the same body and hats on separate skeletons in 0.41 s and one shared body skeleton in 0.52 s, both with zero errors/warnings. Each layout's cap/tall frames differed by 6,853 pixels. This establishes the rigid three-bone fixture; arbitrary-rig compatibility remains untested.
 - [documented] Epic's 5.8 release notes and the updated Mutable sample: in 5.8 the graph can work at skeletal-mesh level with the Skeletal Mesh pin, so a part is a skeletal mesh rather than a per-section assembly.
 - [general] Name parts differently from bones: agent-meshes refuses a part and a bone with one name.
 

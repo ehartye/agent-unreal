@@ -8,7 +8,7 @@ when_to_use: "Use when asked to swap a character's parts at runtime, such as hat
 
 Unreal 5.8 on Windows. Mutable composes one character from swappable parts at runtime. This skill says what an agent can do with it from a script, what the compile costs and where to stop waiting. Other Unreal skills: `unreal-animation`, `unreal-import`, `unreal-editor-scripting`, `unreal-rendering`, `unreal-native`, `unreal-architecture`.
 
-Evidence in short: a spike on 2026-10-29 found that Python alone creates, compiles and inspects a Customizable Object but cannot author its graph (9 of 16 probe checks). A second spike on 2026-10-30 built a small editor C++ module that adds nodes and links pins; two runs passed 26 of 26 checks (probe: [mutable README](../../examples/unreal/mutable/README.md)). Brackets mark each line `[tested]`, `[documented]` or `[general]`.
+Evidence in short: a spike on 2026-10-29 found that Python alone creates, compiles and inspects a Customizable Object but cannot author its graph (9 of 16 probe checks). A second spike on 2026-10-30 built a small editor C++ module that adds nodes and links pins; two runs passed 26 of 26 checks. The 2026-10-31 extension measured four-by-six options and tested shared skeletons, materials, two components and a Python callback (probe: [mutable README](../../examples/unreal/mutable/README.md)). Brackets mark each line `[tested]`, `[documented]` or `[general]`.
 
 | You are about to | Read |
 |---|---|
@@ -18,6 +18,7 @@ Evidence in short: a spike on 2026-10-29 found that Python alone creates, compil
 | Create an Instance, set a parameter option, attach it to an actor, or capture one frame per variant | [Parameters and variants](references/unreal-mutable-variants.md) |
 | Compile or build in a `-nullrhi` commandlet, or decide between headless and the editor | [Headless and editor](references/unreal-mutable-headless.md) |
 | Meet a Mutable bug, a hang or a very large compile, or ask what is not established | [Known bugs and open questions](references/unreal-mutable-bugs.md) |
+| Reuse the measured four-by-six fixture, a shared skeleton, a material parameter, two components or the reflected update callback | [Scale, materials and callbacks](../unreal-editor-scripting/references/unreal-mutable-scale.md) |
 
 ## What works from a script
 
@@ -36,12 +37,13 @@ Evidence in short: a spike on 2026-10-29 found that Python alone creates, compil
 
 - [documented] Epic's 5.8 release notes: Mutable is production-ready in 5.8, though Epic labels parts of it "Very experimental", such as custom External Operations. A dataless Customizable Object evaluates its parameters at runtime and not at compile time.
 - [documented] Epic recommends `CustomizableObjectInstanceUsage` over the `CustomizableSkeletalComponent` wrapper in the 5.8 upgrade notes.
-- [general] The parts come from `unreal-import` (skeletal meshes; a shared skeleton is the safe choice, not a tested requirement) and the character from agent-meshes; a MetaHuman as a Mutable object belongs to unreal-metahuman and is not covered here.
+- [tested] B-Q1 run 2 (2026-10-31) compiled and drew the same rigid three-bone parts on separate and shared skeleton assets. This is not a requirement or compatibility guarantee for arbitrary rigs. Use `unreal-import` for parts and agent-meshes to make them; a MetaHuman as a Mutable object belongs to unreal-metahuman.
 - [general] Run a rendering editor for any frame; a frame cannot come from a commandlet.
 
-## Not established
+## Measured scope and remaining limits
 
-- [tested] 2026-10-30, runs 1 and 2: the compile ran on three small meshes in a fraction of a second. The cost of a large object is not known.
-- [general] Not run: several components or LODs, materials and textures, the Instance update callback from Python (the probe waited a fixed 10 s per variant), the `CustomizableObjectInstanceUsage` class, and the forum reports above. The smallest next experiment is the same recipe on a large real asset under the same timeout.
+- [tested] B-Q2 run 2 (2026-10-31) compiled four six-option parameters at NONE/MAXIMUM in 0.39/0.50 s, with sampled working-set maxima of 3,404.38/3,406.14 MiB. These small-fixture, warm-process measurements have two endpoint samples per subsecond compile; [the record](../unreal-editor-scripting/references/unreal-mutable-scale.md) separates them from lifetime peak memory.
+- [tested] B-Q3 run 3 and B-Q4 run 3 (2026-10-31) validated a material parameter's visible red/blue change, two component names and `updated_delegate.add_callable` after an Instance update. The existing bridge needed no new function.
+- [general] Not established: production-character compile/update costs, additional LODs, texture parameters, the `CustomizableObjectInstanceUsage` class and the forum reports above. Measure a real asset under the same timeout; the small fixture does not decide these cases.
 
 Enable the Mutable plugins like any other: the steps are under Enable a feature in [unreal-editor-scripting](../unreal-editor-scripting/SKILL.md).

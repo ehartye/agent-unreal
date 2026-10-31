@@ -13,7 +13,7 @@ Target: Unreal Engine 5.8 on Windows. This page lists what Epic's tracker and th
 
 - [general] A compile that hangs when the graph holds Extension Data constants: a forum report. Bound every compile with a timeout ([Build and compile](unreal-mutable-build-compile.md)) and take the constants out of a graph that hangs, to see whether they are the cause.
 - [general] A compile that needs very large memory with many morph targets and child objects: a forum report. Keep morph targets and child objects few in a first graph, and watch memory on the compiling machine.
-- [general] Both are anecdotal. Neither was seen or ruled out; the compiles that ran had an empty graph or three small meshes with no Extension Data constants.
+- [general] Both are anecdotal. Neither was reproduced or ruled out by the empty, three-mesh or four-by-six generated fixtures; the newer fixture does not establish production morph-target or child-object memory costs.
 
 ## Missing or empty documentation
 
@@ -25,6 +25,7 @@ Target: Unreal Engine 5.8 on Windows. This page lists what Epic's tracker and th
 
 - [tested] 2026-10-29: Python alone found no route to add a node or link a pin: two runs found none and a third repeated them.
 - [tested] 2026-10-30, bridge runs 1 and 2: with an editor C++ bridge a script built a graph with swappable options, its Instance drew a different part for each option, and it compiled headless; see [Authoring the graph](unreal-mutable-graph.md).
-- [general] Not run: the cost of a large graph's compile, in time and memory, in the editor or headless. The three-mesh graph compiled in under a second.
+- [tested] B-Q2 run 2 (2026-10-31) measured four six-option parameters in the rendering editor: NONE/MAXIMUM completed in 0.39/0.50 s with sampled working-set maxima 3,404.38/3,406.14 MiB. [The record](../../unreal-editor-scripting/references/unreal-mutable-scale.md) qualifies the subsecond endpoint samples, lifetime peak and warm ordering.
+- [general] Production-scale compile costs and a headless run of the four-by-six fixture remain unestablished. The small generated fixture is not a benchmark for the reported problem graphs.
 - [general] Replication, packaging and cooking of Mutable content, Game Feature use and memory limits per platform. Not covered or run here; read Epic's pages.
 - [general] A MetaHuman as a Mutable object (Epic's sample builds one as a dataless object): see unreal-metahuman and the sample.
