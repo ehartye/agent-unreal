@@ -39,4 +39,11 @@ An audit answers: can the project's tests and performance numbers be trusted for
 - `[general]` State what you did not run. Reading a test does not show it passes, and reading a report does not show the numbers are right; say which findings need a run, and hand that to [unreal-native](../../unreal-native/SKILL.md).
 - `[general]` Stop when the activity's readiness and next action are supported. Each extra check needs a question it could change.
 
+## Report file
+
+- `[general]` When the caller supplies a Markdown output path, save the running agent's audit report at that exact path. Otherwise give the normal conversational report; do not invent a file or default directory. The report is the agent's work, not a verbatim reply from the skill.
+- `[general]` Begin the file with `Produced by: <producing agent>; agent-unreal: <installed version>`. Read the version from the installed plugin's `.claude-plugin/plugin.json`; if unavailable, say so rather than guess. Use these headings in order: **Activity and verdict**, **Test inventory**, **Run description**, **Performance claims and conditions**, **Ranked findings**, **Evidence confidence**, **Owner questions**, **Not run**. Follow section 5's report method and distinguish observed, inferred and unverified findings.
+- `[general]` Identify missing or unreadable inputs as unavailable evidence and mark dependent claims unverified. Reading a test never establishes that it passed. State that no engine runs were performed; saving a report does not authorize execution.
+- `[general]` Read an existing destination before writing. When updating a caller-owned audit report, preserve unrelated content. If the destination is an unrelated file, preserve it and report the conflict instead of silently overwriting it.
+
 Next: [remediation plan](unreal-quality-remediation.md).
