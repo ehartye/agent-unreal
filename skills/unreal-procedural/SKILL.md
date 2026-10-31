@@ -1,7 +1,7 @@
 ---
 name: unreal-procedural
-description: "Choose and drive Unreal Engine 5.8 procedural world, mesh and audio systems: World Partition and large open worlds, Landscape and Landmass, Water, PCG in the editor and in a running game, Geometry Scripting, the Procedural Mesh Component, and MetaSounds. Not for lighting or rendering (use unreal-rendering), scripting the editor from Python (unreal-editor-scripting), importing fixed assets (use unreal-import) or deciding whether Blender or Unreal should make a mesh (mesh-tool-selection in agent-meshes)."
-when_to_use: "Use when asked to build an open world, a large landscape with rivers, a partitioned map, terrain with caves or overhangs (Mesh Terrain), oceans or lakes; to scatter foliage, props or biomes by rules; when PCG output is missing in a running game; to build or edit meshes from code or at runtime, or a generated mesh sits at the wrong height or rotation; or for parameter-driven procedural audio."
+description: "Choose and drive Unreal Engine 5.8 procedural world, mesh and audio systems: World Partition and large open worlds, Landscape and Landmass, Water, PCG in the editor and in a running game, Geometry Scripting, the Procedural Mesh Component, MetaSounds, Quartz and Audio Modulation. Not for lighting or rendering (use unreal-rendering), scripting the editor from Python (unreal-editor-scripting), importing fixed assets (use unreal-import) or deciding whether Blender or Unreal should make a mesh (mesh-tool-selection in agent-meshes)."
+when_to_use: "Use when asked to build an open world, a large landscape with rivers, a partitioned map, terrain with caves or overhangs (Mesh Terrain), oceans or lakes; to scatter foliage, props or biomes by rules; when PCG output is missing in a running game; to build or edit meshes from code or at runtime, or a generated mesh sits at the wrong height or rotation; or for parameter-driven procedural audio, Quartz clocks and beat events, or Audio Modulation Control Buses and mixes."
 ---
 
 # Choosing an Unreal procedural system
@@ -25,6 +25,7 @@ Unreal 5.8 on Windows. Pick the feature from the goal, then read that system's r
 | Stack primitives into one mesh, rotate them, or fix a generated mesh that floats, sinks or faces the wrong way | [Geometry Scripting traps](references/unreal-geometry-scripting-traps.md) |
 | Create a runtime mesh from vertex arrays (Procedural Mesh Component; on) | [Procedural Mesh Component](references/unreal-procedural-mesh-component.md) |
 | Make parameter-driven, sample-accurate game audio (MetaSounds; on) | [MetaSounds](references/unreal-metasounds.md) |
+| Schedule Quartz clocks/beat events or script Control Buses, mixes and patches [Audio Modulation: off; Quartz: part of AudioMixer, no plugin] | [Quartz and Audio Modulation](references/unreal-quartz-audio-modulation.md) |
 
 ## Rules of thumb
 

@@ -12,7 +12,7 @@ Target: Unreal Engine 5.8, Windows. MetaSounds is a node-graph, sample-accurate 
 | Dependencies | AudioWidgets, AudioSynesthesia, ContentBrowserAssetDataSource, WaveTable, ModelViewViewModel |
 
 - Enable through Edit > Plugins, or add `{ "Name": "Metasound", "Enabled": true }` to the `Plugins` array of the `.uproject`.
-- Related Audio plugins, all off by default: `AudioModulation` (default Audio Modulation implementation), `AudioSynesthesia` (offline analyzers exposing extracted audio metadata to Blueprints; beta), `WaveTable` (beta). `Metasound` lists AudioSynesthesia, WaveTable and AudioWidgets as dependencies.
+- [documented] Related Audio plugins, all off by default: `AudioModulation` ([enablement and scripted assets](unreal-quartz-audio-modulation.md)), `AudioSynesthesia` (offline analyzers exposing extracted audio metadata to Blueprints; beta), `WaveTable` (beta). `Metasound` lists AudioSynesthesia, WaveTable and AudioWidgets as dependencies.
 
 ## Use it when
 
@@ -28,7 +28,7 @@ Target: Unreal Engine 5.8, Windows. MetaSounds is a node-graph, sample-accurate 
 - Use an imported WAV (Sound Wave asset) when the sound is fixed and rendered offline. The sibling plugin agent-beeps renders game sounds and songs as WAV; import them with the `unreal-import` skill. A MetaSound can still play the imported wave through its Wave Player node when it needs triggers, loop points or pitch-scale modulation.
 - Build a MetaSound when the sound must respond to live parameters. Render a WAV with agent-beeps when the sound is a one-shot cue, a loop or a song.
 - Use Sound Cues only to maintain existing legacy content; they are not sample-accurate and cannot run arbitrary DSP.
-- Use the Audio Modulation plugin when runtime-adjustable parameter buses should replace static Sound Class and Sound Mix settings. MetaSounds can read its parameter buses.
+- [documented] Use [Audio Modulation](unreal-quartz-audio-modulation.md) when runtime-adjustable parameter buses should replace static Sound Class and Sound Mix settings. MetaSounds can read its buses; the reference distinguishes asset creation from observed activation and Quartz timing.
 - Use the audio analysis plugin (AudioSynesthesia) when audio data should drive gameplay or visuals, in real time or offline; Epic lists Niagara and Blueprint as consumers, see [unreal-niagara.md](../../unreal-effects/references/unreal-niagara.md).
 
 ## How an agent drives it
@@ -68,5 +68,5 @@ Python names in the surface: about 146 `Metasound`/`MetaSound` names. Building a
 - [Audio in Unreal Engine 5](https://dev.epicgames.com/documentation/unreal-engine/audio-in-unreal-engine-5)
 - [UMetaSoundBuilderBase](https://dev.epicgames.com/documentation/unreal-engine/API/Plugins/MetasoundEngine/UMetaSoundBuilderBase)
 - [Build New MetaSound](https://dev.epicgames.com/documentation/unreal-engine/BlueprintAPI/Audio/MetaSound/Builder/BuildNewMetaSound)
-- Plugin descriptors: Metasound, AudioModulation, AudioSynesthesia, WaveTable, AudioWidgets.
+- [documented] Plugin descriptors: Metasound, [AudioModulation](unreal-quartz-audio-modulation.md), AudioSynesthesia, WaveTable, AudioWidgets.
 - The editor Python module's class and member listing (`unreal.MetaSound*`, `unreal.Metasound*`).
