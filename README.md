@@ -14,7 +14,7 @@ repository is marked as tested.
 
 ## Status
 
-Early (0.32.0). Fourteen skills.
+Early (0.33.0). Fourteen skills.
 
 The skills moved here from agent-engine 0.14.0, where their history up to that tag lives; `unreal-import` and its importer scripts followed in 0.2.0. The scripts in `examples/`
 were run on Windows against the engine build pinned in `engine-version.json` unless their README says an earlier build or a hand run; other platforms were not run. The sample scene, the `compare.ps1` example set and the showcase hand runs are earlier-build observations.
@@ -81,7 +81,7 @@ from current Fortnite cook, navigation and performance acceptance.
 | `unreal-effects` | Niagara particles, fluids and sand, a template catalog and authoring Niagara from Python; Cascade; Chaos Niagara and destruction, including a Geometry Collection built from C++. |
 | `unreal-animation` | Control Rig and IK Rig, Animation Blueprints (slot-only graphs from Python, a C++ bridge for state machines), Motion Matching, cloth, hair, Sequencer and Movie Render Queue. |
 | `unreal-gameplay` | Gameplay Ability System, Enhanced Input, AI, navigation, Mover, Chaos vehicles, networking and replication. |
-| `unreal-procedural` | World Partition and open worlds, Landscape, Landmass, Water, PCG (editor and running game), Geometry Scripting, Procedural Mesh Component and MetaSounds. |
+| `unreal-procedural` | World Partition and open worlds, Landscape, Landmass, Water, PCG (editor and running game), Geometry Scripting, Procedural Mesh Component, MetaSounds, Quartz and Audio Modulation. |
 | `unreal-rendering` | Lumen, MegaLights, directional lights (a sun and a moon), Virtual Shadow Maps, Nanite, Substrate and Toon, Temporal Super Resolution, and a production stack that combines them. |
 | `unreal-editor-scripting` | Editor Python run modes, cameras and whole-map builds; the Python-to-C++ bridge; enabling a plugin; the example scenes. |
 | `unreal-native` | Build, run, verify, package and profile a native C++ Unreal game from an agent: the build and capture loop, content pipeline, presentation, input replay, material and UV validation, cooking, frame-time profiling against a budget and side-by-side comparison scenes. |
