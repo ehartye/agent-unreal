@@ -1,4 +1,4 @@
-import test from 'node:test';
+import test, { beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync, cpSync, utimesSync, existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -17,7 +17,13 @@ import { readWav, rmsDb } from './agent-verify/artifacts.mjs';
 import { fixture as nativeFixture } from '../examples/unreal/verification_suite/fixture.mjs';
 
 const repo = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const write = (path, value) => writeFileSync(path, JSON.stringify(value, null, 2) + '\n');
+// Keep synthetic lifecycle and report timestamps in one controlled clock domain.
+// Kernel-assigned mtimes can lag Date.now() for these near-instant fixture writes.
+beforeEach(t => t.mock.timers.enable({ apis: ['Date'], now: Date.UTC(2026, 0, 1) }));
+const write = (path, value) => {
+  writeFileSync(path, JSON.stringify(value, null, 2) + '\n');
+  utimesSync(path, new Date(), new Date());
+};
 const read = path => JSON.parse(readFileSync(path));
 const step = (id, kind = 'automation', dependencies = []) => ({ id, kind, required: true, depends_on: dependencies, timeout_seconds: 30, arguments: [], expected_count: 1, ...(kind === 'automation' ? { filter: 'Suite', expected_tests: ['Suite.Test'] } : {}), ...(['replay', 'rejected_replay', 'audio', 'capture', 'smoke'].includes(kind) ? { input: `${id}.json`, requested: {} } : {}), ...(kind === 'rejected_replay' ? { expected_refusal: [{ code: 'unknown_metric', path: '$.phases[0].checks[0].metric' }], expected_exit_code: 0 } : {}) });
 const document = () => ({ schema_version: 1, request_id: 'suite-request', kind: 'replay', warmup: { min_seconds: 0, max_seconds: 3 }, settle: { min_seconds: 0, max_seconds: 3 }, save_sandbox: false, cache: { requested: 'unclassified', preparation: 'Functional check' }, phases: [{ name: 'observe', seconds: 1, measure: true, actions: [], checks: [{ id: 'ready', metric: 'ready', aggregation: 'last', min: 1, max: 1 }] }] });
@@ -103,13 +109,14 @@ test('A2 false automation headlines/counts/empty/skipped/name mismatches refuse'
   for (const mutate of [r => r.tests = [], r => r.succeeded = 0, r => r.failed = -1, r => r.succeededWithWarnings = null, r => r.inProcess = 1, r => r.tests[0].state = 'Skipped', r => r.tests[0].errors = 1, r => r.tests[0].fullTestPath = 'Other', r => r.tests.push(r.tests[0])]) { const r = report(); mutate(r); assert.equal(qualifyAutomation(r, step('a')).valid, false); }
 });
 test('A2 missing/stale reports and incomplete drain never pass; unknown halts independent dispatch', async t => {
-  for (const mode of ['missing', 'stale', 'drain', 'request', 'purpose', 'timeout', 'cancel']) {
+  for (const mode of ['missing', 'stale', 'before-start', 'future', 'drain', 'request', 'purpose', 'timeout', 'cancel']) {
     const f = fixture(t, [step('one'), step('dependent', 'automation', ['one']), step('independent')]); let launches = 0;
-    const adapter = fakeLauncher(({ dir, life, s }) => { if (s.id !== 'one') return; if (mode === 'missing') rmSync(join(dir, 'report/index.json')); if (mode === 'stale') utimesSync(join(dir, 'report/index.json'), new Date(0), new Date(0)); if (mode === 'drain') life.drain.proved = false; if (mode === 'request') life.requestHash = 'b'.repeat(64); if (mode === 'purpose') life.purpose = 'fixture'; if (mode === 'timeout') life.timedOut = true; if (mode === 'cancel') life.cancelled = true; });
+    const adapter = fakeLauncher(({ dir, life, s }) => { if (s.id !== 'one') return; if (mode === 'missing') rmSync(join(dir, 'report/index.json')); if (mode === 'stale') utimesSync(join(dir, 'report/index.json'), new Date(0), new Date(0)); if (mode === 'before-start' || mode === 'future') { const time = new Date(Date.parse(life.started) + (mode === 'before-start' ? -1 : 1001)); utimesSync(join(dir, 'report/index.json'), time, time); } if (mode === 'drain') life.drain.proved = false; if (mode === 'request') life.requestHash = 'b'.repeat(64); if (mode === 'purpose') life.purpose = 'fixture'; if (mode === 'timeout') life.timedOut = true; if (mode === 'cancel') life.cancelled = true; });
     const result = await execute(f.prepare(), join(f.root, 'run'), { launch: async (...args) => { launches++; await adapter(...args); } });
     assert.equal(result.qualified, false); assert.equal(result.steps.length, 3);
     assert.equal(launches, ['drain', 'request', 'purpose', 'cancel'].includes(mode) ? 1 : 2, mode);
     assert.equal(result.steps[0].status, mode === 'timeout' ? 'timed_out' : mode === 'cancel' ? 'cancelled' : ['drain', 'request', 'purpose'].includes(mode) ? 'unknown' : 'failed');
+    if (['stale', 'before-start', 'future'].includes(mode)) assert.match(result.steps[0].errors.join('\n'), /stale report: report\/index.json/);
   }
 });
 test('A2 exact observation source, request, finite measurements and requested conditions bind qualification', t => {
@@ -170,7 +177,8 @@ test('build and package use both identity and existing product bytes', async t =
 });
 test('retained verification refuses malformed result shapes, invalid intervals and overlapping dispatch', async t => {
   const f = fixture(t, [step('one'), step('two')]), out = join(f.root, 'run'), file = join(out, 'regression.json');
-  const original = await execute(f.prepare(), out, { launch: fakeLauncher() }); assert.equal(original.qualified, true);
+  const original = await execute(f.prepare(), out, { launch: fakeLauncher() }); assert.equal(original.qualified, true, JSON.stringify(original));
+  const verified = verifyReceipt(file); assert.equal(verified.qualified, true, JSON.stringify(verified));
   for (const mutate of [r => r.started = 'not-a-time', r => r.finished = null, r => r.errors = {}, r => r.errors = [42], r => r.steps[0].errors = 'none', r => r.steps[0].evidence = null, r => r.steps[0].checks_run = -1, r => r.steps[0].started = 'not-a-time', r => r.steps[0].finished = 'not-a-time', r => r.steps[0].finished = new Date(0).toISOString(), r => r.steps[0].started = 123, r => r.steps[0] = null]) {
     const changed = structuredClone(original); mutate(changed); write(file, changed); assert.throws(() => verifyReceipt(file));
   }
@@ -179,7 +187,7 @@ test('retained verification refuses malformed result shapes, invalid intervals a
   const checked = verifyReceipt(file); assert.equal(checked.qualified, false); assert.ok(checked.errors.some(error => error.includes('Overlapping')));
 });
 test('smoke uses AgentVerify checks; capture and audio require their actual artifacts', async t => {
-  const smoke = fixture(t, [step('smoke', 'smoke')]); assert.equal((await execute(smoke.prepare(), join(smoke.root, 'run'), { launch: fakeLauncher() })).qualified, true);
+  const smoke = fixture(t, [step('smoke', 'smoke')]), smokeResult = await execute(smoke.prepare(), join(smoke.root, 'run'), { launch: fakeLauncher() }); assert.equal(smokeResult.qualified, true, JSON.stringify(smokeResult));
   for (const kind of ['capture', 'audio']) {
     const s = { ...step(kind, kind), expected_count: 2 }, f = fixture(t, [s]); assert.equal(f.prepare().plan[0].kind, kind);
     const out = join(f.root, 'run'), result = await execute(f.prepare(), out, { launch: fakeLauncher() });
