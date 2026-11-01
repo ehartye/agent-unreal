@@ -12,6 +12,7 @@ import { hash } from './lib/unreal-run/contracts.mjs';
 import { engineContenders } from './lib/unreal-run/contention.mjs';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import { corruptRecoveryCases } from './lib/unreal-run/fixtures/recovery-cases.mjs';
 
 const sha = 'a'.repeat(64), id = '12345678-1234-1234-1234-123456789012', now = '2026-01-01T00:00:00.000Z';
 const identity = pid => ({ pid, created: `63900000000000000${pid}` });
@@ -143,6 +144,31 @@ test('recovery accepts only both evidence-backed cases; age and PID absence alon
   for (const state of ['live', 'reused', 'unknown']) assert.equal(recoveryDecision(owner(), [{ ...gone[0], state }]).allowed, false);
   assert.equal(recoveryDecision(owner(), []).allowed, false);
   assert.equal(recoveryDecision(owner(), [{ ...gone[0], expectedCreated: 'wrong' }]).allowed, false);
+  assert.equal(recoveryDecision(owner(), [null]).allowed, false);
+  assert.equal(recoveryDecision(owner(), gone, { lock: 'wrong' }).allowed, false);
+  assert.equal(recoveryDecision(owner(), gone, { purpose: 'fixture' }).allowed, false);
+  for (const [name, mutate] of corruptRecoveryCases) {
+    const corrupt = { ...owner(), permitIssued: true, phase: 'unknown-after-permit', drain: lifecycle().drain };
+    mutate(corrupt);
+    assert.equal(recoveryDecision(corrupt, gone).allowed, false, name);
+  }
+});
+test('recovery policy process binds original owner bytes and refuses corrupt input', t => {
+  const root = mkdtempSync(join(tmpdir(), 'unreal-recovery-policy-'));
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  const ownerPath = join(root, 'owner.json');
+  const bytes = JSON.stringify(owner()); writeFileSync(ownerPath, bytes);
+  const policy = fileURLToPath(new URL('./lib/unreal-run/recovery.mjs', import.meta.url));
+  const input = { ownerPath, ownerHash: hash(bytes), lock: LOCK, purpose: 'production', observations: gone };
+  const invoke = value => spawnSync(process.execPath, [policy], { input: value, encoding: 'utf8', timeout: 5000, windowsHide: true });
+  const valid = invoke(JSON.stringify(input)); assert.equal(valid.status, 0);
+  assert.deepEqual(JSON.parse(valid.stdout), { ...recoveryDecision(owner(), gone), ownerHash: input.ownerHash, lock: LOCK });
+  for (const corrupt of ['', '{bad', '{}', JSON.stringify({ ...input, ownerHash: 'wrong' })]) {
+    const result = invoke(corrupt); assert.equal(result.status, 74); assert.equal(result.stdout, '');
+  }
+  writeFileSync(ownerPath, '{bad');
+  assert.equal(invoke(JSON.stringify({ ...input, ownerHash: hash('{bad') })).status, 74);
+  assert.equal(readFileSync(ownerPath, 'utf8'), '{bad');
 });
 test('configuration rejects bypass keys and command construction preserves workload argv', t => {
   const root = mkdtempSync(join(tmpdir(), 'unreal-config-')); t.after(() => rmSync(root, { recursive: true, force: true }));

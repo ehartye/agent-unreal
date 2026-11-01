@@ -2,12 +2,13 @@
 import assert from 'node:assert/strict';
 import { spawn, execFileSync } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
-import { mkdtempSync, mkdirSync, existsSync, writeFileSync, readFileSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, existsSync, writeFileSync, readFileSync, cpSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { runContainedProcess, readJson, writeJson } from './controller.mjs';
-import { verifyLifecycle, hash } from './contracts.mjs';
+import { verifyLifecycle, hash, recoveryDecision } from './contracts.mjs';
+import { corruptRecoveryCases } from './fixtures/recovery-cases.mjs';
 if (process.platform !== 'win32') throw Error('Native acceptance requires Windows; a skip is not acceptance');
 const here = dirname(fileURLToPath(import.meta.url));
 const caseIds = ['normal', 'nonzero', 'timeout', 'cancel', 'containment', 'owner-death', 'accounting', 'helper-death', 'exclusion', 'recovery', 'rapid-exit', 'observation'];
@@ -111,20 +112,52 @@ try {
   });
   await check('clear-stale refuses absent corrupt live reused and ambiguous; accepts both proven cases', async () => {
     // Seeded recovery records are explicit fixture data, never production receipts.
-    for (const scenario of ['absent', 'corrupt', 'live', 'reused', 'ambiguous', 'pre-permit', 'drained']) {
+    const cases = [['absent'], ['corrupt'], ['live'], ['reused'], ['ambiguous'], ['pre-permit'], ['drained'], ...corruptRecoveryCases, ['wrong-lock', r => { r.lock = isolation().lock; }], ['wrong-purpose', r => { r.purpose = 'production'; }]];
+    const records = [];
+    for (const [scenario, mutate] of cases) {
       const shared = isolation(); mkdirSync(shared.state, { recursive: true });
       const gone = normal.lifecycle.gate;
-      let owner = { version: 1, kind: 'unreal-run/owner', id: randomUUID(), started: new Date().toISOString(), purpose: 'fixture', lock: shared.lock, requestHash: normal.requestHash, permitIssued: scenario !== 'pre-permit', phase: scenario === 'pre-permit' ? 'pre-permit' : 'unknown-after-permit', processes: [gone], drain: null };
+      let owner = { version: 1, kind: 'unreal-run/owner', id: randomUUID(), started: normal.lifecycle.started, purpose: 'fixture', lock: shared.lock, requestHash: normal.requestHash, permitIssued: scenario !== 'pre-permit', phase: scenario === 'pre-permit' ? 'pre-permit' : 'unknown-after-permit', processes: [{ ...gone }], drain: null };
       if (scenario === 'live') owner.processes = [normal.lifecycle.controller];
       if (scenario === 'reused') owner.processes = [{ ...normal.lifecycle.controller, created: '111111111111111111' }];
-      if (scenario === 'drained') owner.drain = normal.lifecycle.drain;
+      if (scenario === 'drained' || mutate) owner.drain = structuredClone(normal.lifecycle.drain);
+      mutate?.(owner);
       if (scenario === 'corrupt') writeFileSync(join(shared.state, 'owner.json'), '{corrupt');
       else if (scenario !== 'absent') writeJson(join(shared.state, 'owner.json'), owner);
+      const ownerPath = join(shared.state, 'owner.json');
+      const original = existsSync(ownerPath) ? readFileSync(ownerPath) : null;
       const r = await run({ ...options(`recovery-${scenario}`, 'normal', shared), action: 'clear-stale' });
       const allowed = ['pre-permit', 'drained'].includes(scenario);
       assert.equal(r.exitCode === 0, allowed, scenario);
       assert.equal(readJson(join(r.evidence, 'recovery.json')).allowed, allowed, scenario);
+      assert.equal(existsSync(ownerPath), original !== null && !allowed, scenario);
+      if (original && !allowed) assert.deepEqual(readFileSync(ownerPath), original, `${scenario}: owner bytes preserved`);
+      const observations = owner.processes.map(p => ({ pid: p.pid, expectedCreated: p.created, state: scenario === 'live' ? 'live' : scenario === 'reused' ? 'reused' : 'gone' }));
+      const pure = recoveryDecision(['absent', 'corrupt'].includes(scenario) ? null : owner, observations, { lock: shared.lock, purpose: 'fixture' });
+      assert.equal(pure.allowed, allowed, `${scenario}: shared policy agrees`);
+      assert.equal(existsSync(join(r.evidence, 'workload-permit.json')), false);
+      assert.equal(existsSync(join(r.evidence, 'workload-started.json')), false);
+      records.push({ scenario, allowed, pure, evidence: r.evidence, ownerPreserved: original !== null && !allowed });
     }
+    // Break only disposable policy copies: the real helper must preserve owner
+    // bytes when its policy process fails or emits malformed/coerced output.
+    for (const [scenario, source] of [['policy-exit', 'process.exit(9);'], ['policy-json', 'console.log("{bad");'], ['policy-shape', 'console.log(JSON.stringify({allowed:"true"}));'], ['policy-binding-types', 'console.log(JSON.stringify({allowed:true,reason:"invalid binding types",ownerHash:[],lock:[]}));']]) {
+      const library = join(root, scenario, 'library'); cpSync(here, library, { recursive: true });
+      writeFileSync(join(library, 'recovery.mjs'), source);
+      const copied = await import(pathToFileURL(join(library, 'controller.mjs')).href);
+      const shared = isolation(); mkdirSync(shared.state, { recursive: true });
+      const ownerPath = join(shared.state, 'owner.json');
+      writeJson(ownerPath, { version: 1, kind: 'unreal-run/owner', id: randomUUID(), started: normal.lifecycle.started, purpose: 'fixture', lock: shared.lock, requestHash: normal.requestHash, permitIssued: true, phase: 'unknown-after-permit', processes: [normal.lifecycle.gate], drain: normal.lifecycle.drain });
+      const original = readFileSync(ownerPath);
+      const r = await copied.runContainedProcess({ ...options(`${scenario}-recovery`, 'normal', shared), action: 'clear-stale' });
+      assert.equal(r.exitCode, 74, scenario); assert.equal(readJson(join(r.evidence, 'recovery.json')).allowed, false);
+      assert.deepEqual(readFileSync(ownerPath), original);
+      assert.equal(existsSync(join(r.evidence, 'workload-permit.json')), false);
+      assert.equal(existsSync(join(r.evidence, 'workload-started.json')), false);
+      records.push({ scenario, allowed: false, evidence: r.evidence, ownerPreserved: true });
+    }
+    writeJson(join(root, 'recovery-cases.json'), records);
+    return { cases: records.length, evidence: join(root, 'recovery-cases.json') };
   });
   await check('rapid child and grandchild exits reconcile membership snapshots before strict drain', async () => {
     const r = await run({ ...options('rapid-exit', 'rapid'), timeoutMs: 30000 });

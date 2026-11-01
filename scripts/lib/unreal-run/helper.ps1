@@ -119,19 +119,21 @@ try {
     }
     if($Action -eq 'clear-stale'){
         if(-not(Test-Path -LiteralPath $ownerPath)){throw 'Recovery refused: absent ownership evidence'}
+        $ownerHash=(Get-FileHash -LiteralPath $ownerPath -Algorithm SHA256).Hash.ToLowerInvariant()
         $old=Read-Json $ownerPath
-        if($old.version -ne 1 -or $old.kind -ne 'unreal-run/owner' -or $old.id -notmatch '^[a-f0-9-]{36}$' -or -not $old.started -or $old.purpose -ne $r.purpose -or $old.lock -ne $r.lock -or $old.requestHash -notmatch '^[a-f0-9]{64}$' -or @($old.processes).Count -eq 0){throw 'Recovery refused: corrupt ownership evidence'}
-        $null=[DateTime]::Parse($old.started)
         $observations=@()
         foreach($p in $old.processes){
-            if($p.pid -lt 1 -or $p.created -notmatch '^\d{15,20}$'){throw 'Recovery refused: corrupt process identity'}
             $state=Observe $p;$observations+=@{pid=$p.pid;expectedCreated=$p.created;state=$state}
-            if($state -ne 'gone'){throw "Recovery refused: $state process identity"}
         }
-        $zero=$old.drain.proved -eq $true -and $null -ne $old.drain.active -and $old.drain.active -eq 0 -and $null -ne $old.drain.members -and @($old.drain.members).Count -eq 0 -and $old.drain.requestHash -eq $old.requestHash -and $old.drain.observed
-        $before=$old.permitIssued -is [bool] -and -not $old.permitIssued -and $old.phase -eq 'pre-permit'
-        if(-not($zero -or $before)){throw 'Recovery refused: workload may have run without drain proof'}
-        $recovery=@{version=1;kind='unreal-run/recovery';id=$r.id;lock=$r.lock;allowed=$true;owner=$old;observations=$observations;reason=if($zero){'verified zero-member owned Job drain'}else{'no workload permit and every recorded identity gone'};observed=[DateTime]::UtcNow.ToString('o')}
+        # The mutex stays held across observation, shared policy and removal.
+        $policyInput=@{ownerPath=$ownerPath;ownerHash=$ownerHash;lock=$r.lock;purpose=$r.purpose;observations=$observations}
+        $policyOutput=ConvertTo-Json -InputObject $policyInput -Depth 30 -Compress | & $r.node (Join-Path $PSScriptRoot 'recovery.mjs')
+        if($LASTEXITCODE -ne 0){throw 'Recovery refused: policy process failed'}
+        $decision=ConvertFrom-Json -InputObject ($policyOutput -join [Environment]::NewLine) -AsHashtable -NoEnumerate
+        if($decision -isnot [System.Collections.IDictionary] -or $decision.allowed -isnot [bool] -or $decision.reason -isnot [string] -or -not $decision.reason -or $decision.ownerHash -isnot [string] -or $decision.lock -isnot [string] -or $decision.ownerHash -cne $ownerHash -or $decision.lock -cne $r.lock){throw 'Recovery refused: invalid policy response'}
+        if(-not $decision.allowed){throw "Recovery refused: $($decision.reason)"}
+        if((Get-FileHash -LiteralPath $ownerPath -Algorithm SHA256).Hash.ToLowerInvariant() -cne $ownerHash){throw 'Recovery refused: ownership evidence changed'}
+        $recovery=@{version=1;kind='unreal-run/recovery';id=$r.id;lock=$r.lock;allowed=$true;owner=$old;ownerHash=$ownerHash;observations=$observations;reason=$decision.reason;observed=[DateTime]::UtcNow.ToString('o')}
         Write-Json (Join-Path $r.evidence 'recovery.json') $recovery
         Remove-Item -LiteralPath $ownerPath
         $recovery|ConvertTo-Json -Depth 30

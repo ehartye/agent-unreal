@@ -65,11 +65,16 @@ export function verifyIdentity(r, lifecycle, { source, operation } = {}) {
 }
 
 // Observations must be made while holding the same mutex. Missing and unknown are distinct.
-export function recoveryDecision(owner, observations) {
+export function recoveryDecision(owner, observations, expected = {}) {
   if (!object(owner) || owner.version !== VERSION || owner.kind !== 'unreal-run/owner' || !/^[a-f0-9-]{36}$/.test(owner.id ?? '') || !time(owner.started) || !['production', 'fixture'].includes(owner.purpose) || (owner.purpose === 'production' && owner.lock !== LOCK) || (owner.purpose === 'fixture' && !/^Global\\agent-unreal-fixture-[a-f0-9-]{36}$/.test(owner.lock ?? '')) || !sha(owner.requestHash) || !Array.isArray(owner.processes) || !owner.processes.length || owner.processes.some(p => !identity(p))) return { allowed: false, reason: 'absent or corrupt ownership evidence' };
-  if (!Array.isArray(observations) || observations.length !== owner.processes.length || observations.some((p, i) => p.pid !== owner.processes[i].pid || p.expectedCreated !== owner.processes[i].created || p.state !== 'gone')) return { allowed: false, reason: 'live, reused or ambiguous process identity' };
-  const validDrain = owner.drain?.proved === true && owner.drain.active === 0 && Array.isArray(owner.drain.members) && owner.drain.members.length === 0 && owner.drain.requestHash === owner.requestHash && time(owner.drain.observed);
+  if ((expected.lock !== undefined && owner.lock !== expected.lock) || (expected.purpose !== undefined && owner.purpose !== expected.purpose) || typeof owner.permitIssued !== 'boolean' || !['pre-permit', 'running', 'unknown-after-permit', 'drained'].includes(owner.phase) || (owner.permitIssued ? owner.phase === 'pre-permit' : !['pre-permit', 'drained'].includes(owner.phase)) || new Set(owner.processes.map(p => `${p.pid}:${p.created}`)).size !== owner.processes.length) return { allowed: false, reason: 'contradictory or unbound ownership evidence' };
+  if (!Array.isArray(observations) || observations.length !== owner.processes.length || observations.some((p, i) => !object(p) || p.pid !== owner.processes[i].pid || p.expectedCreated !== owner.processes[i].created || p.state !== 'gone')) return { allowed: false, reason: 'live, reused or ambiguous process identity' };
+  const validDrain = object(owner.drain) && owner.drain.proved === true && owner.drain.active === 0 && Array.isArray(owner.drain.members) && owner.drain.members.length === 0 && owner.drain.requestHash === owner.requestHash && time(owner.drain.observed) && Date.parse(owner.drain.observed) >= Date.parse(owner.started);
   if (validDrain) return { allowed: true, reason: 'verified zero-member owned Job drain' };
+  // Only an absent or explicitly unobserved drain can accompany pre-permit proof.
+  // A malformed or contradictory drain must not be rescued by the other branch.
+  const unobserved = owner.drain === null || (object(owner.drain) && owner.drain.proved === false && owner.drain.active === null && owner.drain.members === null && owner.drain.observed === null && owner.drain.requestHash === owner.requestHash);
+  if (!unobserved) return { allowed: false, reason: 'corrupt or contradictory drain evidence' };
   if (owner.permitIssued === false && owner.phase === 'pre-permit') return { allowed: true, reason: 'no workload permit and every recorded identity gone' };
   return { allowed: false, reason: 'workload may have run without a drain proof' };
 }
