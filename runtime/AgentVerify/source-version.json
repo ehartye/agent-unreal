@@ -1,0 +1,66 @@
+{
+  "schema_version": 1,
+  "plugin_version": "0.36.0",
+  "files": [
+    {
+      "path": "AgentVerify.uplugin",
+      "sha256": "7e4537e7002bef12fb64e9dec63c652573089d91858c4ade687fe76db61e4fd3"
+    },
+    {
+      "path": "Resources/document-v1.schema.json",
+      "sha256": "e04f0bfa9a9f568efc1bff50b83b42a7c801576cd836380cd47e3039e50c31d5"
+    },
+    {
+      "path": "Resources/source-v1.schema.json",
+      "sha256": "dc89bc8596f265c61ccfd06cc79fa83930d176ba1e59797902354831071c8b52"
+    },
+    {
+      "path": "Source/AgentVerify/AgentVerify.Build.cs",
+      "sha256": "753e660232dcfa0dded45a5a4721936bb3a2bbf3c9eb2f99aaf24a430ece4347"
+    },
+    {
+      "path": "Source/AgentVerify/Private/AgentVerifyAudio.cpp",
+      "sha256": "6471b0648256f13d6b350539450c6690da2415380639f733d1d7bc70ce4d14ba"
+    },
+    {
+      "path": "Source/AgentVerify/Private/AgentVerifyAudio.h",
+      "sha256": "8957e9208619899ed8d5b719b13de87c0797a145f9e060bc758753d6344e76c8"
+    },
+    {
+      "path": "Source/AgentVerify/Private/AgentVerifyJson.cpp",
+      "sha256": "ccab4ceb458fb4c38b2382408107fc6f0002526325dfdd0df69e3ca61e6641c8"
+    },
+    {
+      "path": "Source/AgentVerify/Private/AgentVerifyJson.h",
+      "sha256": "eeec393cf96bc4bb0693a561630b872bec32b14a33349aa238b0ccb77658301f"
+    },
+    {
+      "path": "Source/AgentVerify/Private/AgentVerifyModule.cpp",
+      "sha256": "4fe1e4e46386556eb759cfdfb51658d30a0e0bb1076d666d1b7ee34b9f9bc0fc"
+    },
+    {
+      "path": "Source/AgentVerify/Private/AgentVerifyRunner.cpp",
+      "sha256": "600e8d168f9aed7c564af562524d6b825b998fc15305a437935afa92310461db"
+    },
+    {
+      "path": "Source/AgentVerify/Private/AgentVerifyValidation.cpp",
+      "sha256": "6de906e5081099c034dbf89ea540e012a36f234faa375ad1b883100d834b6040"
+    },
+    {
+      "path": "Source/AgentVerify/Private/Tests/AgentVerifyRulesTests.cpp",
+      "sha256": "baa2c2dbb389733eeba1499cabc3adabd3b732bbe95326a4e949f3e19e7ddfb5"
+    },
+    {
+      "path": "Source/AgentVerify/Public/AgentVerifyRunner.h",
+      "sha256": "756c307a01557223914f4239c4df6e561fb283ebc4cc48b52976fc4927785c3a"
+    },
+    {
+      "path": "Source/AgentVerify/Public/Domain/AgentVerifyRules.h",
+      "sha256": "9882d0db01efb0a81e1a2488e9e2478ad73bf6c57c75bff6b9313d117c115141"
+    },
+    {
+      "path": "Source/AgentVerify/Public/IAgentVerifyProbe.h",
+      "sha256": "43d2bd8087eeb5e8175568f1ea2d0ab536bad18ea0cb8c2fb2fa6ee4f39d7c7c"
+    }
+  ]
+}

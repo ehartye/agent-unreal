@@ -5,6 +5,8 @@ import { readFileSync, readdirSync, existsSync, mkdtempSync, mkdirSync, writeFil
 import { tmpdir } from 'node:os';
 import { join, dirname, resolve, relative, extname, sep } from 'node:path';
 import { loadSnapshot, checkCitations, extractCitations, compareSnapshot, liveSkills, writeSnapshot } from './skill-citations.mjs';
+import { validateSourceManifest, verifySourceFiles } from './agent-verify/contracts.mjs';
+import { collectSourceFiles } from './agent-verify/artifacts.mjs';
 
 // Repo root: scripts/.. unless AGENT_UNREAL_ROOT points elsewhere.
 const ROOT = resolve(process.env.AGENT_UNREAL_ROOT ?? join(import.meta.dirname, '..'));
@@ -20,6 +22,24 @@ test('plugin.json and marketplace.json carry the same version', () => {
   const market = json('.claude-plugin/marketplace.json');
   assert.match(plugin.version, /^\d+\.\d+\.\d+$/);
   assert.equal(market.plugins[0].version, plugin.version);
+});
+
+test('bundled AgentVerify source identifies this release and every supplied source byte', () => {
+  const manifest = json('runtime/AgentVerify/source-version.json');
+  assert.equal(manifest.plugin_version, json('.claude-plugin/plugin.json').version);
+  const checked = validateSourceManifest(manifest);
+  assert.equal(checked.valid, true, JSON.stringify(checked.issues));
+  assert.ok(!manifest.files.some((file) => file.path.toLowerCase() === 'source-version.json'), 'manifest cannot hash itself');
+  const observed = verifySourceFiles(manifest, collectSourceFiles(join(ROOT, 'runtime/AgentVerify'), manifest));
+  assert.equal(observed.valid, true, JSON.stringify(observed.issues));
+  assert.equal(observed.state, 'pristine', `source manifest drift: ${observed.modified_files?.join(', ')}`);
+  for (const schema of ['document-v1.schema.json', 'source-v1.schema.json']) {
+    assert.deepEqual(
+      readFileSync(join(ROOT, 'runtime/AgentVerify/Resources', schema)),
+      readFileSync(join(ROOT, 'scripts/agent-verify/schemas', schema)),
+      `runtime and offline validators must use the same ${schema} bytes`,
+    );
+  }
 });
 
 test('the README status line names the current plugin version', () => {
@@ -52,7 +72,7 @@ test('plugin.json keywords name the engine and UEFN', () => {
 // case-insensitively; a line written /pattern/flags is a regular expression with exactly those flags (the format the other
 // plugins' hygiene tests read), so a name that is also an ordinary word can be matched whole-word and case-sensitively.
 // A line that is not a valid regular expression is reported, not skipped.
-const TEXT = new Set(['.md', '.mjs', '.js', '.jsx', '.json', '.yml', '.yaml', '.py', '.gd', '.cs', '.html', '.sh', '.txt', '']);
+const TEXT = new Set(['.md', '.mjs', '.js', '.jsx', '.json', '.yml', '.yaml', '.py', '.gd', '.cs', '.cpp', '.h', '.hpp', '.inl', '.uplugin', '.html', '.sh', '.txt', '']);
 const SKIP_DIRS = new Set(['.git', 'node_modules', '.playwright-mcp', 'results', 'dist', 'fixtures']);
 const walk = (dir) => readdirSync(dir, { withFileTypes: true }).flatMap((e) => {
   const full = join(dir, e.name);
@@ -155,10 +175,13 @@ test('the generic hygiene patterns catch a home path, a GPU model, a non-plugin 
     'g.md': `${['Ge', 'Force'].join('')} card\n`,
     'r.md': 'https://github.com/ehartye/some-game\n',
     'w.md': 'see wiki/authored/x\n',
+    'runtime/Source/Probe.cpp': `// ${home}\n`,
+    'runtime/Source/Probe.h': '// https://github.com/ehartye/some-game\n',
+    'runtime/Probe.uplugin': JSON.stringify({ Description: `Uses ${home}` }),
     'ok.md': 'https://github.com/ehartye/agent-meshes and C:\\Users\\<you>\\x\n',
   });
   const files = scanHygiene(root).hits.map((h) => h.split(':')[0]).sort();
-  assert.deepEqual(files, ['g.md', 'p.md', 'r.md', 'w.md']);
+  assert.deepEqual(files, ['g.md', 'p.md', 'r.md', 'runtime/Probe.uplugin', 'runtime/Source/Probe.cpp', 'runtime/Source/Probe.h', 'w.md']);
 });
 
 // --- citations of other plugins' skills ---------------------------------------------------------------------------

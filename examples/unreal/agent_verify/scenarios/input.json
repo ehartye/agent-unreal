@@ -1,0 +1,55 @@
+{
+  "schema_version": 1,
+  "request_id": "mapped-input",
+  "kind": "replay",
+  "warmup": {
+    "min_seconds": 0.1,
+    "max_seconds": 60
+  },
+  "settle": {
+    "min_seconds": 0.1,
+    "max_seconds": 60
+  },
+  "save_sandbox": false,
+  "cache": {
+    "requested": "unclassified",
+    "preparation": "No cache preparation requested; functional sample only"
+  },
+  "phases": [
+    {
+      "name": "move",
+      "seconds": 1,
+      "measure": true,
+      "actions": [
+        {
+          "at": 0,
+          "type": "axis",
+          "key": "Gamepad_LeftX",
+          "value": 0.5
+        },
+        {
+          "at": 0,
+          "type": "key",
+          "key": "SpaceBar",
+          "down": true
+        }
+      ],
+      "checks": [
+        {
+          "id": "travel",
+          "metric": "position_x",
+          "aggregation": "last",
+          "min": 20,
+          "max": 100
+        },
+        {
+          "id": "mark",
+          "metric": "marks",
+          "aggregation": "last",
+          "min": 1,
+          "max": 1
+        }
+      ]
+    }
+  ]
+}
