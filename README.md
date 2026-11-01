@@ -14,7 +14,7 @@ repository is marked as tested.
 
 ## Status
 
-Early (0.37.1). Fifteen skills.
+Early (0.38.0). Fifteen skills.
 
 The skills moved here from agent-engine 0.14.0, where their history up to that tag lives; `unreal-import` and its importer scripts followed in 0.2.0. The scripts in `examples/`
 were run on Windows against the engine build pinned in `engine-version.json` unless their README says an earlier build or a hand run; other platforms were not run. The sample scene, the `compare.ps1` example set and the showcase hand runs are earlier-build observations.
@@ -28,7 +28,9 @@ The [shared Windows launcher](scripts/lib/unreal-run/README.md) supplies build, 
 
 ## Verification status
 
-The [verification suite skill](skills/unreal-verify/SKILL.md) writes versioned manifests, plans without launching an engine, runs through the shared launcher and independently qualifies retained evidence. Read the [suite contract](scripts/lib/unreal-verify/README.md) and [disposable native fixture](examples/unreal/verification_suite/README.md). Consumer adoption requires a complete comparison at one source revision; automatic migration and remote job transport are unsupported.
+The [verification suite skill](skills/unreal-verify/SKILL.md) writes versioned manifests, plans without launching an engine, runs through the shared launcher and independently qualifies retained evidence. Read the [suite contract](scripts/lib/unreal-verify/README.md) and [disposable native fixture](examples/unreal/verification_suite/README.md). Consumer adoption requires a complete comparison at one source revision; automatic migration remains unsupported.
+
+[Remote suite jobs](skills/unreal-verify/references/unreal-remote-jobs.md) provide typed Start/Status/Cancel/Fetch for an exact clean revision on a Windows engine host. Both ends need Node and Git; the host needs PowerShell 7, SSH access and the existing engine/toolchain. LFS sources also need Git LFS, hydrated objects and an already initialized local LFS repository format. Keep host configuration and fresh state/Fetch output Git-ignored under the source checkout. Qualification runs at original remote paths and is bound to verified returned bytes. [Fixture instructions and acceptance scope](examples/unreal/remote_jobs/README.md) distinguish normal SSH closure from untested forced network failure, and explain the separate no-engine real-LFS check. Remote engine and Git LFS acceptance are not added to merge CI.
 
 Epic's MCP plugin was tried on an earlier Unreal build and an earlier UEFN build: it drives the editor and returns screenshots, but has no
 audio import and rejects GLB. This was not repeated on the pinned builds.
@@ -84,7 +86,7 @@ from current Fortnite cook, navigation and performance acceptance.
 
 | Skill | Job |
 |---|---|
-| `unreal-verify` | Write and validate suite manifests, execute declared checks through the shared launcher, qualify retained receipts and compare staged consumer adoption. |
+| `unreal-verify` | Write and validate suite manifests, run local or exact-revision remote jobs, qualify retained evidence and compare staged consumer adoption. |
 | `unreal-effects` | Niagara particles, fluids and sand, a template catalog and authoring Niagara from Python; Cascade; Chaos Niagara and destruction, including a Geometry Collection built from C++. |
 | `unreal-animation` | Control Rig and IK Rig, Animation Blueprints (slot-only graphs from Python, a C++ bridge for state machines), Motion Matching, cloth, hair, Sequencer and Movie Render Queue. |
 | `unreal-gameplay` | Gameplay Ability System, Enhanced Input, AI, navigation, Mover, Chaos vehicles, networking and replication. |

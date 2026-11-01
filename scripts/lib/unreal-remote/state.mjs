@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { execFileSync } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { atomic, write, json, now, canonical } from './files.mjs';
-import { binding, validateState, TERMINAL } from './contracts.mjs';
+import { binding, validateState, TERMINAL, validProcessIdentity, processIdentityDifference, processIdentityGone } from './contracts.mjs';
 import { proveDrain } from './worker.mjs';
 
 let processOwner;
@@ -25,9 +25,9 @@ export function recoverStateLock(directory, observe) {
   write(join(recovery, 'owner.json'), { version: 1, process: currentOwner(), observed: now() });
   try {
   const owner = json(join(lock, 'owner.json'));
-  if (owner.version !== 1 || !owner.token || !owner.process?.created || readdirSync(lock).length !== 1) throw Error('Unknown state lock ownership; preserve it for inspection');
+  if (owner.version !== 1 || !owner.token || !validProcessIdentity(owner.process) || readdirSync(lock).length !== 1) throw Error('Unknown state lock ownership; preserve it for inspection');
   const observed = observe(owner.process);
-  if (!(observed?.pid === owner.process.pid && (observed.absent === true || typeof observed.created === 'string' && observed.created !== owner.process.created))) throw Error('State lock owner remains live or unobservable');
+  if (!processIdentityGone(owner.process, observed)) throw Error('State lock owner remains live or unobservable');
   if (canonical(json(join(lock, 'owner.json'))) !== canonical(owner)) throw Error('State lock changed during recovery');
   const request = json(join(directory, 'request.json')), current = readState(directory, request), nextFile = join(directory, `state-${String(current.sequence + 1).padStart(6, '0')}.json`);
   if (existsSync(nextFile)) {
@@ -40,6 +40,15 @@ export function recoverStateLock(directory, observe) {
 }
 
 export function readState(directory, request) { return validateState(json(join(directory, 'state.json')), request); }
+export function assertWorkerIdentity(directory, request, state, expected, observed, boundary, observationError = null) {
+  const reason = observationError ? 'Process identity observation failed' : processIdentityDifference(expected, observed);
+  if (!reason) return;
+  const file = join(directory, 'identity-diagnostic.json');
+  const diagnostic = { version: 1, kind: 'unreal-remote/identity-diagnostic', ...binding(request), token: state.token, sequence: state.sequence, observed_at: now(), boundary, expected: expected ?? null, observed: observed ?? null, observation_error: observationError, reason };
+  // The first failed comparison is immutable. Never reconstruct or overwrite it later.
+  try { write(file, diagnostic); } catch (error) { if (error.code !== 'EEXIST') throw error; }
+  throw Error(`${boundary}: ${reason}`);
+}
 export function initialize(directory, request) {
   const state = { version: 1, kind: 'unreal-remote/state', ...binding(request), token: randomUUID(), sequence: 0, phase: 'launch_pending', observed: now(), worker: null, drained: false, error: null };
   write(join(directory, 'state-000000.json'), state); write(join(directory, 'state.json'), state); return state;
@@ -93,7 +102,8 @@ export function issuePermit(directory, request, expected, worker) {
   const unlock = lockState(directory);
   try {
     const state = readState(directory, request);
-    if (state.sequence !== expected.sequence || state.token !== expected.token || state.phase !== 'ready' || canonical(state.worker) !== canonical(worker)) throw Error('Permit fencing rejected changed state');
+    if (state.sequence !== expected.sequence || state.token !== expected.token || state.request_sha256 !== expected.request_sha256 || state.source_sha256 !== expected.source_sha256 || state.job !== expected.job || state.version !== expected.version || state.phase !== 'ready') throw Error('Permit fencing rejected changed state');
+    assertWorkerIdentity(directory, request, state, state.worker, worker, 'Permit fencing rejected worker identity');
     write(join(directory, 'permit.json'), { version: 1, ...binding(request), token: state.token, worker });
   } finally { unlock(); }
 }
@@ -112,7 +122,7 @@ export function reconcileLease(directory, request, observeWorker) {
       if (!existsSync(join(directory, 'dispatch-ledger.json'))) return { released: false, reason: 'Missing post-permit dispatch ledger; preserve lease and original evidence' };
       if (!state.worker) return { released: false, reason: 'Permit exists without exact worker identity; retain lease and inspect owned launcher evidence' };
       observation = observeWorker(state.worker);
-      if (!(observation?.absent === true && observation.pid === state.worker.pid) && !(observation?.pid === state.worker.pid && typeof observation.created === 'string' && observation.created !== state.worker.created)) return { released: false, reason: 'Exact worker remains live or its identity is unobservable; retain lease' };
+      if (!processIdentityGone(state.worker, observation)) return { released: false, reason: 'Exact worker remains live or its identity is unobservable; retain lease' };
       try { proofs = proveDrain(join(directory, 'suite')); }
       catch (error) { return { released: false, reason: `${error.message}. Use unreal-run status and its documented exact-owner recovery; preserve lease until recorded Job drain is established` }; }
     }
@@ -127,7 +137,7 @@ export function cancelObserved(directory, request, observe) {
   if (!TERMINAL.includes(state.phase)) {
     const setup = json(join(directory, 'setup.json')), owner = state.worker ?? setup.owner;
     const observed = observe(owner);
-    if (observed?.pid === owner.pid && (observed.absent === true || typeof observed.created === 'string' && observed.created !== owner.created)) state = transition(directory, request, state, { phase: 'unknown', drained: false, error: state.worker ? 'Exact worker disappeared; cancellation cannot imply drain' : 'Exact setup owner disappeared before a worker established ownership' });
+    if (processIdentityGone(owner, observed)) state = transition(directory, request, state, { phase: 'unknown', drained: false, error: state.worker ? 'Exact worker disappeared; cancellation cannot imply drain' : 'Exact setup owner disappeared before a worker established ownership' });
   }
   return state.phase === 'unknown' ? { state, reconciliation: reconcileLease(directory, request, observe) } : state;
 }

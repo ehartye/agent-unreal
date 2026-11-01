@@ -8,7 +8,7 @@ import { execute, verifyReceipt, productionLaunch } from '../unreal-verify/runne
 import { validateRequest as launcherRequest, verifyLifecycle } from '../unreal-run/contracts.mjs';
 import { runContainedProcess } from '../unreal-run/controller.mjs';
 import { json, write, digest, hash, canonical, now, inventory } from './files.mjs';
-import { readState, transition, cancelled, checkLease, releaseLease } from './state.mjs';
+import { readState, transition, cancelled, checkLease, releaseLease, assertWorkerIdentity } from './state.mjs';
 import { binding, assertBinding, TERMINAL } from './contracts.mjs';
 import { readFileSync } from 'node:fs';
 
@@ -63,7 +63,9 @@ export async function runWorker(directory, { executeSuite = execute, launchSetup
   }
   try {
     checkLease(metadata.lease, request, state);
-    worker = identity(process.pid, directory);
+    try { worker = identity(process.pid, directory); }
+    catch (error) { assertWorkerIdentity(directory, request, state, { pid: process.pid }, null, 'Worker initial identity differs', error.message); }
+    assertWorkerIdentity(directory, request, state, worker, worker, 'Worker initial identity differs');
     write(join(directory, 'dispatch-ledger.json'), { version: 1, kind: 'unreal-remote/dispatch-ledger', ...binding(request), paths: ['setup/launcher'] });
     if (state.phase === 'launch_pending') state = transition(directory, request, state, { phase: 'ready', worker });
     else if (state.phase === 'cancelling') state = transition(directory, request, state, { phase: 'cancelling', worker });
@@ -78,8 +80,10 @@ export async function runWorker(directory, { executeSuite = execute, launchSetup
     state = readState(directory, request); checkLease(metadata.lease, request, state);
     if (!cancelled(directory, request, state)) {
       const permit = json(join(directory, 'permit.json'));
-      if (canonical(permit) !== canonical({ version: 1, ...binding(request), token: state.token, worker })) throw Error('Worker dispatch permit differs');
-      if (state.phase !== 'ready' || canonical(state.worker) !== canonical(worker)) throw Error('Worker state ownership differs');
+      assertWorkerIdentity(directory, request, state, worker, permit?.worker, 'Worker dispatch permit identity differs');
+      if (canonical({ ...permit, worker }) !== canonical({ version: 1, ...binding(request), token: state.token, worker })) throw Error('Worker dispatch permit differs');
+      if (state.phase !== 'ready') throw Error('Worker state ownership differs');
+      assertWorkerIdentity(directory, request, state, worker, state.worker, 'Worker state ownership differs');
       state = transition(directory, request, state, { phase: 'running' });
       controller = new AbortController();
       const workloadDeadline = Date.now() + request.remote.timeouts.workload_seconds * 1000;

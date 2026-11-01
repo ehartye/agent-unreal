@@ -5,7 +5,7 @@ import { randomUUID } from 'node:crypto';
 import { json, write, safe, unpack, fileIdentity, canonical, digest, now } from './files.mjs';
 import { validateRequest, binding, TERMINAL, jobId, remoteSettings } from './contracts.mjs';
 import { git, materialize, ignored } from './source.mjs';
-import { initialize, readState, transition, lease, issuePermit, cancelObserved, currentOwner } from './state.mjs';
+import { initialize, readState, transition, lease, issuePermit, cancelObserved, currentOwner, assertWorkerIdentity } from './state.mjs';
 import { processIdentity, windows, delay } from './worker.mjs';
 import { publishReturn, qualifyReturn } from './transfer.mjs';
 
@@ -48,8 +48,10 @@ export async function startRemote(base, request, message, { launch = (directory)
       state = readState(directory, request);
       if (TERMINAL.includes(state.phase)) return state;
       if (state.worker) {
-        const observed = identity(child.pid, directory);
-        if (canonical(observed) !== canonical(state.worker)) throw Error('Detached worker creation identity differs');
+        let observed;
+        try { observed = identity(child.pid, directory); }
+        catch (error) { assertWorkerIdentity(directory, request, state, state.worker, null, 'Detached worker creation identity differs', error.message); }
+        assertWorkerIdentity(directory, request, state, state.worker, observed, 'Detached worker creation identity differs');
         if (state.phase === 'ready') issuePermit(directory, request, state, observed);
         return state;
       }

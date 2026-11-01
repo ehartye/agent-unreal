@@ -4,6 +4,20 @@ import { json, safe, logical, digest } from './files.mjs';
 import { ignored } from './source.mjs';
 
 export const TERMINAL = ['succeeded', 'failed', 'cancelled', 'unknown'];
+export function validProcessIdentity(value) {
+  return value !== null && typeof value === 'object' && !Array.isArray(value) && Object.keys(value).length === 2 && Object.keys(value).every(k => k === 'pid' || k === 'created') && Number.isSafeInteger(value.pid) && value.pid > 0 && typeof value.created === 'string' && /^[0-9]+$/.test(value.created);
+}
+export function processIdentityDifference(expected, observed) {
+  if (!validProcessIdentity(expected)) return 'Expected process identity is missing or malformed';
+  if (!validProcessIdentity(observed)) return 'Observed process identity is absent, missing or malformed';
+  if (expected.pid !== observed.pid) return 'Process PID differs';
+  if (expected.created !== observed.created) return 'Process creation identity differs';
+  return null;
+}
+export function sameProcessIdentity(expected, observed) { return processIdentityDifference(expected, observed) === null; }
+export function processIdentityGone(expected, observed) {
+  return validProcessIdentity(expected) && observed?.pid === expected.pid && (validProcessIdentity(observed) && observed.created !== expected.created || observed.absent === true && Object.keys(observed).length === 2 && Object.keys(observed).every(k => k === 'pid' || k === 'absent'));
+}
 export function fields(value, allowed, label) {
   if (!value || typeof value !== 'object' || Array.isArray(value) || Object.keys(value).some(k => !allowed.includes(k))) throw Error(`Unsupported ${label} fields`);
 }

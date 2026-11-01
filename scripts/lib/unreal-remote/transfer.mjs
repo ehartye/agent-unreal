@@ -19,7 +19,7 @@ export function publishReturn(directory, request, { diagnostic = false } = {}) {
   // Metadata is frozen per fetch. Original suite evidence is never rewritten or relocated for verification.
   write(join(snapshot, 'request.json'), request); write(join(snapshot, 'state.json'), state); write(join(snapshot, 'result.json'), result);
   const sources = inventory(snapshot).map(m => ({ path: m.path, source: join(snapshot, m.path) }));
-  for (const name of readdirSync(directory).filter(n => n === 'dispatch-ledger.json' || n === 'suite-plan.json' || /^dispatch-\d{6}\.json$/.test(n))) sources.push({ path: name, source: join(directory, name) });
+  for (const name of readdirSync(directory).filter(n => n === 'identity-diagnostic.json' || n === 'dispatch-ledger.json' || n === 'suite-plan.json' || /^dispatch-\d{6}\.json$/.test(n))) sources.push({ path: name, source: join(directory, name) });
   if (existsSync(join(directory, 'setup'))) for (const m of inventory(join(directory, 'setup'))) sources.push({ path: `setup/${m.path}`, source: join(directory, 'setup', m.path) });
   const suite = join(directory, 'suite');
   if (existsSync(suite)) for (const m of inventory(suite)) sources.push({ path: `suite/${m.path}`, source: join(suite, m.path) });
@@ -38,7 +38,7 @@ export function qualifyReturn(directory, request, archive, expected) {
   if (canonical(fileIdentity(archive)) !== canonical({ bytes: descriptor.archive.bytes, sha256: descriptor.archive.sha256 })) throw Error('Remote archive changed before qualification');
   const state = readState(directory, request);
   if (digest(state) !== descriptor.state_sha256) throw Error('State changed before remote qualification');
-  const sources = descriptor.archive.members.map(m => ({ ...m, source: m.path.startsWith('suite/') || m.path.startsWith('setup/') || m.path.startsWith('dispatch-') || m.path === 'suite-plan.json' ? join(directory, m.path) : join(snapshot, m.path) }));
+  const sources = descriptor.archive.members.map(m => ({ ...m, source: m.path.startsWith('suite/') || m.path.startsWith('setup/') || m.path.startsWith('dispatch-') || m.path === 'suite-plan.json' || m.path === 'identity-diagnostic.json' ? join(directory, m.path) : join(snapshot, m.path) }));
   const unchanged = () => { for (const m of sources) if (canonical(fileIdentity(m.source)) !== canonical({ bytes: m.bytes, sha256: m.sha256 })) throw Error('Original evidence changed during remote qualification'); };
   unchanged();
   const suite = join(directory, 'suite');

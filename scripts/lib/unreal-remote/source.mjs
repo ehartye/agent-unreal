@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { existsSync, readFileSync, writeFileSync, mkdirSync, cpSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync, mkdirSync, cpSync, lstatSync } from 'node:fs';
 import { join, resolve, relative, dirname } from 'node:path';
 import { sourceIdentity } from '../unreal-run/identity.mjs';
 import { validateManifest, OBSERVATIONS } from '../unreal-verify/manifest.mjs';
@@ -80,6 +80,24 @@ export function createBundle(root, commit, destination) {
   const heads = git(root, ['bundle', 'list-heads', destination]).toString().trim();
   if (heads !== `${commit} HEAD`) throw Error('Bundle advertised revision differs');
 }
+// Internal filesystem boundary for newly owned, hydrated worktrees only.
+export function normalizeHydratedLfs(worktree, tree, accepted) {
+  if (!accepted.length) return;
+  const requireTree = phase => {
+    if (git(worktree, ['write-tree']).toString().trim() !== tree) throw Error(`Remote indexed tree differs ${phase} LFS normalization`);
+  };
+  const requireBytes = () => {
+    for (const m of accepted) {
+      const destination = safe(join(worktree, logical(m.path)), worktree);
+      if (!lstatSync(destination).isFile()) throw Error('Hydrated LFS destination is not a regular file');
+      const identity = fileIdentity(destination);
+      if (identity.bytes !== m.bytes || identity.sha256 !== m.oid) throw Error('Hydrated LFS object differs');
+    }
+  };
+  requireTree('before'); requireBytes();
+  git(worktree, ['--literal-pathspecs', 'add', '--renormalize', '--pathspec-from-file=-', '--pathspec-file-nul'], { input: Buffer.from(accepted.map(m => m.path + '\0').join(''), 'utf8') });
+  requireTree('after'); requireBytes();
+}
 export function materialize(base, request, payload) {
   const repo = join(base, 'repository.git'), worktree = join(base, 'repository-worktrees', request.job);
   if (!existsSync(repo)) { mkdirSync(repo); git(repo, ['init', '--bare']); git(repo, ['config', 'lfs.repositoryformatversion', '0']); }
@@ -103,6 +121,7 @@ export function materialize(base, request, payload) {
       else cpSync(source, object, { errorOnExist: true, force: false });
       cpSync(source, safe(join(worktree, m.path), worktree));
     }
+    normalizeHydratedLfs(worktree, request.source.tree, actualPointers);
   }
   const observed = sourceIdentity({ sourceRoot: worktree });
   if (observed.dirty || observed.commit !== request.source.commit || observed.snapshot !== request.source.snapshot || git(worktree, ['rev-parse', 'HEAD^{tree}']).toString().trim() !== request.source.tree) throw Error('Remote source commit/tree/snapshot differs');
