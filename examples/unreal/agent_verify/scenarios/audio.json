@@ -1,0 +1,53 @@
+{
+  "schema_version": 1,
+  "request_id": "master-mix",
+  "kind": "observation",
+  "warmup": {
+    "min_seconds": 0.1,
+    "max_seconds": 60
+  },
+  "settle": {
+    "min_seconds": 0.1,
+    "max_seconds": 60
+  },
+  "save_sandbox": false,
+  "cache": {
+    "requested": "unclassified",
+    "preparation": "No cache preparation requested; functional sample only"
+  },
+  "phases": [
+    {
+      "name": "silence",
+      "seconds": 1,
+      "measure": true,
+      "actions": [],
+      "checks": [],
+      "audio": {
+        "id": "silence",
+        "min_rms_db": -120,
+        "max_rms_db": -80
+      }
+    },
+    {
+      "name": "tone",
+      "seconds": 2,
+      "measure": true,
+      "actions": [
+        {
+          "at": 0,
+          "type": "command",
+          "token": "sample.tone",
+          "args": [
+            "1"
+          ]
+        }
+      ],
+      "checks": [],
+      "audio": {
+        "id": "tone",
+        "min_rms_db": -45,
+        "max_rms_db": -5
+      }
+    }
+  ]
+}

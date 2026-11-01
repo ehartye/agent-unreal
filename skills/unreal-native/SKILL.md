@@ -19,6 +19,7 @@ reviewing its module and state structure is [unreal-architecture](../unreal-arch
 | You are about to | Read |
 |---|---|
 | Start an engine process, diagnose an engine lock, or adopt the prescribed launcher | [Shared launcher](references/unreal-engine-launcher.md) |
+| Install AgentVerify source, replay named observations, validate receipts or compare a disposable integration | [AgentVerify integration](references/unreal-agent-verify.md) |
 | Pin the compiler, run real gameplay, verify screenshots, or find static parts at the world origin (`is not static`) | [Native game loop](references/unreal-native-game.md) |
 | Add plugins and modules to a native game, or fix a first C++ compile error | [Module setup](references/unreal-native-module-setup.md) |
 | Diagnose a build that passes then fails on code you did not change (adaptive unity, chunking, the git working set) | [Unity builds](references/unreal-native-unity-builds.md) |

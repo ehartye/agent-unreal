@@ -28,3 +28,10 @@ Source for every `[documented]` line here: Epic's 5.8 pages "Introduction to Per
 - `[general]` Check a budget claim against its measurement: the budget, the scenario it applies to, the percentile it is judged at and the machine it was set on.
 
 Next: [profiling tools](unreal-quality-profiling-tools.md).
+
+## AgentVerify measurement contract
+
+- `[general]` Bundled AgentVerify separates warm-up, compile settlement and capture-hold frames from measured scenario frames. Explicitly unmeasured phases retain observations but have null timing summaries. Frame time comes from the monotonic wall clock, independently of simulation delta.
+- `[general]` Its v1 summaries use arithmetic mean, nearest-rank p95/p99 (`ceil(p*n)-1`) and maximum. The deterministic 1–100 fixture gives 50.5, 95, 99 and 100. Empty or nonfinite measured samples cannot satisfy a budget. Recompute summaries from retained raw frames within serialization precision; these are the contract's chosen semantics, not an Epic-mandated percentile method.
+- `[general]` A hardware-targeted budget requires matching observed hardware/profile and verified requested cache preparation. Unknown or observed contention, a cache label without preparation evidence, or a hardware mismatch prevents eligibility. A cross-hardware regression guard must retain its limited comparison claim. No cache flush or machine configuration change is implicit.
+- `[general]` A valid receipt can honestly record failed or unavailable observations. Master-mix WAV duration and samples, actual screenshot bytes and input cleanup evidence matter beyond metadata. The [source integration guide](../../unreal-native/references/unreal-agent-verify.md) and [disposable acceptance sample](../../../examples/unreal/agent_verify/README.md) describe the separate native lane; neither a synthetic fixture nor a passing lifecycle receipt establishes native behavior.

@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "request_id": "shot",
+  "kind": "shot",
+  "warmup": {
+    "min_seconds": 0.1,
+    "max_seconds": 60
+  },
+  "settle": {
+    "min_seconds": 0.1,
+    "max_seconds": 60
+  },
+  "save_sandbox": false,
+  "cache": {
+    "requested": "unclassified",
+    "preparation": "No cache preparation requested; functional sample only"
+  },
+  "phases": [
+    {
+      "name": "observe",
+      "seconds": 0.3,
+      "measure": true,
+      "actions": [],
+      "checks": [
+        {
+          "id": "visible-scene",
+          "metric": "scene_ready",
+          "aggregation": "last",
+          "min": 1,
+          "max": 1
+        }
+      ],
+      "capture": {
+        "id": "scene-shot",
+        "wait_seconds": 0.1
+      }
+    }
+  ]
+}

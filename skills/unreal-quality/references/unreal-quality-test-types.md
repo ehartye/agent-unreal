@@ -34,3 +34,5 @@ Source for every `[documented]` line here: Epic's 5.8 pages "Automation Test Fra
 - `[general]` Keep tests needing CQTest, editor modules or Functional Testing in a dedicated tests module or plugin (community advice), so test-only code stays out of Shipping targets.
 
 Next: [test design](unreal-quality-test-design.md).
+
+- `[general]` The [AgentVerify sample](../../../examples/unreal/agent_verify/README.md) demonstrates consumer ownership with an engine-free `Domain/TravelRule.h` and the Automation name `ObservationSample.Domain.Travel.ReleasedAxisStopsMovement`. Use `<Project>.Domain.<Area>.<Rule>` for such checks; keep world, controller, audio and file adapters outside the rule. AgentVerify supplies scenario observation, not a replacement for Automation, Functional Tests or a general game-test framework.

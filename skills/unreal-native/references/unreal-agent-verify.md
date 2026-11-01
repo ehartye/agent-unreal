@@ -1,0 +1,26 @@
+# AgentVerify source integration and observations
+
+- [general] Copy the bundled `runtime/AgentVerify/` into a disposable consumer's `Plugins/AgentVerify/`, preserving `source-version.json`, schemas and source. Enable the plugin and depend on its `AgentVerify` module. The descriptor's version 1 is the API generation; the manifest identifies the supplying agent-unreal release and exact files.
+- [general] Implement `IAgentVerifyProbe` for named finite metrics and registered command tokens. Return explicit unavailable values when observations are missing. Gameplay metrics, scenario data, save isolation and actual cache preparation belong to the consumer. The plugin owns replay timing, mapped input delivery, compile settling, capture holds, audio observations and receipts.
+- [general] Start and retain `FAgentVerifyRunner` on the game thread through completion. Cancellation releases injected keys and axes on the next actual frame; keep the world and controller alive through cleanup. One runner owns ordinary screenshot/input resources in a process. Simulated input does not establish physical-controller acceptance.
+- [general] Validate documents before launch, then require live-name validation before actions. Invalid structure, unknown metrics and unknown command tokens produce zero-action refusals. A crash or timeout is not such a refusal. An available metric's value zero is distinct from an unavailable measurement.
+
+```powershell
+node scripts/agent-verify/validate.mjs document replay.json
+node scripts/unreal-run.mjs game --config launcher.local.json --evidence D:/Evidence/run --timeout 180 -- -AVRequest=D:/Scenarios/replay.json -AVOutput=D:/Evidence/observation
+node scripts/agent-verify/validate.mjs receipt D:/Evidence/observation/receipt.json --request replay.json --source Plugins/AgentVerify --evidence D:/Evidence/observation
+```
+
+- [general] The `-AVRequest` option above is wired by the [disposable sample adapter](../../../examples/unreal/agent_verify/README.md); a real consumer chooses its own startup route. AgentVerify is source code, not an engine command-line service. Use the [shared launcher](unreal-engine-launcher.md) for execution and read both lifecycle and observation evidence.
+- [general] Validator exit zero means valid evidence, whose outcome may be `passed`, `failed` or `rejected`. Compare the outcome and exact refusal code/path requested by the caller. The external validator recomputes checks, frame summaries and actual PNG/WAV bytes instead of trusting `success`.
+- [general] Capture waits for 90 actual settled frames after settlement and restarts if compilation resumes; an unsettled pending screenshot is discarded. Audio records each complete phase from the master mix. Missing taps, shortened recordings and silent expected-active phases cannot pass an audio check. Audio-disabled smoke may pass only when it requests no audio checks.
+- [general] The sample's separate bounded runner preserves source/request identities, raw traces, mapped input cleanup observations, screenshots and recordings. Native integration acceptance remains distinct from the dependency-free contract tests and CI. See [measurement conditions](../../unreal-quality/references/unreal-quality-measurement.md) before making a performance claim.
+
+## Updating a supplied source copy
+
+- [tested] The disposable sample's builder acceptance on Unreal 5.8, executable CL 58902052, passed eight Automation rules and ten native observation cases: mapped movement/release, smoke, a 90-real-frame shot, actual master-mix silence/tone, exact malformed/unknown-name refusals, unavailable metrics, cancellation and missing audio tap. External missing-shot/short-WAV mutations were separately refused. A retained old/new comparison matched two functional checks and input transitions while preserving different raw counter units. These results do not establish physical controllers or a performance budget; independent spec verification is separate.
+
+- [general] Inspect the consumer copy with the validator's `--source` option. Changed, missing or added source files produce `modified`; generated `Binaries`, `Intermediate` and `Saved` files are outside source identity. The verifier never writes into the copy. Do not regenerate the shipped manifest to make local edits appear pristine.
+- [general] Retain the old manifest, source and receipts; compare the incoming version with any local modifications. Apply a reviewed update to a disposable copy first, rebuild through the launcher and run its relevant scenarios. Keep an existing consumer integration operational until migration is separately authorized and verified.
+- [general] A migration comparison binds both runs to one baseline plus an explicit adapter delta. Match scenario actions, every check and verdict. Preserve raw counter units and initialization effects; do not manufacture parity by relabeling counts. Only generic identifiers/version fields, corrected percentile semantics and new eligibility metadata are expected differences.
+- [general] Pure game rules belong in the consumer's engine-free Domain headers. The sample's `ObservationSample.Domain.Travel.ReleasedAxisStopsMovement` Automation test owns a movement rule; its engine adapter owns actors/input/clocks. Do not move game-specific rules into AgentVerify merely to make them testable.
