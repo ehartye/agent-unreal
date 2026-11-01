@@ -4,6 +4,8 @@ Source for every `[documented]` line here: Epic's 5.8 pages "Review Test Results
 
 ## Reading a run
 
+- `[general]` For manifest-driven suite execution and retained receipt qualification, use [unreal-verify](../../unreal-verify/SKILL.md). It checks declared counts, identities, requested conditions and launcher drain; keep its native acceptance separate from the dependency-free merge lane.
+
 - `[documented]` The Automation Test Framework logs events and test status to the log file by default. Lines include `Test Started`, `Test Completed. Result=...`, and a final `**** TEST COMPLETE. EXIT CODE: <n> ****`. "An exit code of 0 means no test failure."
 - `[documented]` `-ReportExportPath="<path>"` writes a JSON report with every event, each test's duration and the device details. The sample has `succeeded`, `failed`, `notRun`, `inProcess` and `totalDuration` at the top and, per test, `state`, `duration`, `entries`, `warnings` and `errors`.
 - `[documented]` Excluded tests report `Skipped` with their reason attached as an info event.
