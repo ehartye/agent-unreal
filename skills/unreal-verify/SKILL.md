@@ -1,6 +1,6 @@
 ---
 name: unreal-verify
-description: "Author and run manifest-driven Unreal Engine 5.8 verification suites, qualify retained suite receipts, and compare suite adoption evidence. Use when asked to write a verification manifest, validate a suite plan, investigate an unqualified regression.json, declare an expected replay refusal, or assess migration to the shared suite runner. Not for individual native builds or captures, quality audits, or test strategy."
+description: "Author and run Unreal Engine 5.8 verification suites locally or on a Windows engine host, qualify receipts and compare adoption evidence. Use when asked to write or validate a suite manifest, start/status/cancel/fetch a remote job, investigate an unqualified regression.json, declare an expected replay refusal, or assess suite migration. Not for individual native builds or captures, quality audits, or test strategy."
 ---
 
 # Verification suites
@@ -23,6 +23,7 @@ never remove a requested condition just to obtain qualification.
 | Write replay/metric requests, integrate observations or interpret refusal details | [AgentVerify integration and observations](../unreal-native/references/unreal-agent-verify.md) |
 | Run disposable native acceptance | [Fixture driver and requirements](../../examples/unreal/verification_suite/README.md) |
 | Compare an existing consumer and plan adoption | [Staged adoption](references/unreal-verify-adoption.md) |
+| Submit, inspect, cancel or fetch an exact-revision remote suite | [Remote jobs and evidence](references/unreal-remote-jobs.md) |
 
 ## Workflow
 
@@ -58,8 +59,9 @@ node scripts/unreal-verify.mjs --verify-receipt fresh-folder/regression.json
 
 Validation exits zero for a valid plan; execution and retained verification exit
 zero only for a qualified suite. Invalid input exits 2; unqualified results exit 1.
-Preserve original source, products and evidence at their original local paths for
-retained verification. Moving receipts or fetching an archive is unsupported.
+Preserve original source, products and evidence at their original paths for
+retained verification. Remote Fetch runs verification at those remote paths and
+binds the result to the transfer; a relocated aggregate cannot be verified locally.
 
 ## Expected rejection
 
@@ -80,6 +82,7 @@ README for the five required driver arguments and separate engine acceptance.
 
 Finish with the observed plan/verdict and retained evidence, or the precise reason
 qualification is unavailable. Keep unsupported consumer behavior visible and use
-staged adoption before proposing any switch. Arbitrary shell steps, automatic
-migration and remote job transport are unsupported; remote execution belongs to a
-separate future specification. The dependency-free merge gate does not run Unreal.
+staged adoption before proposing any switch. Remote v1 transports existing suites
+through the four typed actions in the linked guide. Arbitrary shell steps,
+automatic migration and hostile-producer attestation are unsupported. Native and
+real-Git-LFS acceptance stay outside the dependency-free merge gate.

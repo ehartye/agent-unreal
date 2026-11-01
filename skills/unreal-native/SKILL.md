@@ -31,6 +31,7 @@ reviewing its module and state structure is [unreal-architecture](../unreal-arch
 | Cook Windows; tell UAT policy failures from real Game EXE proof; cook a folder that code loads only by path | [Native packaging](references/unreal-native-packaging.md) |
 | Stage a cooked build from the target receipt, create the pak with UnrealPak, and read what a packaged Game EXE run proves | [Packaging staging](references/unreal-native-packaging-staging.md) |
 | Build a Server target on a Launcher install, or run a packaged Game (`-server`, `?listen`) or the editor binary as a server and read what each did | [Dedicated server](references/unreal-native-dedicated-server.md) |
+| Read the measured Server-target, packaged Game and editor-server outcomes and their limits | [Dedicated-server run evidence](references/unreal-native-dedicated-server-runs.md) |
 | Check a staged build with a packaged smoke run: windowed start, log read, world counts | [Packaged smoke run](references/unreal-native-packaged-smoke.md) |
 | Separate content-only asset construction from native gameplay and preserve cooked provenance | [Native content pipeline](references/unreal-native-content-pipeline.md) |
 | Import rigid GLB controls and WAVs through the content-only bake, or read what the second-generation runtime proof did and did not show | [Content pipeline assets](references/unreal-native-content-pipeline-assets.md) |

@@ -1,0 +1,22 @@
+{
+  "version": 1,
+  "source_root": "C:/Projects/ObservationSample",
+  "state_directory": "Saved/RemoteJobs",
+  "ssh_target": "engine-worker",
+  "remote": {
+    "root": "C:/RemoteJobs/observation-sample",
+    "node": "C:/Program Files/nodejs/node.exe",
+    "launcher": {
+      "version": 1,
+      "project": "ObservationSample.uproject",
+      "engine": "C:/Engines/UE_5.8",
+      "editorTarget": "ObservationSampleEditor",
+      "gameTarget": "ObservationSample"
+    },
+    "timeouts": {
+      "transport_seconds": 120,
+      "startup_seconds": 30,
+      "workload_seconds": 1200
+    }
+  }
+}

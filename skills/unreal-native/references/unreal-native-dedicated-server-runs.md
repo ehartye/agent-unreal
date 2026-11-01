@@ -1,0 +1,18 @@
+# Dedicated-server run evidence
+
+Read [Dedicated servers on an installed engine](unreal-native-dedicated-server.md) for the project scope, run labels, steps, source comparison and remaining questions.
+
+## What happened
+
+- [tested] Q1 run 1: `Build.bat <Project>Server Win64 Development -Project=<uproject> ...` with a `<Project>Server.Target.cs` of `Type = TargetType.Server` exited 6 after 3 s. The build tool printed, word for word, `Server targets are not currently supported from this engine distribution.`, then a `BuildException` with the same sentence, then `Result: Failed (OtherCompilationError)`. No module compile action ran.
+- [tested] Q1 run 1: the build tool prints that exception without an `ERROR:` prefix. A judge that looks for `ERROR:` misses it; take the line before `Result: Failed`.
+- [tested] Q2 run 1: the Game target built and packaged with the plugin's recipe (editor build 49 s, then `RunUAT BuildCookRun ... -build -cook -stage -pak -archive`, 82 s, both exit 0).
+- [tested] Q2 run 1: the packaged `<Project>.exe /Engine/Maps/Entry?game=<game mode> -server -log -nullrhi -port=7777 -abslog=<file> -unattended -nosplash -nosound -notraceserver -NoGamepad` logged `net mode Standalone, IsRunningDedicatedServer 0`. Its log held no `IpNetDriver listening on port` line and the process was still running after 90 s. No client was started.
+- [tested] Q2 run 2: the same package (no rebuild) started with `?listen` on the map URL and without `-server` logged `IpNetDriver listening on port 7777` and `net mode ListenServer, IsRunningDedicatedServer 0`, about 1 s after start. A second process of the same package, `<Project>.exe 127.0.0.1:7777 -log -nullrhi`, was welcomed (`Welcomed by server`; the server logged `Join succeeded`) and logged `client received Value=4242` and `client actor began with Value=4242`. 4 of 4 checks passed.
+- [tested] Q2 run 2 was a listen server (a server with a local player), not a dedicated one. The runs did not produce a packaged dedicated server, and they did not run a client against a Server-target binary.
+- [tested] D-Q1 run 1 (2026-10-30): the editor binary of the same project, `UnrealEditor.exe <Project>.uproject /Engine/Maps/Entry?game=<game mode> -server -game -log -nullrhi -port=7777 -abslog=<file> -unattended -nosplash -nosound -notraceserver -NoGamepad`, logged `IpNetDriver listening on port 7777` and `net mode DedicatedServer, IsRunningDedicatedServer 1`, 7 s after start.
+- [tested] D-Q2 run 1 (same invocation, 2026-10-30): the packaged Game started as `<Project>.exe 127.0.0.1:7777 -log -nullrhi ...` was welcomed by that server (`Welcomed by server`; the server logged `Join succeeded`) and logged `client received Value=4242` and `client actor began with Value=4242`. No version or checksum refusal appeared.
+- [tested] D-Q3 run 1 (2026-10-30): the packaged Game started as `<Project>.exe /Engine/Maps/Entry?game=<game mode> -server -game -log -nullrhi -port=7777 ...` logged `net mode Standalone, IsRunningDedicatedServer 0` and no `IpNetDriver listening on port` line in 30 s: the outcome of `-server` alone (Q2 run 1).
+- [tested] D-Q1 run 1 used the editor binary, not a cooked or packaged server. Its behaviour under load, its fitness for a release and its CPU and RAM cost were not measured (GPU memory showed no change in D-Q1 run 1).
+- [general] Why the same switches gave DedicatedServer in the editor binary (D-Q1 run 1) and Standalone in the packaged Game (Q2 run 1, D-Q3 run 1) is not established. The runs show outcomes, not the cause. An engine-header reading of `IsRunningDedicatedServer()` made before the runs is unconfirmed.
+
