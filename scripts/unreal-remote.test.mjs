@@ -122,7 +122,9 @@ if (control.mode === 'tamper') fs.writeFileSync(process.argv[3], 'changed hydrat
   git(f.source, ['config', 'filter.remoteFixture.required', 'true']);
   writeFileSync(join(f.source, '.gitattributes'), '*.bin filter=remoteFixture -text\n');
   const data = Buffer.from('deterministic hydrated fixture\n'), paths = ['asset[1] space.bin', 'asset1 space.bin', 'second.bin'];
-  for (const path of paths) writeFileSync(join(f.source, path), data);
+  // Keep initial filtered entries older than the index so racy-stat refreshes do not call the filter.
+  const indexedTime = new Date('2000-01-01T00:00:00Z');
+  for (const path of paths) { writeFileSync(join(f.source, path), data); utimesSync(join(f.source, path), indexedTime, indexedTime); }
   git(f.source, ['add', '.']); git(f.source, ['-c', 'user.name=Fixture', '-c', 'user.email=f@example.invalid', 'commit', '-m', 'Filtered fixture']);
   const commit = git(f.source, ['rev-parse', 'HEAD']).toString().trim(), tree = git(f.source, ['write-tree']).toString().trim(), accepted = pointers(f.source, commit), identity = sourceIdentity({ sourceRoot: f.source });
   assert.equal(identity.dirty, false); rmSync(calls);
