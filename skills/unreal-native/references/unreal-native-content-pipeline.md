@@ -15,7 +15,7 @@ Observed in one consuming project on an earlier engine build; not reproduced in 
 - [general] Construction config used `GlobalDefaultGameMode=/Script/Engine.GameModeBase` and an Engine entry map for editor startup. The saved map had no native GameMode override. The delivered game instead staged the **real runtime config**, with its native `/Script/MyGame.MyGameMode`. This let the native game construct procedural actors while loading the same cooked `/Game/Art` material/font paths.
 - [general] The same project basename preserved cooked `MyGame/Content/...` package paths and the expected pak mount. The native materials, UFont assets and their FontFaces were generated. The native game consumed those real assets; reference screenshots were not used as runtime backplates.
 
-Use the full Editor synchronous Python construction path for the font importer:
+Historical construction transcript from that project, using the full Editor synchronous Python path for the font importer. For new construction and cook runs, route these arguments through the [shared launcher](unreal-engine-launcher.md) and retain each operation's receipt:
 
 ```powershell
 $previousSourceRoot = $env:MY_SOURCE_ROOT

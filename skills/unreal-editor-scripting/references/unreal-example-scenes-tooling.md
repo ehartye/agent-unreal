@@ -1,4 +1,4 @@
-# Example scenes: content tooling, rendering probes and native builds
+# Example scenes: content tooling and rendering probes
 
 Same method as the other scenes in [Example scenes](unreal-example-scenes.md): each builds a throwaway project in the OS temp folder, runs on an installed Unreal 5.8, prints PASS or FAIL per claim and is a manual run, not part of `node scripts/check.mjs`, which runs only the pure check logic (each folder's `*.test.mjs`). The commands pass the engine folder. A line in a reference marked [tested] is one of these checks. Each folder has a README with the full results.
 
@@ -26,33 +26,9 @@ One hidden headless commandlet (`-nullrhi`), under a minute including the first 
 - [tested] `get_console_variable_int_value("r.MegaLights.Allow")` returned 0 and logged `Failed to find console variable`; `r.MegaLights.Allowed` returned 1 and logged nothing.
 - [tested] `rp_viewport.mjs --offscreen` (11 of 11; eight phases in a Play-In-Editor viewport, read from screenshots by an agent) showed the renderer's on-screen message in four phases; its 3 headless extras test the setter routes only. See [Two directional lights](../../unreal-rendering/references/unreal-directional-lights.md). `rp_rt_validate.mjs --offscreen` (8 of 8) ran the MegaLights tracing routes; the Project Settings toggle was not run.
 
-## Gameplay Effects in C++ (`examples/unreal/gas_native/`)
+## Native bridge, automation and build examples
 
-Backs [GAS in C++](../../unreal-gameplay/references/unreal-gas-native-effects.md): a small runtime module (attribute set, native tags, a cooldown and a cost effect, an ability) driven headless by a commandlet with no map and no assets.
-
-```text
-pwsh -NoProfile -File examples/unreal/engine_lock/with-engine-lock.ps1 node examples/unreal/gas_native/gas_native.mjs --engine "C:/Program Files/Epic Games/UE_5.8" [--keep] [--compiler <version>] [--sdk <version>]
-```
-
-About one to two minutes to build and 10 to 30 s for the probe; 12 checks (`gas-native-checks.mjs`). See the [folder README](../../../examples/unreal/gas_native/README.md).
-
-- [tested] Result: 12 of 12 pass (24 of 24 with the component cases). The module builds with `GameplayAbilities`, `GameplayTags` and `GameplayTasks` named, and the effect's constructor leaves one target-tags component that grants the native tag.
-- [tested] Activation pays the cost (100 to 90) and sets the cooldown tag; a second activation is refused; the tag is present at 1 s and gone at 2.1 s; it activates again (80); an effect made with `NewObject` at run time takes `AddComponent<UTargetTagsGameplayEffectComponent>()`.
-- [tested] The commandlet increments `GFrameCounter` before each `World->Tick`, or `FTimerManager::Tick` returns early and the cooldown never ends.
-
-## Unity builds (`examples/unreal/unity_build/`)
-
-Backs [Unity builds and file-scope names](../../unreal-native/references/unreal-native-unity-builds.md) and [its fixes](../../unreal-native/references/unreal-native-unity-build-fixes.md): a three-file module whose files build alone and fail together.
-
-```text
-pwsh -NoProfile -File examples/unreal/engine_lock/with-engine-lock.ps1 node examples/unreal/unity_build/unity_build.mjs --engine "C:/Program Files/Epic Games/UE_5.8" [--keep] [--compiler <version>] [--sdk <version>]
-```
-
-About six minutes: it builds the Editor target 10 times in two throwaway projects (the second is a git repository, so `git` must be on the path); 11 checks (`unity-build-checks.mjs`). See the [folder README](../../../examples/unreal/unity_build/README.md).
-
-- [tested] With the threshold lowered, adaptive unity on, an installed engine and no git repository, all three writable files stay out of the unity file and the clashing sources build.
-- [tested] With `-DisableAdaptiveUnity` the files share one unity file and the build fails with `C2374`, `C2086`, `C4459` and `C2872` in `ProbeBeta.cpp`; the old binary is unchanged. `bUseUnity = false`, file-prefixed names and one unity file per source all build.
-- [tested] In a git project the clean tree fails; an edited file leaves the chunk and the build passes; committing alone does not regroup; writing the committed file again, as a checkout or rebase does, brings the clash back.
+[Native examples](unreal-example-scenes-native.md) retains the full Landscape bridge, automation, Gameplay Effects and unity-build commands, results and qualifications.
 
 ## More runs that passed
 

@@ -57,19 +57,13 @@ It builds a throwaway project, copies the Open World template (the Landscape sou
 - A Custom node takes `#define` macros, not helper functions; the instancing flag is `False` until set or drawn.
 - A fixed camera Z was under the Landscape at 12 of 81 points; `place_above_ground` was 200 cm up at all 81.
 
-## C++ bridge and automation test (`landscape_bridge/`, `automation_test/`)
+## C++ bridge and automation test
 
-Two throwaway code projects, built with Unreal Build Tool (compiler and SDK discovered, not hard-coded), then run headless.
-
-- `node examples/unreal/landscape_bridge/landscape_bridge.mjs --engine <UE_5.8 folder>`: an editor-only module exposes `ALandscapeProxy::Import` as `unreal.LandscapeBridgeLibrary.create_landscape_from_heights`. A 505 by 505 height array becomes a Landscape of 16 components (quad size 100); sampled heights match the input within half a height step (worst 0.379 cm). Same result in a non-partitioned map and in a `new_level(path, True)` World Partition map: grid size 0 keeps all 16 components on the Landscape actor, grid size 2 makes 4 streaming proxies. 19 of 19 checks. Reference: [Python to C++ bridge](unreal-python-cpp-bridge.md).
-- `node examples/unreal/landscape_bridge/landscape_world.mjs --engine <UE_5.8 folder> [--rendering]`: five brush functions on the same module, then three phases (Landmass brush attach, PCG on a partitioned Landscape, proxy unload). It passed 16 of 18 checks in `-nullrhi` editors and 18 of 18 with `--rendering`. References: [Landscape bridge brushes](unreal-landscape-bridge-brushes.md), [Landmass](../../unreal-procedural/references/unreal-landmass.md).
-- `node examples/unreal/automation_test/automation_test.mjs --engine <UE_5.8 folder>`: a passing and a deliberately failing `IMPLEMENT_SIMPLE_AUTOMATION_TEST` (`EditorContext | ProductFilter`), run with `-ExecCmds="Automation RunTests <filter>; Quit"`. The failing test is reported as `failed: 1`, state `Fail`, with message and line; exit codes are 255 with `; Quit` and 0 with `-TestExit`, so `automation_report.mjs` decides from `index.json`. 9 of 9 checks. Reference: [Automation tests](../../unreal-native/references/unreal-native-automation-tests.md).
-
-Both folders have a README and a pure Node test that runs in `node scripts/check.mjs`; the engine runs take three to five minutes each.
+See [Native bridge, automation and build examples](unreal-example-scenes-native.md) for the Landscape bridge and automation probes, commands, results and qualifications.
 
 ## More scenes
 
-[Example scenes: tooling and native builds](unreal-example-scenes-tooling.md) has the commands and results for these, and for `niagara_toolsets`, `editor_python_friction`, `constructor_locks`, `anim_bridge` and `contention`.
+[Tooling and rendering examples](unreal-example-scenes-tooling.md) cover `niagara_toolsets`, `editor_python_friction`, `constructor_locks`, `anim_bridge`, `contention` and rendering probes. [Native examples](unreal-example-scenes-native.md) cover Gameplay Effects and unity builds.
 
 | Folder | Runs | Backs |
 |---|---|---|

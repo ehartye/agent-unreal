@@ -24,7 +24,8 @@ reviewing its module and state structure is [unreal-architecture](../unreal-arch
 | Diagnose a build that passes then fails on code you did not change (adaptive unity, chunking, the git working set) | [Unity builds](references/unreal-native-unity-builds.md) |
 | Fix C2374, C2086, C4459 or C2872, name file-scope symbols safely, turn the grouping off, and gate replay and test steps on the build | [Unity build fixes](references/unreal-native-unity-build-fixes.md) |
 | Write a C++ automation test for 5.8, run it headless, read its report and why the exit code is not the verdict | [Automation tests](references/unreal-native-automation-tests.md) |
-| Generate materials and fonts, draw crisp Canvas text (it draws nothing without a `UFont`), record native audio | [Native presentation](references/unreal-native-presentation.md) |
+| Generate materials and fonts, draw crisp Canvas text (it draws nothing without a `UFont`) | [Native presentation](references/unreal-native-presentation.md) |
+| Record the master mix, handle unfocused volume or pace an explicit audio capture | [Native audio recording](references/unreal-native-audio-recording.md) |
 | Diagnose a near-black first frame, physical-camera exposure, an HDR palette pass or imported vertex colour that hides detail | [Exposure and vertex colour](references/unreal-native-exposure-and-vertex-color.md) |
 | Cook Windows; tell UAT policy failures from real Game EXE proof; cook a folder that code loads only by path | [Native packaging](references/unreal-native-packaging.md) |
 | Stage a cooked build from the target receipt, create the pak with UnrealPak, and read what a packaged Game EXE run proves | [Packaging staging](references/unreal-native-packaging-staging.md) |
