@@ -98,7 +98,7 @@ owns actor positions, input bindings and clocks. The example Automation test is
 `WITH_DEV_AUTOMATION_TESTS` and uses the product filter rather than promising a
 Smoke duration. Source ownership follows behavior, not the test harness.
 
-[tested] On Unreal 5.8 (observed executable CL 58902052), the builder acceptance
+[tested] On Unreal 5.8, the builder acceptance
 passed all eight Automation rules and ten observation scenarios: actual mapped
 movement and cleanup, a 90-real-frame capture, master-mix silence/tone, exact
 zero-action refusals, unavailable metrics, cancellation and the absent-tap
