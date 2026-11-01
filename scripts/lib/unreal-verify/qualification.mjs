@@ -20,7 +20,7 @@ export function commandFor(step, prepared, directory) {
 }
 function readFresh(directory, name, interval) {
   const bytes = readArtifact(directory, name), observed = statSync(join(directory, name)).mtimeMs;
-  if (!bytes.length || observed < Date.parse(interval.started) || observed > Date.parse(interval.finished) + 1000) throw Error(`Missing, empty or stale report: ${name}`);
+  if (!bytes.length || observed < Date.parse(interval.started) || observed > Date.parse(interval.finished) + 1000) throw Error(`Missing, empty or stale report: ${name} (bytes=${bytes.length}, mtimeMs=${observed}, startedMs=${Date.parse(interval.started)}, finishedMs=${Date.parse(interval.finished)})`);
   return bytes;
 }
 export function qualifyAutomation(report, step) {
