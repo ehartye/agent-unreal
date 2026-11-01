@@ -1,0 +1,11 @@
+{
+  "FileVersion": 3,
+  "Version": 1,
+  "VersionName": "1",
+  "FriendlyName": "AgentVerify",
+  "Description": "Versioned replay, capture and observed-output receipts with a consumer metric adapter.",
+  "Category": "Testing",
+  "CanContainContent": false,
+  "Modules": [{ "Name": "AgentVerify", "Type": "Runtime", "LoadingPhase": "Default" }],
+  "Plugins": [{ "Name": "PlatformCrypto", "Enabled": true }]
+}

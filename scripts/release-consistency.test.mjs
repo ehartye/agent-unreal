@@ -5,6 +5,8 @@ import { readFileSync, readdirSync, existsSync, mkdtempSync, mkdirSync, writeFil
 import { tmpdir } from 'node:os';
 import { join, dirname, resolve, relative, extname, sep } from 'node:path';
 import { loadSnapshot, checkCitations, extractCitations, compareSnapshot, liveSkills, writeSnapshot } from './skill-citations.mjs';
+import { validateSourceManifest, verifySourceFiles } from './agent-verify/contracts.mjs';
+import { collectSourceFiles } from './agent-verify/artifacts.mjs';
 
 // Repo root: scripts/.. unless AGENT_UNREAL_ROOT points elsewhere.
 const ROOT = resolve(process.env.AGENT_UNREAL_ROOT ?? join(import.meta.dirname, '..'));
@@ -20,6 +22,24 @@ test('plugin.json and marketplace.json carry the same version', () => {
   const market = json('.claude-plugin/marketplace.json');
   assert.match(plugin.version, /^\d+\.\d+\.\d+$/);
   assert.equal(market.plugins[0].version, plugin.version);
+});
+
+test('bundled AgentVerify source identifies this release and every supplied source byte', () => {
+  const manifest = json('runtime/AgentVerify/source-version.json');
+  assert.equal(manifest.plugin_version, json('.claude-plugin/plugin.json').version);
+  const checked = validateSourceManifest(manifest);
+  assert.equal(checked.valid, true, JSON.stringify(checked.issues));
+  assert.ok(!manifest.files.some((file) => file.path.toLowerCase() === 'source-version.json'), 'manifest cannot hash itself');
+  const observed = verifySourceFiles(manifest, collectSourceFiles(join(ROOT, 'runtime/AgentVerify'), manifest));
+  assert.equal(observed.valid, true, JSON.stringify(observed.issues));
+  assert.equal(observed.state, 'pristine', `source manifest drift: ${observed.modified_files?.join(', ')}`);
+  for (const schema of ['document-v1.schema.json', 'source-v1.schema.json']) {
+    assert.deepEqual(
+      readFileSync(join(ROOT, 'runtime/AgentVerify/Resources', schema)),
+      readFileSync(join(ROOT, 'scripts/agent-verify/schemas', schema)),
+      `runtime and offline validators must use the same ${schema} bytes`,
+    );
+  }
 });
 
 test('the README status line names the current plugin version', () => {
