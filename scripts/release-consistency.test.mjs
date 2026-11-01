@@ -52,7 +52,7 @@ test('plugin.json keywords name the engine and UEFN', () => {
 // case-insensitively; a line written /pattern/flags is a regular expression with exactly those flags (the format the other
 // plugins' hygiene tests read), so a name that is also an ordinary word can be matched whole-word and case-sensitively.
 // A line that is not a valid regular expression is reported, not skipped.
-const TEXT = new Set(['.md', '.mjs', '.js', '.jsx', '.json', '.yml', '.yaml', '.py', '.gd', '.cs', '.html', '.sh', '.txt', '']);
+const TEXT = new Set(['.md', '.mjs', '.js', '.jsx', '.json', '.yml', '.yaml', '.py', '.gd', '.cs', '.cpp', '.h', '.hpp', '.inl', '.uplugin', '.html', '.sh', '.txt', '']);
 const SKIP_DIRS = new Set(['.git', 'node_modules', '.playwright-mcp', 'results', 'dist', 'fixtures']);
 const walk = (dir) => readdirSync(dir, { withFileTypes: true }).flatMap((e) => {
   const full = join(dir, e.name);
@@ -155,10 +155,13 @@ test('the generic hygiene patterns catch a home path, a GPU model, a non-plugin 
     'g.md': `${['Ge', 'Force'].join('')} card\n`,
     'r.md': 'https://github.com/ehartye/some-game\n',
     'w.md': 'see wiki/authored/x\n',
+    'runtime/Source/Probe.cpp': `// ${home}\n`,
+    'runtime/Source/Probe.h': '// https://github.com/ehartye/some-game\n',
+    'runtime/Probe.uplugin': JSON.stringify({ Description: `Uses ${home}` }),
     'ok.md': 'https://github.com/ehartye/agent-meshes and C:\\Users\\<you>\\x\n',
   });
   const files = scanHygiene(root).hits.map((h) => h.split(':')[0]).sort();
-  assert.deepEqual(files, ['g.md', 'p.md', 'r.md', 'w.md']);
+  assert.deepEqual(files, ['g.md', 'p.md', 'r.md', 'runtime/Probe.uplugin', 'runtime/Source/Probe.cpp', 'runtime/Source/Probe.h', 'w.md']);
 });
 
 // --- citations of other plugins' skills ---------------------------------------------------------------------------
