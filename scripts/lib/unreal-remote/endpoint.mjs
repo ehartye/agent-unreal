@@ -70,8 +70,9 @@ export function statusRemote(base, job, expectedHash) {
   const state = readState(directory, request);
   const dispatches = readdirSync(directory).filter(n => /^dispatch-\d{6}\.json$/.test(n)).map(n => {
     const record = json(join(directory, n));
-    if (!/^\d{3}-[a-z0-9.-]+\/launcher$/.test(record.path)) throw Error('Invalid dispatch progress path');
-    return { path: record.path, observed: record.observed, workload_permit: existsSync(join(directory, 'suite', record.path, 'workload-permit.json')), lifecycle: existsSync(join(directory, 'suite', record.path, 'lifecycle.json')) };
+    if (record.path !== 'setup/launcher' && !/^\d{3}-[a-z0-9.-]+\/launcher$/.test(record.path)) throw Error('Invalid dispatch progress path');
+    const base = record.path === 'setup/launcher' ? directory : join(directory, 'suite');
+    return { path: record.path, observed: record.observed, workload_permit: existsSync(join(base, record.path, 'workload-permit.json')), lifecycle: existsSync(join(base, record.path, 'lifecycle.json')) };
   });
   return { version: 1, kind: 'unreal-remote/status', ...binding(request), found: true, observed: now(), state, request, dispatches };
 }
@@ -87,7 +88,8 @@ export async function endpoint(messageFile) {
     return startRemote(base, message.request, dirname(messageFile));
   }
   const observed = statusRemote(base, message.job, message.request_sha256);
-  if (!observed.found || message.action === 'status') return observed;
+  if (!observed.found) return observed;
+  if (message.action === 'status') return { ...observed, worker_observation: observed.state.worker ? processIdentity(observed.state.worker.pid, dirname(messageFile)) : null };
   const directory = join(base, 'jobs', message.job), request = observed.request;
   if (canonical(request.runtime) !== canonical(message.runtime)) throw Error('Job implementation snapshot differs; use the exact client/runtime snapshot recorded at Start');
   if (message.action === 'cancel') return cancelObserved(directory, request, observed => processIdentity(observed.pid, dirname(messageFile)));

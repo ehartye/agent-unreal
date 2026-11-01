@@ -43,6 +43,8 @@ export async function acceptance({ config: file, evidence, manifest = 'remote-ma
     report.start = await call('start', report.jobs.completed, ['--commit', commit, '--manifest', manifest, '--suite', suite]);
     // CLI return closes its launching SSH process. Subsequent invocations are independent SSH sessions.
     report.disconnect = { launching_client_returned: true, observed: now(), worker: report.start.state?.worker };
+    report.post_disconnect = await call('status', report.jobs.completed);
+    if (!['ready', 'running'].includes(report.post_disconnect.state?.phase) || digest(report.post_disconnect.worker_observation) !== digest(report.disconnect.worker)) throw Error('No live exact worker was observed after launching SSH/client closure');
     report.completed = await until(report.jobs.completed, s => s.state.phase === 'succeeded', config.remote.timeouts.workload_seconds + 60);
     if (!report.disconnect.worker || digest(report.disconnect.worker) !== digest(report.completed.state.worker)) throw Error('Detached worker creation identity differs across disconnected sessions');
     report.fetch = await call('fetch', report.jobs.completed, ['--output', join(config.state_directory, `${prefix}-complete-output`)]);

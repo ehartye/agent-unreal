@@ -38,6 +38,13 @@ function fixture(t) {
 }
 function job(f) { const dir = join(f.base, 'jobs', f.request.job); mkdirSync(dir, { recursive: true }); write(join(dir, 'request.json'), f.request); const state = initialize(dir, f.request); return { dir, state }; }
 const worker = { pid: 77, created: '133000000000000000' };
+function inertLifecycle(command, { cancelled = false, timedOut = false } = {}) {
+  mkdirSync(command.evidence, { recursive: true }); const identity = pid => ({ pid, created: '133000000000000000' });
+  const request = { version: 1, kind: 'unreal-run/request', id: randomUUID(), nonce: 'a'.repeat(64), purpose: 'production', lock: LOCK, state: join(dirname(command.evidence), 'inert-state'), node: process.execPath, controllerPid: 1, controllerCreated: identity(1).created, ...command };
+  write(join(command.evidence, 'request.json'), request); const requestHash = hash(readFileSync(join(command.evidence, 'request.json')));
+  write(join(command.evidence, 'lifecycle.json'), { version: 1, kind: 'unreal-run/lifecycle', id: request.id, requestHash, operation: command.operation, purpose: 'production', lock: LOCK, controller: identity(1), helper: identity(2), gate: identity(3), probe: identity(4), processes: [1, 2, 3, 4].map(identity), started: now(), finished: now(), contained: true, probeContained: true, permitIssued: true, permit: { requestHash, gate: identity(3) }, exitCode: cancelled || timedOut ? 1 : 0, cancelled, timedOut, errors: [], drain: { proved: true, active: 0, members: [], requestHash, observed: now() } });
+  return { exitCode: cancelled || timedOut ? 1 : 0 };
+}
 function ready(f, directory) { const s = readState(directory, f.request); transition(directory, f.request, s, { phase: 'ready', worker }); return { pid: worker.pid }; }
 function terminal(f, phase = 'failed') {
   const j = job(f); let s = transition(j.dir, f.request, j.state, { phase: 'ready', worker });
@@ -163,6 +170,24 @@ test('R2 cancelled pre-permit worker records zero dispatch and drain without inv
   assert.equal(state.phase, 'cancelled', state.error); assert.equal(state.drained, true); assert.equal(dispatches, 0); assert.equal(existsSync(held), false);
   assert.deepEqual(proveDrain(join(j.dir, 'suite')), []);
 });
+test('R2 shared-launcher setup is covered by the overall deadline and scoped cancellation before suite dispatch', async t => {
+  for (const cancel of [false, true]) {
+    const f = fixture(t); f.request.remote.timeouts.workload_seconds = cancel ? 10 : 1;
+    const j = job(f), common = join(f.root, 'common'); mkdirSync(common);
+    const held = lease(common, j.dir, f.request, j.state); write(join(j.dir, 'worker.json'), { lease: held });
+    let suiteDispatches = 0, setupStarted;
+    const started = new Promise(r => { setupStarted = r; });
+    const running = runWorker(j.dir, { identity: () => worker, pollMs: 10, executeSuite: async () => { suiteDispatches++; }, launchSetup: async ({ signal, onDiagnostic, ...command }) => {
+      setupStarted(); await new Promise(r => { if (signal.aborted) r(); else signal.addEventListener('abort', r, { once: true }); });
+      return inertLifecycle(command, { cancelled: cancel, timedOut: !cancel });
+    } });
+    issuePermit(j.dir, f.request, readState(j.dir, f.request), worker);
+    await started; if (cancel) cancelJob(j.dir, f.request);
+    const state = await running;
+    assert.equal(state.phase, cancel ? 'cancelled' : 'failed', state.error); assert.equal(state.drained, true); assert.equal(suiteDispatches, 0); assert.equal(existsSync(held), false);
+    assert.equal(proveDrain(join(j.dir, 'suite')).length, 1);
+  }
+});
 test('R2 cancellation reconciles dead setup and exact stale state lock, never a live or unknown owner', t => {
   const f = fixture(t), j = job(f), common = join(f.root, 'common'); mkdirSync(common);
   const held = lease(common, j.dir, f.request, j.state); write(join(j.dir, 'worker.json'), { lease: held });
@@ -249,7 +274,7 @@ test('R3 successful Fetch calls the unchanged suite verifier on original paths a
   } });
   assert.equal(aggregate.qualified, true, canonical(aggregate));
   write(join(j.dir, 'dispatch-ledger.json'), { version: 1, kind: 'unreal-remote/dispatch-ledger', ...binding(f.request), paths: ['000-rules/launcher'] });
-  write(join(j.dir, 'dispatch-000000.json'), { version: 1, ...binding(f.request), path: '000-rules/launcher' });
+  write(join(j.dir, 'dispatch-000000.json'), { version: 1, ...binding(f.request), path: '000-rules/launcher', command_sha256: digest(json(join(suite, '000-rules/command.json'))) });
   let s = transition(j.dir, f.request, j.state, { phase: 'ready', worker }); s = transition(j.dir, f.request, s, { phase: 'running' }); s = transition(j.dir, f.request, s, { phase: 'succeeded', drained: true });
   write(join(j.dir, 'result.json'), { version: 1, kind: 'unreal-remote/result', ...binding(f.request), phase: 'succeeded', drained: true, drain: proveDrain(suite), suite_sha256: fileIdentity(join(suite, 'regression.json')).sha256 });
   const returned = publishReturn(j.dir, f.request), downloaded = join(f.root, 'download'), expected = verifyDownload(returned.archive, downloaded, returned.descriptor, f.request, false);
