@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "plugin_version": "0.36.0",
+  "plugin_version": "0.37.0",
   "files": [
     {
       "path": "AgentVerify.uplugin",

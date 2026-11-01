@@ -13,7 +13,7 @@ The manifest is produced by `fixture.mjs`: a bounded build, the eight supplied
 automation rules, a passing mapped-input replay and an exact live-name refusal.
 The refusal expects engine exit zero and a valid rejected observation. Every
 engine operation uses the same production launcher and owned process tree.
-The passing replay requires observed Development configuration and 640×360
+The passing replay requires observed Development configuration and 640-by-360
 resolution. The live-name refusal stops before runtime observation and therefore
 requests no runtime conditions (`requested: {}`). It proves the exact refusal and
 zero actions, without claiming an observed configuration or resolution. Explicitly

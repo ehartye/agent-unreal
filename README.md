@@ -14,7 +14,7 @@ repository is marked as tested.
 
 ## Status
 
-Early (0.36.0). Fourteen skills.
+Early (0.37.0). Fifteen skills.
 
 The skills moved here from agent-engine 0.14.0, where their history up to that tag lives; `unreal-import` and its importer scripts followed in 0.2.0. The scripts in `examples/`
 were run on Windows against the engine build pinned in `engine-version.json` unless their README says an earlier build or a hand run; other platforms were not run. The sample scene, the `compare.ps1` example set and the showcase hand runs are earlier-build observations.
@@ -27,6 +27,8 @@ sample scene, none of it verified on the pinned builds. Its spec stays in agent-
 The [shared Windows launcher](scripts/lib/unreal-run/README.md) supplies build, editor, game, commandlet, package, test, status, doctor and evidence-based recovery. It preserves exact arguments, contains owned process trees, and records lifecycle and build/package identities. Use the [compatibility adapter](examples/unreal/engine_lock/README.md) around existing probe runners. Existing consumers keep their launchers until a separate migration is verified. Native acceptance stays outside the dependency-free merge gate.
 
 ## Verification status
+
+The [verification suite skill](skills/unreal-verify/SKILL.md) writes versioned manifests, plans without launching an engine, runs through the shared launcher and independently qualifies retained evidence. Read the [suite contract](scripts/lib/unreal-verify/README.md) and [disposable native fixture](examples/unreal/verification_suite/README.md). Consumer adoption requires a complete comparison at one source revision; automatic migration and remote job transport are unsupported.
 
 Epic's MCP plugin was tried on an earlier Unreal build and an earlier UEFN build: it drives the editor and returns screenshots, but has no
 audio import and rejects GLB. This was not repeated on the pinned builds.
@@ -82,6 +84,7 @@ from current Fortnite cook, navigation and performance acceptance.
 
 | Skill | Job |
 |---|---|
+| `unreal-verify` | Write and validate suite manifests, execute declared checks through the shared launcher, qualify retained receipts and compare staged consumer adoption. |
 | `unreal-effects` | Niagara particles, fluids and sand, a template catalog and authoring Niagara from Python; Cascade; Chaos Niagara and destruction, including a Geometry Collection built from C++. |
 | `unreal-animation` | Control Rig and IK Rig, Animation Blueprints (slot-only graphs from Python, a C++ bridge for state machines), Motion Matching, cloth, hair, Sequencer and Movie Render Queue. |
 | `unreal-gameplay` | Gameplay Ability System, Enhanced Input, AI, navigation, Mover, Chaos vehicles, networking and replication. |
@@ -135,6 +138,11 @@ establish that a skill improves an agent's work.
 ## Requirements
 
 Node 20 or later for the checks and scripts. Unreal Engine 5.8 on Windows for the engine-side work.
+
+| Verification mode | Requirements |
+|---|---|
+| Offline plan and retained verification | Node 20+, Git, and unchanged referenced local project/source/evidence files; no engine launch. |
+| Suite execution | Windows, Unreal Engine 5.8, the [launcher configuration and toolchain](scripts/lib/unreal-run/README.md), and AgentVerify source plus a consumer adapter for observation steps. Fresh output beneath an existing parent. |
 
 ## License
 
