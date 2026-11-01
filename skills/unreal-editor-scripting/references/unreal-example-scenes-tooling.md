@@ -16,7 +16,7 @@ Same method as the other scenes in [Example scenes](unreal-example-scenes.md): e
 Backs the [tested] lines of [Two directional lights](../../unreal-rendering/references/unreal-directional-lights.md).
 
 ```text
-node examples/unreal/rendering_probes/rp_validate.mjs --engine "C:/Program Files/Epic Games/UE_5.8" [--keep]
+pwsh -NoProfile -File examples/unreal/engine_lock/with-engine-lock.ps1 node examples/unreal/rendering_probes/rp_validate.mjs --engine "C:/Program Files/Epic Games/UE_5.8" [--keep]
 ```
 
 One hidden headless commandlet (`-nullrhi`), under a minute including the first start of the new project; 3 checks (`rp-validate-checks.mjs`). `--keep` leaves `Saved/probe.json` and `Saved/Logs/probe.log`. See the [folder README](../../../examples/unreal/rendering_probes/README.md).
@@ -31,7 +31,7 @@ One hidden headless commandlet (`-nullrhi`), under a minute including the first 
 Backs [GAS in C++](../../unreal-gameplay/references/unreal-gas-native-effects.md): a small runtime module (attribute set, native tags, a cooldown and a cost effect, an ability) driven headless by a commandlet with no map and no assets.
 
 ```text
-node examples/unreal/gas_native/gas_native.mjs --engine "C:/Program Files/Epic Games/UE_5.8" [--keep] [--compiler <version>] [--sdk <version>]
+pwsh -NoProfile -File examples/unreal/engine_lock/with-engine-lock.ps1 node examples/unreal/gas_native/gas_native.mjs --engine "C:/Program Files/Epic Games/UE_5.8" [--keep] [--compiler <version>] [--sdk <version>]
 ```
 
 About one to two minutes to build and 10 to 30 s for the probe; 12 checks (`gas-native-checks.mjs`). See the [folder README](../../../examples/unreal/gas_native/README.md).
@@ -45,7 +45,7 @@ About one to two minutes to build and 10 to 30 s for the probe; 12 checks (`gas-
 Backs [Unity builds and file-scope names](../../unreal-native/references/unreal-native-unity-builds.md) and [its fixes](../../unreal-native/references/unreal-native-unity-build-fixes.md): a three-file module whose files build alone and fail together.
 
 ```text
-node examples/unreal/unity_build/unity_build.mjs --engine "C:/Program Files/Epic Games/UE_5.8" [--keep] [--compiler <version>] [--sdk <version>]
+pwsh -NoProfile -File examples/unreal/engine_lock/with-engine-lock.ps1 node examples/unreal/unity_build/unity_build.mjs --engine "C:/Program Files/Epic Games/UE_5.8" [--keep] [--compiler <version>] [--sdk <version>]
 ```
 
 About six minutes: it builds the Editor target 10 times in two throwaway projects (the second is a git repository, so `git` must be on the path); 11 checks (`unity-build-checks.mjs`). See the [folder README](../../../examples/unreal/unity_build/README.md).

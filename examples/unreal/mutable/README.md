@@ -1,5 +1,7 @@
 # Mutable probe: an editor bridge that authors a Customizable Object's graph, swappable parts, variants and a headless compile
 
+Run the launcher commands below from the plugin root. They wrap each complete probe in the [shared owned process tree](../engine_lock/README.md); retained scientific results describe their original runs.
+
 Probes Mutable (Epic's runtime character customization plugin) on Unreal Engine 5.8, Windows. A script can create and compile a Customizable Object, but Python reaches no call that adds a node to its graph or links a pin, so the object has no parameter. This probe tests the smallest fix: a small editor C++ module, `MutableBridge`, that gives Python those two operations, and then checks that an object built with it offers swappable agent-meshes parts through a parameter, shows a different part for each option, and compiles headless. Nothing here needs a project or an asset of yours: the runner makes a throwaway code project (PythonScriptPlugin, EditorScriptingUtilities, Mutable, Interchange and the bridge module) in the OS temp folder.
 
 Status: Ran 2026-10-30, twice, 26 of 26 checks pass (`bridge` 3, `build` 5, `graph` 7, `variants` 7, `headless` 4). The module builds against the Mutable plugin's editor module in about 40 s with no compiler or linker message and `unreal.MutableBridgeLibrary` appears in Python with its nine functions. On an object made by `new_customizable_object` the bridge adds nodes and links pins and the graph reads back; eleven invalid requests are refused with a reason. A graph of 19 added nodes and 27 links gives a compiled object with one parameter `Hat` whose options are `Cap` and `Tall`; a captured frame of each option shows the whole figure with that hat and the frames differ. The same compile runs in a `-nullrhi` commandlet in 0.12 s. The compile of three small meshes says nothing about the cost of a large object.
@@ -18,7 +20,7 @@ Status of the scale/material extension: ran 2026-10-31. The four scientific grou
 Every reported Mutable compile has a 240 s limit. The scale compiles last less than one second, so the one-second collector records only start/end samples for each. The sampled maximum can miss shorter peaks; the process lifetime peak includes startup. These measurements establish this small rigid fixture, not production character costs or a cold-cache optimization comparison.
 
 ```text
-node examples/unreal/mutable/mu_probe.mjs --engine "C:/Program Files/Epic Games/UE_5.8" --parts <folder of .glb files> [--only bridge,build,graph,variants,headless] [--keep] [--plan] [--compile-timeout <seconds>] [--compiler <x.y.z>] [--sdk <10.0.n.n>]
+pwsh -NoProfile -File examples/unreal/engine_lock/with-engine-lock.ps1 node examples/unreal/mutable/mu_probe.mjs --engine "C:/Program Files/Epic Games/UE_5.8" --parts <folder of .glb files> [--only bridge,build,graph,variants,headless] [--keep] [--plan] [--compile-timeout <seconds>] [--compiler <x.y.z>] [--sdk <10.0.n.n>]
 ```
 
 Windows with Visual Studio 2022 Build Tools (the compiler and Windows SDK are found by `discoverToolchain` in `../native-build.mjs`; `--compiler` and `--sdk` override). `--parts` is a folder with two or more `.glb` files, here a fixed person body and two hats on the same three-bone skeleton (see "Making the parts"); `AGENT_UNREAL_MUTABLE_PARTS` sets it too. The groups run in order in one project: `bridge` builds the module and starts the editor, `build` imports the parts, `graph` builds on them, and `variants` and `headless` read what `graph` saved, so `--only` must name what a group needs (`graph` needs `bridge` and `build`; `variants` and `headless` need `graph`). `--plan` prints what would run. `--keep` leaves the project folder (a run with a failing check keeps it anyway; it holds `Saved/*.json` reports, `Saved/build.log`, `Saved/Logs` and `Saved/Screenshots`). Exit code 0 when every check of the groups that ran passes, 1 when a check fails, 2 on a usage error. It is not part of `node scripts/check.mjs`; the pure checks have node tests (`mu-probe.test.mjs`) in the merge lane.
@@ -34,8 +36,8 @@ The four new groups each require `bridge,build` in the same invocation:
 
 ```text
 node examples/unreal/mutable/mu_parts.mjs <new-output-folder> <agent-meshes-plugin-root>
-node examples/unreal/mutable/mu_probe.mjs --engine <engine-folder> --parts <new-output-folder>/parts --only bridge,build,skeleton,scale,material,components --compile-timeout 240 --keep
-node examples/unreal/mutable/mu_internal_header.mjs <engine-folder>
+pwsh -NoProfile -File examples/unreal/engine_lock/with-engine-lock.ps1 node examples/unreal/mutable/mu_probe.mjs --engine <engine-folder> --parts <new-output-folder>/parts --only bridge,build,skeleton,scale,material,components --compile-timeout 240 --keep
+pwsh -NoProfile -File examples/unreal/engine_lock/with-engine-lock.ps1 node examples/unreal/mutable/mu_internal_header.mjs <engine-folder>
 ```
 
 Run the Internal-header command once, separately: it copies the module into another temporary project, adds the public node include there, and retains `internal-build.log` plus its JSON summary whether the build succeeds or fails. It does not alter the delivered module. The native build is bounded separately at 1200 seconds; every Mutable compile uses `run_compile` and the selected 240-second limit. Run native work only with exclusive engine access and the documented shared lock; preserve unrelated workloads and retain contention as disqualifying evidence.

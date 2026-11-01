@@ -1,11 +1,13 @@
 # PCG in a game process (Unreal 5.8)
 
+Run the launcher commands below from the plugin root. They wrap each complete probe in the [shared owned process tree](../engine_lock/README.md); retained scientific results describe their original runs.
+
 A test scene and an experiment harness behind [PCG in a running game](../../../skills/unreal-procedural/references/unreal-pcg-game-process.md). It copies a small engine Landscape map into a throwaway project, builds maps that differ only in the PCG World Actor and its Landscape cache, generates PCG in the editor and in a game process (the editor binary with `-game`), and checks every claim in that reference.
 
 ## Run it
 
 ```
-node examples/unreal/pcg_game/pcg_validate.mjs --engine "C:/Program Files/Epic Games/UE_5.8" [--keep] [--shot <png path>]
+pwsh -NoProfile -File examples/unreal/engine_lock/with-engine-lock.ps1 node examples/unreal/pcg_game/pcg_validate.mjs --engine "C:/Program Files/Epic Games/UE_5.8" [--keep] [--shot <png path>]
 ```
 
 It makes the project in the OS temp folder, runs the editor many times (about ten minutes, and a GPU for the offscreen runs), prints PASS or FAIL per claim with the measured values, and exits 0 when all pass. `--keep` leaves the project and its logs; `--shot` copies the game-process screenshot. `node --test examples/unreal/pcg_game/pcg-validate.test.mjs` tests the check logic without Unreal and is part of `node scripts/check.mjs`.
@@ -38,8 +40,8 @@ A game process here is the editor binary with `-game`. PCG in a packaged (cooked
 In Git Bash set `MSYS_NO_PATHCONV=1` so `/Game/...` is not rewritten. Editor scripts that keep ticking use `-ExecCmds="py <absolute path>"`, not `-ExecutePythonScript`, and every script reads its output path from `PCG_REPORT`:
 
 ```
-UnrealEditor.exe Project.uproject /Game/Maps/PcgBase -nullrhi -ExecCmds="py <path>/pcg_experiments.py" -unattended -nosplash -nosound -notraceserver
-UnrealEditor.exe Project.uproject /Game/Maps/PcgCacheOn -game -windowed -ResX=1280 -ResY=720 -RenderOffScreen -ExecCmds="py <path>/pcg_game_run.py" -unattended -nosplash -nosound -notraceserver
+pwsh -NoProfile -File examples/unreal/engine_lock/with-engine-lock.ps1 UnrealEditor.exe Project.uproject /Game/Maps/PcgBase -nullrhi -ExecCmds="py <path>/pcg_experiments.py" -unattended -nosplash -nosound -notraceserver
+pwsh -NoProfile -File examples/unreal/engine_lock/with-engine-lock.ps1 UnrealEditor.exe Project.uproject /Game/Maps/PcgCacheOn -game -windowed -ResX=1280 -ResY=720 -RenderOffScreen -ExecCmds="py <path>/pcg_game_run.py" -unattended -nosplash -nosound -notraceserver
 ```
 
 Start editors detached from any console window and stop only the processes whose command line names your project.

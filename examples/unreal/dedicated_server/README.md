@@ -1,5 +1,7 @@
 # Dedicated servers on an installed engine: the Server target and a packaged Game as a server
 
+Run the launcher commands below from the plugin root. They wrap each complete probe in the [shared owned process tree](../engine_lock/README.md); retained scientific results describe their original runs.
+
 Status: ran on Windows (a throwaway project, an installed Launcher engine, no source build). **Q1 validated in 1 of 3 runs:** the Server target does not build; Unreal Build Tool exits 6 in about 3 seconds with "Server targets are not currently supported from this engine distribution." **Q2 partial in 2 of 3 runs:** the packaged Game builds and stages (49 s editor build, 82 s package), but `-server -log -nullrhi -port=7777` leaves it a Standalone process with no listening line; started with `?listen` instead it listens on 7777, a second process of the same build is welcomed and logs the replicated integer (4 of 4 checks, net mode ListenServer). **Editor Q1 and Q2 validated in 1 of 3 runs (5 of 5 checks):** the editor binary started as `-server -game -log -nullrhi -port=7777` logs `net mode DedicatedServer, IsRunningDedicatedServer 1` and `IpNetDriver listening on port 7777` 7 s after start, and the packaged Game (editor build 41 s, package 82 s) joins it: `Welcomed by server`, `client received Value=4242`. **Q3 recorded in 1 of 3 runs:** the packaged Game started as `-server -game` logs `net mode Standalone, IsRunningDedicatedServer 0` and never logs the listening line (waited 30 s), the same outcome as `-server` alone. Both server processes were stopped by the probe, which started them. The runner deletes its project folders on a clean run (disk use was not measured).
 
 ## The questions
@@ -13,7 +15,7 @@ Status: ran on Windows (a throwaway project, an installed Launcher engine, no so
 ## What it does
 
 ```text
-node examples/unreal/dedicated_server/ds_probe.mjs --engine "C:/Program Files/Epic Games/UE_5.8" [--only target,packaged,editor] [--keep] [--variant server|server-game|listen] [--port 7777] [--project <kept folder> --skip-package] [--seconds 90]
+pwsh -NoProfile -File examples/unreal/engine_lock/with-engine-lock.ps1 node examples/unreal/dedicated_server/ds_probe.mjs --engine "C:/Program Files/Epic Games/UE_5.8" [--only target,packaged,editor] [--keep] [--variant server|server-game|listen] [--port 7777] [--project <kept folder> --skip-package] [--seconds 90]
 ```
 
 1. `target`: writes the project (module `module/DsProbe`, the Game, Editor and Server targets), runs the Server-target build through `buildGame()` from `../native-build.mjs` (it builds whatever target name it is given), and prints the build tool's error and result lines.

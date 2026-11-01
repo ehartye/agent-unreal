@@ -2,6 +2,8 @@
 
 Target: Unreal Engine 5.8, Windows (the build pinned in `engine-version.json`). This page covers writing a test, running it headless, reading the report and why the process exit code is not the verdict; the build and capture loop is in [native build and capture](unreal-native-game.md). Evidence comes from `examples/unreal/automation_test/` (`node automation_test.mjs --engine <UE_5.8 folder>`), which builds the module below in a throwaway code project and ran 9 of 9 checks.
 
+Run current commands from the plugin root through the [shared launcher](unreal-engine-launcher.md), with an ignored project configuration and fresh evidence.
+
 ## Write the test
 
 ```cpp
@@ -31,7 +33,7 @@ bool FAgentProbePassingTest::RunTest(const FString& Parameters)
 
 ```powershell
 $report = "$project/Saved/automation-report-1"   # a new empty folder for every run
-& "$ue/Engine/Binaries/Win64/UnrealEditor-Cmd.exe" $uproject -nullrhi "-ExecCmds=Automation RunTests AgentUnrealProbe; Quit" "-ReportExportPath=$report" -unattended -nosplash -nosound -notraceserver
+node scripts/unreal-run.mjs test --config "$projectRoot/launcher.local.json" --evidence "$report/launcher" --timeout 300 -- -nullrhi "-ExecCmds=Automation RunTests AgentUnrealProbe; Quit" "-ReportExportPath=$report" -unattended -nosplash -nosound -notraceserver
 ```
 
 - [tested] `UnrealEditor-Cmd.exe` with `-nullrhi` and `-ExecCmds="Automation RunTests <filter>; Quit"` ran the queued tests, wrote `<report>/index.json` and `index.html`, then quit. The `Quit` waits for the test queue (the log reads `Quit Command Queued`, then `Test Completed`, then the report). A run took 18 to 54 s; the slowest was the first start.
@@ -56,7 +58,7 @@ Use a new empty `-ReportExportPath` folder for each run, so a report left from a
 - [general] After the guard fix, fresh automation reported all tests succeeded and none failed. Such bounded behaviours do not replace play-through, handling or physical-input checks.
 
 ```powershell
-& "$ueRoot/Engine/Binaries/Win64/UnrealEditor-Cmd.exe" $uproject "-ExecCmds=Automation RunTests MyGame" "-TestExit=Automation Test Queue Empty" "-ReportExportPath=$projectRoot/Saved/Verification/fresh-tests" -unattended -nullrhi -nosound -notraceserver
+node scripts/unreal-run.mjs test --config "$projectRoot/launcher.local.json" --evidence "$projectRoot/Saved/Verification/fresh-tests/launcher" --timeout 300 -- "-ExecCmds=Automation RunTests MyGame" "-TestExit=Automation Test Queue Empty" "-ReportExportPath=$projectRoot/Saved/Verification/fresh-tests" -unattended -nullrhi -nosound -notraceserver
 # Parse fresh index.json: require executed successes and failed/notRun/inProcess == 0.
 ```
 

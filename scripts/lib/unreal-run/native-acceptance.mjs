@@ -10,7 +10,7 @@ import { runContainedProcess, readJson, writeJson } from './controller.mjs';
 import { verifyLifecycle, hash } from './contracts.mjs';
 if (process.platform !== 'win32') throw Error('Native acceptance requires Windows; a skip is not acceptance');
 const here = dirname(fileURLToPath(import.meta.url));
-const caseIds = ['normal', 'nonzero', 'timeout', 'cancel', 'containment', 'owner-death', 'accounting', 'helper-death', 'exclusion', 'recovery'];
+const caseIds = ['normal', 'nonzero', 'timeout', 'cancel', 'containment', 'owner-death', 'accounting', 'helper-death', 'exclusion', 'recovery', 'rapid-exit', 'observation'];
 const argv = process.argv.slice(2);
 const output = argv[0] && !argv[0].startsWith('--') ? argv.shift() : null;
 let selected = caseIds;
@@ -125,6 +125,30 @@ try {
       assert.equal(r.exitCode === 0, allowed, scenario);
       assert.equal(readJson(join(r.evidence, 'recovery.json')).allowed, allowed, scenario);
     }
+  });
+  await check('rapid child and grandchild exits reconcile membership snapshots before strict drain', async () => {
+    const r = await run({ ...options('rapid-exit', 'rapid'), timeoutMs: 30000 });
+    assert.equal(r.exitCode, 0, JSON.stringify(r.lifecycle?.errors));
+    assert.equal(verifyLifecycle(r.lifecycle, { purpose: 'fixture' }).valid, true);
+    return { receipt: join(r.evidence, 'lifecycle.json') };
+  });
+  await check('persistent member observation failure stays a bounded refusal with original diagnostics', async () => {
+    const transient = options('observation-once', 'normal'); transient.fixtureIsolation.fault = 'observation-once';
+    const recovered = await run(transient);
+    assert.equal(recovered.exitCode, 0); assert.equal(verifyLifecycle(recovered.lifecycle, { purpose: 'fixture' }).valid, true);
+    const recoveredObservations = readFileSync(join(transient.evidence, 'member-observations.jsonl'), 'utf8').trim().split(/\r?\n/).map(JSON.parse);
+    assert.ok(recoveredObservations.some(v => v.outcome === 'retry') && recoveredObservations.some(v => v.outcome === 'identity-observed' && v.identity.pid === v.pid));
+    const o = options('observation', 'long'); o.fixtureIsolation.fault = 'observation';
+    const r = await run(o);
+    assert.equal(r.exitCode, 74); assert.equal(r.lifecycle.permitIssued, true);
+    assert.equal(verifyLifecycle(r.lifecycle, { purpose: 'fixture' }).valid, false);
+    assert.equal(verifyLifecycle(r.lifecycle, { purpose: 'fixture', requireSuccess: false }).valid, true);
+    assert.match(r.lifecycle.errors.join('\n'), /Unobservable live Job member PID \d+.*Injected process observation query failure/s);
+    const observations = readFileSync(join(o.evidence, 'member-observations.jsonl'), 'utf8').trim().split(/\r?\n/).map(JSON.parse);
+    assert.ok(observations.length > 1 && observations.every(v => v.pid > 0 && v.error.detail.includes('Injected process observation query failure')));
+    assert.equal(observations.at(-1).outcome, 'unresolved');
+    assert.ok(observations.at(-1).elapsedMs >= 1000 && observations.at(-1).elapsedMs < 3000);
+    return { receipt: join(r.evidence, 'lifecycle.json') };
   });
 } finally {
   const sentinelSurvived = sentinel.exitCode === null;

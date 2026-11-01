@@ -2,6 +2,8 @@
 
 Observed in one consuming project on an earlier engine build; not reproduced in this repo. Engine source inspection and executed behaviour are labelled separately. These are editor/native-game integration observations, not screenshot-reference acceptance. The [native game loop](unreal-native-game.md) covers compiler selection, capture completion, tests and current cook/package status; exposure, palette and imported vertex colour are in [exposure and vertex colour](unreal-native-exposure-and-vertex-color.md).
 
+Current launches use the [shared launcher](unreal-engine-launcher.md) from the plugin root with a project configuration.
+
 ## Editor asset generation and fonts
 
 - [general] Native unlit material graphs were created and explicitly saved under `/Game/Art`. Connecting `VertexColor` output **"RGB"** failed even though the node looks RGB in the editor. Its compound RGB output has an **empty** name; `""` connects it, while `"A"` connects alpha. Check every material connection boolean instead of assuming success.
@@ -25,7 +27,7 @@ const FSlateFontInfo Info(Font, 18.f, TEXT("Bold")); // "Light", "Regular" or "B
 - [general] The fix observed once in that project copied the default composite font into the transient `UFont` instead (`Font->GetMutableInternalCompositeFont() = *FCoreStyle::GetDefaultFont();`; the public `CompositeFont` member is deprecated since 5.7, `Engine/Source/Runtime/Engine/Classes/Engine/Font.h`). The snippet above was not compiled or run in this repo, and whether a packaged build stages `Engine/Content/Slate/Fonts` is unchecked.
 
 ```powershell
-& "$ueRoot/Engine/Binaries/Win64/UnrealEditor.exe" $uproject "-ExecutePythonScript=$projectRoot/Scripts/build_content.py" -RenderOffScreen -nullrhi -unattended -nosplash -nosound -notraceserver "-abslog=$projectRoot/Saved/Logs/content.log"
+node scripts/unreal-run.mjs editor --config "$projectRoot/launcher.local.json" --evidence "$projectRoot/Saved/Verification/content-launch" --timeout 300 -- "-ExecutePythonScript=$projectRoot/Scripts/build_content.py" -RenderOffScreen -nullrhi -unattended -nosplash -nosound -notraceserver "-abslog=$projectRoot/Saved/Logs/content.log"
 if ($LASTEXITCODE -ne 0) { throw 'Editor content generation failed' }
 ```
 

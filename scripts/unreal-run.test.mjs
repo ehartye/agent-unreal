@@ -1,14 +1,17 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { parseArguments } from './unreal-run.mjs';
 import { LOCK, OPERATIONS, verifyLifecycle, verifyIdentity, recoveryDecision, validateRequest } from './lib/unreal-run/contracts.mjs';
 import { loadConfiguration, operationCommand, runContainedProcess } from './lib/unreal-run/controller.mjs';
-import { verifyArtifactFiles } from './lib/unreal-run/identity.mjs';
+import { sourceIdentity, verifyArtifactFiles, observeToolchain } from './lib/unreal-run/identity.mjs';
 import { hash } from './lib/unreal-run/contracts.mjs';
+import { engineContenders } from './lib/unreal-run/contention.mjs';
+import { spawnSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 
 const sha = 'a'.repeat(64), id = '12345678-1234-1234-1234-123456789012', now = '2026-01-01T00:00:00.000Z';
 const identity = pid => ({ pid, created: `63900000000000000${pid}` });
@@ -20,6 +23,35 @@ function receipt() {
 }
 function owner() { return { version: 1, kind: 'unreal-run/owner', id, purpose: 'production', lock: LOCK, started: now, requestHash: sha, processes: [identity(1)], permitIssued: false, phase: 'pre-permit', drain: null }; }
 const gone = [{ pid: 1, expectedCreated: identity(1).created, state: 'gone' }];
+
+test('contention excludes exact EOS overlay images while engine and near-name game observations still block', () => {
+  const observation = (name, commandLine = null) => ({ name, commandLine, pid: 101, created: '639000000000000001' });
+  const nonEngines = ['EOSOverlayRenderer-Win64-Shipping.exe', 'EOSOverlayRenderer-Win32-Shipping.exe', 'eosoverlayrenderer-win64-shipping.EXE', 'node.exe', 'dotnet.exe'].map(name => observation(name));
+  assert.deepEqual(engineContenders(nonEngines), []);
+  for (const observed of [
+    observation('UnrealEditor.exe'), observation('UnrealEditor-Cmd.exe'), observation('UnrealGame.exe'),
+    observation('UnrealBuildTool.exe'), observation('dotnet.exe', 'dotnet "D:/Engine/UnrealBuildTool.dll" SampleEditor'),
+    observation('dotnet.exe', 'dotnet "D:/Engine/AutomationTool.dll" BuildCookRun'),
+    observation('Sample-Win64-Shipping.exe'), observation('Sample-Win64-Development.exe'), observation('Sample-Win64-Test.exe'),
+    observation('EOSOverlayRendererGame-Win64-Shipping.exe'), observation('MyEOSOverlayRenderer-Win64-Shipping.exe'), observation('EOSOverlayRenderer-Win64-Development.exe'),
+  ]) {
+    const contenders = engineContenders([...nonEngines, observed]);
+    assert.equal(contenders.length, 1, observed.name);
+    assert.equal(contenders[0].pid, observed.pid); assert.equal(contenders[0].created, observed.created);
+    assert.equal(contenders[0].name, observed.name); assert.ok(contenders[0].reason);
+    assert.equal(Object.hasOwn(contenders[0], 'commandLine'), false, 'receipt does not expose unrelated command arguments');
+  }
+});
+
+test('contention classifier CLI refuses missing or malformed observations instead of emitting no contenders', () => {
+  const classifier = fileURLToPath(new URL('./lib/unreal-run/contention.mjs', import.meta.url));
+  for (const input of ['', '{bad', '{}', '[null]', '[{"name":"UnrealEditor.exe","pid":0}]']) {
+    const result = spawnSync(process.execPath, [classifier], { input, encoding: 'utf8', timeout: 5000 });
+    assert.equal(result.status, 74); assert.equal(result.stdout, ''); assert.match(result.stderr, /classification refused/);
+  }
+  const empty = spawnSync(process.execPath, [classifier], { input: '[]', encoding: 'utf8', timeout: 5000 });
+  assert.equal(empty.status, 0); assert.deepEqual(JSON.parse(empty.stdout), []);
+});
 
 test('CLI advertises nine operations and preserves exact trailing arguments', () => {
   assert.equal(OPERATIONS.length, 9);
@@ -34,6 +66,8 @@ test('production requests cannot change lock identity or select fixture faults',
   assert.deepEqual(validateRequest(request), []);
   assert.match(validateRequest({ ...request, lock: 'other' }).join(), /lock identity/);
   assert.match(validateRequest({ ...request, fault: 'containment' }).join(), /fixture fault/);
+  assert.match(validateRequest({ ...request, fault: 'observation' }).join(), /fixture fault/);
+  assert.match(validateRequest({ ...request, fault: 'observation-once' }).join(), /fixture fault/);
   assert.match(validateRequest({ ...request, arguments: ['bad\0value'] }).join(), /NUL/);
 });
 test('complete lifecycle is verifiable with expected request binding', () => {
@@ -57,6 +91,41 @@ test('identity verification accepts complete build/package observations and reje
   assert.equal(verifyIdentity(good, { ...life, drain: null }).valid, false);
   assert.equal(verifyLifecycle({ ...life, drain: { ...life.drain, observed: '2025-01-01T00:00:00Z' } }).valid, false);
 });
+test('toolchain identity reads the actual UBT compiler and Windows SDK observation', () => {
+  const line = 'Using Visual Studio 2022 14.44.35223 toolchain (D:/Toolchain) and Windows 10.0.26100.0 SDK (D:/SDK).';
+  const observed = observeToolchain(line);
+  assert.equal(observed.compiler, '14.44.35223'); assert.equal(observed.sdk, '10.0.26100.0');
+  assert.equal(observed.observation, line); assert.equal(observed.logSha256, hash(line));
+  for (const missing of ['', 'Target is up to date', 'Using Visual Studio 2022 14.44.35223 toolchain']) assert.throws(() => observeToolchain(missing), /not observed/);
+});
+
+test('sample source identity excludes generated file-order logs but detects source and build-resource changes', t => {
+  const root = mkdtempSync(join(tmpdir(), 'unreal-sample-identity-'));
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  const git = args => {
+    const result = spawnSync('git', ['-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid', '-c', 'commit.gpgsign=false', '-c', 'core.autocrlf=false', ...args], { cwd: root, encoding: 'utf8', timeout: 10000, windowsHide: true });
+    assert.equal(result.status, 0, result.stderr || result.error?.message);
+  };
+  const write = (relative, contents) => { const file = join(root, relative); mkdirSync(join(file, '..'), { recursive: true }); writeFileSync(file, contents); };
+  write('.gitignore', readFileSync(new URL('../examples/unreal/engine_lock/sample/.gitignore', import.meta.url)));
+  write('Source/Module.cpp', 'source before\n');
+  write('Build/Windows/Resources/Icon.ico', 'resource before\n');
+  git(['init']); git(['add', '--', '.']); git(['commit', '-m', 'Sample identity fixture']);
+  const baseline = sourceIdentity({ sourceRoot: root });
+  assert.equal(baseline.dirty, false);
+  write('Build/Windows/FileOpenOrder/EditorOpenOrder.log', 'editor generated access order\n');
+  write('Build/Windows/FileOpenOrder/CookerOpenOrder.log', 'cook generated access order\n');
+  assert.deepEqual(sourceIdentity({ sourceRoot: root }), baseline);
+  for (const path of ['Source/Module.cpp', 'Build/Windows/Resources/Icon.ico']) {
+    const original = readFileSync(join(root, path));
+    write(path, 'changed input\n');
+    assert.notEqual(sourceIdentity({ sourceRoot: root }).snapshot, baseline.snapshot, path);
+    write(path, original);
+  }
+  write('Build/Windows/Resources/Additional.ico', 'new packaging input\n');
+  assert.notEqual(sourceIdentity({ sourceRoot: root }).snapshot, baseline.snapshot);
+});
+
 test('artifact verification reads bytes and rejects missing or tampered products', t => {
   const root = mkdtempSync(join(tmpdir(), 'unreal-artifacts-')); t.after(() => rmSync(root, { recursive: true, force: true }));
   const file = join(root, 'product.bin'); writeFileSync(file, 'product');
@@ -82,6 +151,9 @@ test('configuration rejects bypass keys and command construction preserves workl
   const config = { version: 1, project: 'Game.uproject', engine: '.', sourceRoot: '.', editorTarget: 'GameEditor', gameTarget: 'Game' };
   const file = join(root, 'project.json'); writeFileSync(file, JSON.stringify(config)); const loaded = loadConfiguration(file);
   assert.deepEqual(operationCommand('editor', loaded, ['', 'a b']).arguments, [join(root, 'Game.uproject'), '', 'a b']);
+  for (const operation of ['build', 'package']) for (const override of ['-Project=Other.uproject', '-Target=Other', '-TargetList=other.txt', '-Platform=Other', '-Configuration=Shipping', '-ClientConfig=Shipping', '-ArchiveDirectory=Other', '--PROJECT']) {
+    assert.throws(() => operationCommand(operation, loaded, [override]), /identity options belong in project configuration/);
+  }
   writeFileSync(file, JSON.stringify({ ...config, lock: 'other' })); assert.throws(() => loadConfiguration(file), /Unknown configuration field/);
   writeFileSync(file, JSON.stringify({ ...config, gameTarget: 'Game;exec' })); assert.throws(() => loadConfiguration(file), /Invalid configuration/);
 });

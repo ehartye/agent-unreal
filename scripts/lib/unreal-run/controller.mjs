@@ -103,6 +103,10 @@ export function loadConfiguration(file) {
 
 export function operationCommand(operation, c, args) {
   if (!Array.isArray(args) || args.some(a => typeof a !== 'string' || a.includes('\0'))) throw Error('Invalid engine arguments');
+  if (['build', 'package'].includes(operation)) {
+    const owned = /^--?(?:project|scriptsforproject|target|targetname|targetlist|platform|configuration|clientconfig|serverconfig|serverplatform|servertarget|archivedirectory)(?:=|$)/i;
+    if (args.some(arg => owned.test(arg))) throw Error('Build/package identity options belong in project configuration, not trailing arguments');
+  }
   let executable, arguments_;
   if (operation === 'build' || operation === 'package') {
     let dotnet = c.dotnet;

@@ -21,7 +21,7 @@ export function validateRequest(r) {
   if (!Array.isArray(r.arguments) || r.arguments.some(a => typeof a !== 'string' || a.includes('\0'))) errors.push('arguments must be a string array without NUL');
   for (const key of ['timeoutMs', 'waitMs']) if (!Number.isSafeInteger(r[key]) || r[key] < 1 || r[key] > 86400000) errors.push(`invalid bounded ${key}`);
   if (!identity({ pid: r.controllerPid, created: r.controllerCreated })) errors.push('invalid controller creation identity');
-  if (r.fault && (r.purpose !== 'fixture' || !['containment', 'accounting'].includes(r.fault))) errors.push('invalid fixture fault');
+  if (r.fault && (r.purpose !== 'fixture' || !['containment', 'accounting', 'observation', 'observation-once'].includes(r.fault))) errors.push('invalid fixture fault');
   return errors;
 }
 

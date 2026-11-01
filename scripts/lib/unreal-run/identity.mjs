@@ -41,6 +41,12 @@ export function verifyArtifactFiles(receipt, { resolveArtifact = path => path } 
   return { valid: errors.length === 0, errors };
 }
 
+export function observeToolchain(log) {
+  const match = log.match(/Using Visual Studio[^\r\n]*?([0-9]+\.[0-9]+\.[0-9]+)[^\r\n]*?toolchain[^\r\n]*?and\s+Windows\s+([0-9]+\.[0-9]+\.[0-9]+(?:\.[0-9]+)?)\s+SDK[^\r\n]*/i);
+  if (!match) throw Error('Actual compiler and SDK were not observed in workload logs');
+  return { compiler: match[1], sdk: match[2], observation: match[0], logSha256: hash(log) };
+}
+
 export function collectIdentity(config, source, result) {
   const receipt = { version: 1, kind: 'unreal-run/identity', operation: result.request.operation, id: result.request.id, requestHash: result.requestHash, source, engine: null, toolchain: null, artifacts: [], complete: false, errors: [] };
   try {
@@ -54,9 +60,7 @@ export function collectIdentity(config, source, result) {
     const stdout = readFileSync(join(result.evidence, 'stdout.log'), 'utf8');
     const stderr = readFileSync(join(result.evidence, 'stderr.log'), 'utf8');
     const log = stdout + '\n' + stderr;
-    const match = log.match(/Using Visual Studio[^\r\n]*?([0-9]+\.[0-9]+\.[0-9]+)[^\r\n]*?toolchain[^\r\n]*?and\s+([0-9]+\.[0-9]+\.[0-9]+(?:\.[0-9]+)?)\s+Windows[^\r\n]*SDK/i);
-    if (!match) throw Error('Actual compiler and SDK were not observed in workload logs');
-    receipt.toolchain = { compiler: match[1], sdk: match[2], observation: match[0], logSha256: hash(log) };
+    receipt.toolchain = observeToolchain(log);
     const target = result.request.operation === 'build' ? config.editorTarget : config.gameTarget;
     const binaryRoot = join(dirname(config.project), 'Binaries', config.platform);
     const names = [`${target}.target`, `${target}-${config.platform}-${config.configuration}.target`];

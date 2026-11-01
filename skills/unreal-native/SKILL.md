@@ -6,6 +6,8 @@ when_to_use: "Use when profiling frame time on a quiet machine, hitting a frame 
 
 # Native Unreal games
 
+- [general] Before any build, editor, game, commandlet or package, read the consumer launcher instructions and the [shared launcher](references/unreal-engine-launcher.md). Use its owned process tree; retain an existing consumer launcher until migration is separately verified.
+
 Unreal 5.8 on Windows, driven by an agent. Each reference holds the commands, the evidence behind them
 and what was not verified. Importing assets is `unreal-import`;
 choosing a system and Niagara are the domain skills (for example
@@ -16,6 +18,7 @@ reviewing its module and state structure is [unreal-architecture](../unreal-arch
 
 | You are about to | Read |
 |---|---|
+| Start an engine process, diagnose an engine lock, or adopt the prescribed launcher | [Shared launcher](references/unreal-engine-launcher.md) |
 | Pin the compiler, run real gameplay, verify screenshots, or find static parts at the world origin (`is not static`) | [Native game loop](references/unreal-native-game.md) |
 | Add plugins and modules to a native game, or fix a first C++ compile error | [Module setup](references/unreal-native-module-setup.md) |
 | Diagnose a build that passes then fails on code you did not change (adaptive unity, chunking, the git working set) | [Unity builds](references/unreal-native-unity-builds.md) |

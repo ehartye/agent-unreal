@@ -1,5 +1,7 @@
 # Measure on a quiet machine: editor contention helper
 
+Run the launcher commands below from the plugin root. They wrap each complete probe in the [shared owned process tree](../engine_lock/README.md); retained scientific results describe their original runs.
+
 Backs [profiling facts](../../../skills/unreal-native/references/unreal-native-profiling-facts.md). Windows, Node 22 or newer, no dependencies, no Unreal needed for the helper itself.
 
 Other Unreal editors, commandlets or games on the same machine take CPU, GPU and memory from a measurement. A frame-time receipt recorded beside them looks like a regression in the game. The helper records who else is running in every receipt, waits a bounded time for them to leave, and refuses to record unless contention is allowed explicitly.
@@ -43,7 +45,7 @@ From Node: `await waitForQuiet({ timeoutMs, pollMs, allowContention, excludeComm
 ## Demonstration
 
 ```text
-node examples/unreal/contention/contention_demo.mjs --engine "C:/Program Files/Epic Games/UE_5.8" --frames 150 --rounds 4 [--threads 20] [--busy] --out demo.json
+pwsh -NoProfile -File examples/unreal/engine_lock/with-engine-lock.ps1 node examples/unreal/contention/contention_demo.mjs --engine "C:/Program Files/Epic Games/UE_5.8" --frames 150 --rounds 4 [--threads 20] [--busy] --out demo.json
 ```
 
 A fixed workload with no Unreal and no GPU (a seeded array transformed for a fixed number of passes, timed one frame at a time on one thread and as a fork-join over several worker threads) is timed alone, beside one and beside two throwaway `UnrealEditor-Cmd.exe -nullrhi` editors, each in its own project folder in the OS temp folder. Each phase takes a contention reading before and after. A reading that excludes the temp folder counts only editors that are not the demonstration's own; a phase is `clean` when there were none, so a slowdown in it comes from the scratch editors. With `--busy` each scratch editor spins its game thread (`contention_idle.py`) instead of idling. The demonstration stops only processes whose command line names its temp folder.

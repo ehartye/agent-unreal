@@ -1,5 +1,7 @@
 # Skeletal mesh material slots: what Python reaches, and a small editor module for the rest
 
+Run the launcher commands below from the plugin root. They wrap each complete probe in the [shared owned process tree](../engine_lock/README.md); retained scientific results describe their original runs.
+
 Prepared for [Unreal import policy](../../../skills/unreal-import/references/unreal-import-policy.md) and [Bridging editor Python to C++](../../../skills/unreal-editor-scripting/references/unreal-python-cpp-bridge.md). Unreal Engine 5.8, Windows, Visual Studio 2022 Build Tools.
 
 **Status:** Run on 2026-10-26: 15 of 15 checks pass in the commandlet run and 15 of 15 with `--rendering`; rerun with the same result. The first run found two probe faults (the engine skeletal cube had to be scanned into the asset registry before `duplicate_asset` could find it in a commandlet; the imported slot name is read with `get_editor_property`, not as an attribute). The assign-back route was expected to leave the package clean and does not: it dirties the package (see the table). In a session with no desktop, the rendering run passed 15 of 15 with `-RenderOffScreen` (the first launch without it ended in exit 3 at the editor window's swap chain; see "Run"). The author process exits 1 in a commandlet run because the deliberate refusal logs an error; the checks do not judge the exit code.
@@ -28,7 +30,7 @@ The engine skeletal cube has one slot, so the probe pads a copy to two slots wit
 ## Run
 
 ```text
-node examples/unreal/skeletal_materials/skeletal_materials.mjs --engine "C:/Program Files/Epic Games/UE_5.8" [--keep] [--rendering] [--compiler 14.44.35228] [--sdk 10.0.26100.0]
+pwsh -NoProfile -File examples/unreal/engine_lock/with-engine-lock.ps1 node examples/unreal/skeletal_materials/skeletal_materials.mjs --engine "C:/Program Files/Epic Games/UE_5.8" [--keep] [--rendering] [--compiler 14.44.35228] [--sdk 10.0.26100.0]
 ```
 
 `--engine` may be replaced by the `UE_ROOT` environment variable. A few minutes for the build, then about a minute per process. `--rendering` runs the same script inside a rendering editor (`UnrealEditor.exe` without `-nullrhi`, with a GPU, started with `-RenderOffScreen` so no window is shown; a session with no desktop cannot create the editor window's swap chain and the editor ends with exit 3) so the authored-material statistics in the report can be compared with the headless run.

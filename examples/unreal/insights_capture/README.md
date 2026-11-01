@@ -1,5 +1,7 @@
 # Capturing an Unreal Insights trace and exporting frame times headless
 
+Run the launcher commands below from the plugin root. They wrap each complete probe in the [shared owned process tree](../engine_lock/README.md); retained scientific results describe their original runs.
+
 Backs [Capturing and reading an Unreal Insights trace](../../../skills/unreal-native/references/unreal-native-insights-capture.md). Unreal Engine 5.8, Windows. No GPU and no window are needed.
 
 The question: can an agent capture a short trace with a named region and read per-frame game-thread times out of it without opening the Insights window, and are the numbers the ones the script produced? A script runs a known load on the game thread (3 ms on every tick, plus a 30 ms stall on every 40th tick) inside `Trace.RegionBegin Measured` / `Trace.RegionEnd Measured`, with a bookmark at each end. `UnrealInsights.exe` then exports the region.
@@ -13,7 +15,7 @@ The question: can an agent capture a short trace with a named region and read pe
 ## Run
 
 ```text
-node examples/unreal/insights_capture/insights_capture.mjs --engine "C:/Program Files/Epic Games/UE_5.8" [--runs 2] [--frames 120] [--warmup 30] [--budget-ms 8.33] [--pause] [--start late|launch] [--mode game|editor] [--keep]
+pwsh -NoProfile -File examples/unreal/engine_lock/with-engine-lock.ps1 node examples/unreal/insights_capture/insights_capture.mjs --engine "C:/Program Files/Epic Games/UE_5.8" [--runs 2] [--frames 120] [--warmup 30] [--budget-ms 8.33] [--pause] [--start late|launch] [--mode game|editor] [--keep]
 ```
 
 About 15 s per run plus 3 s for the export. Exit code 0 when every check passes.
@@ -21,7 +23,7 @@ About 15 s per run plus 3 s for the export. Exit code 0 when every check passes.
 ## Command lines that worked
 
 ```text
-UnrealEditor-Cmd.exe <Project>/Probe.uproject -game -nullrhi -unattended -nosplash -nopause -nosound -notraceserver
+pwsh -NoProfile -File examples/unreal/engine_lock/with-engine-lock.ps1 UnrealEditor-Cmd.exe <Project>/Probe.uproject -game -nullrhi -unattended -nosplash -nopause -nosound -notraceserver
     -traceautostart=0 -trace=cpu,frame,bookmark,region,counters -statnamedevents -abslog=<log> -ExecCmds="py insights_probe.py"
 UnrealInsights.exe -OpenTraceFile=<trace>.utrace -NoUI -AutoQuit -ExecOnAnalysisCompleteCmd="@=<file>.rsp" -abslog=<log>
 ```
@@ -57,7 +59,7 @@ A rendered frame (`-nullrhi` throws render data away), the `gpu` and `rendercomm
 Backs [Measurement conditions and budgets](../../../skills/unreal-quality/references/unreal-quality-measurement.md) and [Profiling tools: what each answers](../../../skills/unreal-quality/references/unreal-quality-profiling-tools.md). The run above captures one trace with the default channels; this phase runs the commands those pages name. It is a separate runner, so the run above is unchanged:
 
 ```text
-node examples/unreal/insights_capture/insights_stats.mjs --engine "<UE_5.8 folder>" [--held 300000] [--freed 1500000] [--keep]
+pwsh -NoProfile -File examples/unreal/engine_lock/with-engine-lock.ps1 node examples/unreal/insights_capture/insights_stats.mjs --engine "<UE_5.8 folder>" [--held 300000] [--freed 1500000] [--keep]
 ```
 
 - `insights_stats_probe.py` has two modes. `stats` runs `stat help`, a bare `stat`, `stat unit`, `stat fps` and `stat startfile` ... `stat stopfile` in a headless game process (`UnrealEditor-Cmd.exe -game -nullrhi`) and leaves the output in the log. `memory` sets bookmarks `LeakA`, `LeakB`, `LeakC`, makes two engine allocations between the first two (a held array and an array freed between `LeakB` and `LeakC`), runs a few thousand small allocations between every step, and stops the trace.

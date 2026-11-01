@@ -9,7 +9,7 @@
     "arguments": {"type": "array", "items": {"type": "string"}}, "cwd": {"type": "string", "minLength": 1}, "evidence": {"type": "string", "minLength": 1}, "node": {"type": "string", "minLength": 1},
     "timeoutMs": {"type": "integer", "minimum": 1, "maximum": 86400000}, "waitMs": {"type": "integer", "minimum": 1, "maximum": 86400000},
     "controllerPid": {"type": "integer", "minimum": 1}, "controllerCreated": {"type": "string", "pattern": "^[0-9]{15,20}$"},
-    "fault": {"enum": ["containment", "accounting"]}
+    "fault": {"enum": ["containment", "accounting", "observation", "observation-once"]}
   },
   "$comment": "validateRequest additionally binds production to its immutable global lock and refuses fault injection outside isolated fixtures."
 }

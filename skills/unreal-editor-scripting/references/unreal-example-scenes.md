@@ -7,7 +7,7 @@ Each scene builds a throwaway project in the OS temp folder, runs scripts on an 
 Backs the Drawn, ink and cel looks section of [Niagara](../../unreal-effects/references/unreal-niagara.md) and the Substrate Toon bullets of [Substrate](../../unreal-rendering/references/unreal-substrate.md).
 
 ```text
-node examples/unreal/stylized/stylized_validate.mjs --engine "C:/Program Files/Epic Games/UE_5.8" [--keep] [--shots <folder>]
+pwsh -NoProfile -File examples/unreal/engine_lock/with-engine-lock.ps1 node examples/unreal/stylized/stylized_validate.mjs --engine "C:/Program Files/Epic Games/UE_5.8" [--keep] [--shots <folder>]
 ```
 
 It builds a project with `r.Substrate=True` and the Blendable GBuffer plus a bare project, and prints 17 checks in about 2.5 minutes. Result: 17 of 17 pass. A Toon sphere draws 2 flat bands against 0 for a plain lit sphere; Toon on a masked and a translucent sprite draws 3 and 2 flat bands with one silhouette; a self-emissive flipbook sprite gives identical pixels under a bright and a dark backdrop; a floor-quantized ramp draws 3 flat bands against 16 luminance levels. A Toon Profile override set with the console `Set` command survived an editor restart. The [folder README](../../../examples/unreal/stylized/README.md) lists every station.
@@ -17,7 +17,7 @@ It builds a project with `r.Substrate=True` and the Blendable GBuffer plus a bar
 Scenes that back [World Partition](../../unreal-procedural/references/unreal-world-partition.md): the Open World template and a Water sample map, plus a four-cube level made with `LevelEditorSubsystem.new_level`, converted and rebuilt by commandlet, and read back by JSON report.
 
 ```
-node examples/unreal/world/world_validate.mjs --engine "C:/Program Files/Epic Games/UE_5.8" [--keep]
+pwsh -NoProfile -File examples/unreal/engine_lock/with-engine-lock.ps1 node examples/unreal/world/world_validate.mjs --engine "C:/Program Files/Epic Games/UE_5.8" [--keep]
 ```
 
 It builds a throwaway project in the OS temp folder, runs hidden editors and commandlets, and prints PASS or FAIL for 30 claims (the 17 from 0.3.0 and 13 new). The Landscape size rule is a pure Node check that runs in `node scripts/check.mjs`.
@@ -31,7 +31,7 @@ Headline: all 30 pass. A partitioned `new_level` works in all three modes and ho
 A small engine Landscape map gets two PCG volumes and five variants of the PCG World Actor and its Landscape cache. The scripts generate in the editor and in a game process (the editor binary with `-game`), run an experiment harness (graph variants generated on a test volume, instances counted) and check every claim in [PCG in a running game](../../unreal-procedural/references/unreal-pcg-game-process.md).
 
 ```
-node examples/unreal/pcg_game/pcg_validate.mjs --engine "C:/Program Files/Epic Games/UE_5.8" [--keep] [--shot <png>]
+pwsh -NoProfile -File examples/unreal/engine_lock/with-engine-lock.ps1 node examples/unreal/pcg_game/pcg_validate.mjs --engine "C:/Program Files/Epic Games/UE_5.8" [--keep] [--shot <png>]
 ```
 
 About ten minutes, GPU needed for the offscreen runs; `pcg-validate.test.mjs` runs in `node scripts/check.mjs`. See the [folder README](../../../examples/unreal/pcg_game/README.md).
@@ -45,7 +45,7 @@ Result: with the cache serialized the game process spawns instances; without it 
 `examples/unreal/editor_python/` has helpers (`soft_set`, a generator stage runner, `recreate_map`, `place_above_ground`, `allow_instancing`) and a validating scene. `ep_probe.py` runs headless; `ep_stages.py` and `ep_ground.py` run in a rendering editor (`-ExecCmds="py ..."`). Reference: [Editor Python: maps, materials and meshes](unreal-editor-python-maps.md).
 
 ```text
-node examples/unreal/editor_python/ep_validate.mjs --engine "C:/Program Files/Epic Games/UE_5.8" [--keep] [--shots <folder>]
+pwsh -NoProfile -File examples/unreal/engine_lock/with-engine-lock.ps1 node examples/unreal/editor_python/ep_validate.mjs --engine "C:/Program Files/Epic Games/UE_5.8" [--keep] [--shots <folder>]
 ```
 
 It builds a throwaway project, copies the Open World template (the Landscape source), and checks 21 claims. Result: 21 of 21 pass.

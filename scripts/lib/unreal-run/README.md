@@ -64,6 +64,13 @@ Only that Job is terminated for timeout, cancellation or controller death.
 Cleanup waits at most ten seconds for zero active members and an empty member
 list. PID disappearance, EOF, or kill-on-close is never substituted for drain.
 
+Member enumeration and process queries are separate observations. An exiting
+process can remain in a Job snapshot after its PID can no longer be opened. The
+helper reconciles each failed identity observation for at most one second, still
+checking cancellation and the workload deadline. It records the PID, original
+exception and reconciliation outcome in `member-observations.jsonl`. Persistent
+failure refuses the run; a reconciled snapshot never substitutes for final drain.
+
 Ctrl+C and SIGTERM request cancellation; the controller waits for cleanup.
 Controller death is separately detected through creation identity. Helper death
 leaves the persistent journal unresolved even when Windows closes the Job and
@@ -89,6 +96,13 @@ prevent arbitrary manual launches or broker-created processes outside its Job,
 nor recognize every renamed/custom executable. Participating consumers must use
 the same launcher. The mutex and journal are coordination, not an adversarial
 security boundary against other code running as the same user.
+
+The exact `EOSOverlayRenderer-Win32-Shipping.exe` and
+`EOSOverlayRenderer-Win64-Shipping.exe` names identify Epic's separately
+distributed EOS overlay, not a game workload; they are excluded from the
+packaged-game suffix check. Near-name games still block dispatch. Classifier
+failure or malformed observations refuse dispatch rather than reporting an
+empty scan. This name-based exception is not executable authentication.
 
 ## Receipt contract and embedding API
 
@@ -133,7 +147,7 @@ node scripts/lib/unreal-run/verify-receipt.mjs Saved/build-proof --config launch
 node scripts/lib/unreal-run/verify-receipt.mjs Saved/editor-proof
 ```
 
-The first two need no engine or Windows helper. The last requires Windows and
+The first two need no engine or Windows helper. The native-acceptance command requires Windows and
 returns its unique retained OS-temp evidence directory; an optional first path
 selects an empty output directory. It uses isolated global mutexes, never the
 production mutex, and only inert child/grandchild workloads. It covers exact
@@ -143,6 +157,10 @@ recovery refusal/acceptance and survival of an unrelated sentinel. Run the same
 command through a remote session for that host's fixture acceptance. Engine
 build/editor/game/commandlet/package smoke acceptance is a separate native lane;
 inert fixture success does not establish those engine behaviors.
+
+The receipt-verifier commands read retained evidence without starting an engine.
+For actual build, commandlet, editor/game and package smoke checks, use the
+[disposable engine acceptance sample](../../../examples/unreal/engine_lock/README.md).
 
 For a targeted owner-death repair check, append `--only owner-death,helper-death`
 to the native acceptance command. The report names the selected cases and marks

@@ -1,11 +1,13 @@
 # Niagara toolsets scene: author a system from Python and check the call shapes
 
+Run the launcher commands below from the plugin root. They wrap each complete probe in the [shared owned process tree](../engine_lock/README.md); retained scientific results describe their original runs.
+
 Backs [Author Niagara systems from Python with the Niagara toolsets](../../../skills/unreal-effects/references/unreal-niagara-toolsets.md) and its companions on [delete and recreate](../../../skills/unreal-effects/references/unreal-niagara-toolsets-lifecycle.md), [inputs](../../../skills/unreal-effects/references/unreal-niagara-toolset-inputs.md) and [renderers](../../../skills/unreal-effects/references/unreal-niagara-toolset-renderers.md). Verified on Unreal Engine 5.8 (the validator and the opt-in groups). Windows. Nothing here needs a project of yours: the validator makes a throwaway project (PythonScriptPlugin, EditorScriptingUtilities, Niagara, NiagaraToolsets) in the OS temp folder.
 
 ## Run
 
 ```text
-node examples/unreal/niagara_toolsets/nts_validate.mjs --engine "C:/Program Files/Epic Games/UE_5.8" [--keep] [--only author]
+pwsh -NoProfile -File examples/unreal/engine_lock/with-engine-lock.ps1 node examples/unreal/niagara_toolsets/nts_validate.mjs --engine "C:/Program Files/Epic Games/UE_5.8" [--keep] [--only author]
 ```
 
 It starts eight hidden headless commandlets and one hidden editor (the stack-issue tick run), a few minutes in total (timing varies with machine load, and a loaded machine can take more than twice as long), prints PASS or FAIL per claim and exits 0 when every check passes. A line is written, and flushed, as each phase starts and ends, so a redirected run shows progress and a slow phase can be told from a hung one. It is not part of `node scripts/check.mjs`; the check logic is tested there (`nts-validate.test.mjs`). Two phases end in an editor crash on purpose, so a non-zero exit code from those is a result, not an error. A timed-out run is retried once, and afterwards only processes whose command line names the throwaway project are stopped.
@@ -21,7 +23,7 @@ Status: Prepared 2026-10-26. Rerun with the same counts as the first runs: the d
 `nts_probe.mjs` runs probes for questions the validator above does not answer. It is separate from `nts_validate.mjs`: the default run is unchanged, and no validator file refers to the probes (a test checks that). It is not part of `node scripts/check.mjs`; the pure checks have node tests (`nts-probe.test.mjs`) in the merge lane.
 
 ```text
-node examples/unreal/niagara_toolsets/nts_probe.mjs --engine "C:/Program Files/Epic Games/UE_5.8" [--only renderers,emit,frame,wire,gradient] [--keep] [--plan]
+pwsh -NoProfile -File examples/unreal/engine_lock/with-engine-lock.ps1 node examples/unreal/niagara_toolsets/nts_probe.mjs --engine "C:/Program Files/Epic Games/UE_5.8" [--only renderers,emit,frame,wire,gradient] [--keep] [--plan]
         [--scenes <folder>] [--glb <file|builtin>] [--static-glb <file>] [--atlas-png <file>] [--atlas-json <file>]
 ```
 

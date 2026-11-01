@@ -1,11 +1,13 @@
 # Rendering probes: ForwardShadingPriority on directional lights
 
+Run the launcher commands below from the plugin root. They wrap each complete probe in the [shared owned process tree](../engine_lock/README.md); retained scientific results describe their original runs.
+
 Backs the [tested] lines of [Two directional lights: ForwardShadingPriority and the renderer message](../../../skills/unreal-rendering/references/unreal-directional-lights.md). The default run and the opt-in probes are verified on Unreal Engine 5.8, Windows. Nothing here needs a project or an asset of yours: the validator makes a throwaway project in the OS temp folder.
 
 ## Run
 
 ```text
-node examples/unreal/rendering_probes/rp_validate.mjs --engine "C:/Program Files/Epic Games/UE_5.8" [--keep]
+pwsh -NoProfile -File examples/unreal/engine_lock/with-engine-lock.ps1 node examples/unreal/rendering_probes/rp_validate.mjs --engine "C:/Program Files/Epic Games/UE_5.8" [--keep]
 ```
 
 It starts one hidden headless commandlet (`-run=pythonscript`, `-nullrhi`), usually under a minute including the first start of the new project (timing varies with machine load), prints PASS or FAIL per check and exits 0 when every check passes. A line is written, and flushed, as each phase starts and ends, so a redirected run shows progress. The project folder is deleted after a clean run. A failed check or a missing report keeps it and prints its path and the editor log's path; `--keep` also keeps it after a clean run. The folder holds `Saved/probe.json` (the report) and `Saved/Logs/probe.log`. It is not part of `node scripts/check.mjs`; the check logic is tested there (`rp-validate.test.mjs`).
@@ -45,7 +47,7 @@ The renderer's on-screen message in this default run. It is drawn only by a rend
 ### MegaLights: the tracing routes and the editor toggle
 
 ```text
-node examples/unreal/rendering_probes/rp_rt_validate.mjs --engine "C:/Program Files/Epic Games/UE_5.8" [--keep] [--offscreen] [--warmup-seconds 120]
+pwsh -NoProfile -File examples/unreal/engine_lock/with-engine-lock.ps1 node examples/unreal/rendering_probes/rp_rt_validate.mjs --engine "C:/Program Files/Epic Games/UE_5.8" [--keep] [--offscreen] [--warmup-seconds 120]
 ```
 
 Needs a GPU: three launches of a **rendering editor** (no `-nullrhi`; run no other Unreal process), on a DirectX 12 GPU with ray tracing for the two hardware claims. Without `--offscreen` the editor opens a visible window (keep it in front). `--offscreen` adds `-RenderOffScreen` for a session with no desktop (SSH, a service), where a visible window cannot be created: the editor ends with exit 3 at its window swap chain. Either way the script starts a Play-In-Editor session and profiles that viewport, because the offscreen editor's own level viewport drew nothing on an earlier engine build (see [Editor Python run modes](../../../skills/unreal-editor-scripting/references/unreal-editor-python.md)). About 10 minutes plus the first shader compile. Each launch writes its own `Config/DefaultEngine.ini` into a throwaway project (the graphics lines are the ones the engine writes for a new project: DX12, SM6 only):
@@ -67,7 +69,7 @@ The `ProfileGPU` section of the report held 14 lines naming MegaLights in both p
 ### MegaLights: the Niagara Light Renderer count
 
 ```text
-node examples/unreal/rendering_probes/rp_rt_validate.mjs --engine "C:/Program Files/Epic Games/UE_5.8" --phase lights [--keep] [--offscreen] [--warmup-seconds 120]
+pwsh -NoProfile -File examples/unreal/engine_lock/with-engine-lock.ps1 node examples/unreal/rendering_probes/rp_rt_validate.mjs --engine "C:/Program Files/Epic Games/UE_5.8" --phase lights [--keep] [--offscreen] [--warmup-seconds 120]
 ```
 
 Same GPU and flags as the tracing routes above, on the hardware route, in one throwaway project that also enables the Niagara and NiagaraToolsets plugins. Two launches share `rp_rt_probe.py` (the `RP_MODE` environment variable picks the job):
@@ -86,10 +88,10 @@ What the run showed (6 of 6, `--offscreen`, 2026-10-29, one run): `lights-build`
 **Interactive: does the editor toggle write the skin cache setting?** Yes (2 of 2, 2026-10-29, one rendering editor on a throwaway project, a person at the screen): ticking Support Hardware Ray Tracing and answering Yes wrote `r.SkinCache.CompileShaders=1` and `r.RayTracing=True` under `[/Script/Engine.RendererSettings]` of `Config/DefaultEngine.ini`, and the first save also added an unrelated file-server settings section. A script cannot do this unattended: the Project Settings window writes the ini, and a Python `set_editor_property` on the settings object runs in an unattended script, where the skin cache prompt takes its default answer (No, `MessageDialog.cpp`) and the toggle reverts (`RendererSettings.cpp` `PostEditChangeProperty`). So:
 
 ```text
-node rp_rt_validate.mjs --engine <folder> --phase toggle-prepare     # makes a project and saves Saved/toggle-before.ini
+pwsh -NoProfile -File examples/unreal/engine_lock/with-engine-lock.ps1 node examples/unreal/rendering_probes/rp_rt_validate.mjs --engine <folder> --phase toggle-prepare     # makes a project and saves Saved/toggle-before.ini
 # YOU: open the project in a rendering editor, tick Project Settings > Engine > Rendering > Hardware Ray Tracing > Support Hardware Ray Tracing,
 #      answer Yes to the skin cache question, close the editor
-node rp_rt_validate.mjs --phase toggle-judge --project <that folder>
+pwsh -NoProfile -File examples/unreal/engine_lock/with-engine-lock.ps1 node examples/unreal/rendering_probes/rp_rt_validate.mjs --phase toggle-judge --project <that folder>
 ```
 
 The judge diffs the `[/Script/Engine.RendererSettings]` section and prints every key that changed; it passes when `r.RayTracing` is written and a skin cache key (`r.SkinCache.CompileShaders`, or the property name `SkinningShaderSupport`) is written as something other than the inline-only value. The source predicts both on a Yes.
@@ -97,9 +99,9 @@ The judge diffs the `[/Script/Engine.RendererSettings]` section and prints every
 ### Directional lights: what needs a rendering viewport
 
 ```text
-node examples/unreal/rendering_probes/rp_viewport.mjs --engine "C:/Program Files/Epic Games/UE_5.8" [--keep]             # headless extras, about a minute, no GPU
-node examples/unreal/rendering_probes/rp_viewport.mjs --engine "C:/Program Files/Epic Games/UE_5.8" --offscreen          # no desktop needed, an agent reads the screenshots, see below
-node examples/unreal/rendering_probes/rp_viewport.mjs --engine "C:/Program Files/Epic Games/UE_5.8" --interactive        # INTERACTIVE, see below
+pwsh -NoProfile -File examples/unreal/engine_lock/with-engine-lock.ps1 node examples/unreal/rendering_probes/rp_viewport.mjs --engine "C:/Program Files/Epic Games/UE_5.8" [--keep]             # headless extras, about a minute, no GPU
+pwsh -NoProfile -File examples/unreal/engine_lock/with-engine-lock.ps1 node examples/unreal/rendering_probes/rp_viewport.mjs --engine "C:/Program Files/Epic Games/UE_5.8" --offscreen          # no desktop needed, an agent reads the screenshots, see below
+pwsh -NoProfile -File examples/unreal/engine_lock/with-engine-lock.ps1 node examples/unreal/rendering_probes/rp_viewport.mjs --engine "C:/Program Files/Epic Games/UE_5.8" --interactive        # INTERACTIVE, see below
 node examples/unreal/rendering_probes/rp_viewport.mjs --judge --report <viewport-report.json> --observed <observations.json>
 ```
 

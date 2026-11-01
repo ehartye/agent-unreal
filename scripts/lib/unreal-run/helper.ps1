@@ -44,15 +44,46 @@ function Publish-Owner {
     $owner.processes=$processes.ToArray()
     Write-Json $ownerPath $owner
 }
+function Observe-JobMember([int]$MemberId) {
+    # Membership is a snapshot: an exiting process can remain listed briefly
+    # after GetProcessById can no longer open it. Reconcile for at most one second;
+    # neither disappearance nor this reconciliation is the final Job drain proof.
+    $clock=[Diagnostics.Stopwatch]::StartNew();$attempt=0;$lastFailure=$null
+    while($true){
+        Check-Owner
+        if($workWatch.ElapsedMilliseconds -ge $r.timeoutMs){$script:timedOut=$true;throw 'Bounded workload timeout during member observation'}
+        $member=$null;$stage='open';$failure=$null;$attempt++
+        try {
+            if($r.fault -eq 'observation' -or ($r.fault -eq 'observation-once' -and $attempt -eq 1)){throw [IO.IOException]::new('Injected process observation query failure')}
+            $member=[Diagnostics.Process]::GetProcessById($MemberId)
+            $stage='creation-identity';$value=Identity $member
+            $stage='job-membership'
+            if(-not $job.Contains($member)){throw 'Observed process is not in the owned Job'}
+            if($attempt -gt 1){
+                $diagnostic=@{pid=$MemberId;stage=$stage;attempt=$attempt;elapsedMs=$clock.ElapsedMilliseconds;listed=$true;outcome='identity-observed';identity=$value;error=$lastFailure;observed=[DateTime]::UtcNow.ToString('o')}
+                [IO.File]::AppendAllText((Join-Path $r.evidence 'member-observations.jsonl'),(($diagnostic|ConvertTo-Json -Depth 10 -Compress)+[Environment]::NewLine))
+            }
+            return $value
+        } catch {
+            $failure=@{type=$_.Exception.GetType().FullName;message=$_.Exception.Message;detail=$_.Exception.ToString();stack=$_.ScriptStackTrace}
+        } finally {if($member){$member.Dispose()}}
+        $lastFailure=$failure
+        try {$listed=$MemberId -in $job.ProcessIds()} catch {
+            throw ("Job membership recheck failed for PID {0} after {1}: {2}; membership query: {3}" -f $MemberId,$stage,$failure.detail,$_.Exception.ToString())
+        }
+        $outcome=if(-not $listed){'no-longer-listed'}elseif($clock.ElapsedMilliseconds -ge 1000){'unresolved'}else{'retry'}
+        $diagnostic=@{pid=$MemberId;stage=$stage;attempt=$attempt;elapsedMs=$clock.ElapsedMilliseconds;listed=$listed;outcome=$outcome;error=$failure;observed=[DateTime]::UtcNow.ToString('o')}
+        [IO.File]::AppendAllText((Join-Path $r.evidence 'member-observations.jsonl'),(($diagnostic|ConvertTo-Json -Depth 10 -Compress)+[Environment]::NewLine))
+        if(-not $listed){return $null}
+        if($outcome -eq 'unresolved'){throw ("Unobservable live Job member PID {0} after bounded reconciliation at {1}: {2}" -f $MemberId,$stage,$failure.detail)}
+        Start-Sleep -Milliseconds 25
+    }
+}
 function External-Engines {
     # Detection only. These processes are NEVER terminated by this helper.
-    @(Get-CimInstance Win32_Process -ErrorAction Stop | Where-Object {
-        $_.Name -match '^Unreal(Editor|Editor-Cmd|Game).*\.exe$' -or
-        $_.Name -eq 'UnrealBuildTool.exe' -or
-        ($_.Name -eq 'dotnet.exe' -and $_.CommandLine -match '(UnrealBuildTool|AutomationTool)\.dll') -or
-        ($_.Name -match '-Win64-(Development|Shipping|Test)\.exe$')
-    } | ForEach-Object {@{pid=$_.ProcessId;created=if($_.CreationDate){$_.CreationDate.ToUniversalTime().Ticks.ToString()}else{$null};name=$_.Name}})
+    @(Get-EngineContention -Processes @(Get-CimInstance Win32_Process -ErrorAction Stop) -Node $r.node)
 }
+. (Join-Path $PSScriptRoot 'contention.ps1')
 [IO.Directory]::CreateDirectory($r.state)|Out-Null
 $ownerPath=Join-Path $r.state 'owner.json'
 $lastPath=Join-Path $r.state 'last.json'
@@ -148,10 +179,8 @@ try {
         Check-Owner
         if($workWatch.ElapsedMilliseconds -ge $r.timeoutMs){$timedOut=$true;throw 'Bounded workload timeout'}
         foreach($memberId in $job.ProcessIds()){
-            $member=$null
-            try {$member=[Diagnostics.Process]::GetProcessById($memberId);$memberIdentity=Identity $member;if(-not $job.Contains($member)){throw 'Job process identity changed'};if(-not @($processes|Where-Object {$_.pid -eq $memberIdentity.pid -and $_.created -eq $memberIdentity.created}).Count){$processes.Add($memberIdentity);Publish-Owner}}
-            catch {if($memberId -in $job.ProcessIds()){throw 'Unobservable live Job member'}}
-            finally {if($member){$member.Dispose()}}
+            $memberIdentity=Observe-JobMember $memberId
+            if($null -ne $memberIdentity -and -not @($processes|Where-Object {$_.pid -eq $memberIdentity.pid -and $_.created -eq $memberIdentity.created}).Count){$processes.Add($memberIdentity);Publish-Owner}
         }
         if($r.fault -eq 'accounting' -and $workWatch.ElapsedMilliseconds -gt 400){throw 'Injected ambiguous accounting'}
         Start-Sleep -Milliseconds 50;$gate.Refresh()

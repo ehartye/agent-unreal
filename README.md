@@ -22,6 +22,10 @@ were run on Windows against the engine build pinned in `engine-version.json` unl
 [`docs/sample-scene.md`](docs/sample-scene.md) records what earlier builds of Unreal and UEFN passed of the cross-engine
 sample scene, none of it verified on the pinned builds. Its spec stays in agent-engine, which also holds the Godot, Unity and web builds.
 
+## Engine execution
+
+The [shared Windows launcher](scripts/lib/unreal-run/README.md) supplies build, editor, game, commandlet, package, test, status, doctor and evidence-based recovery. It preserves exact arguments, contains owned process trees, and records lifecycle and build/package identities. Use the [compatibility adapter](examples/unreal/engine_lock/README.md) around existing probe runners. Existing consumers keep their launchers until a separate migration is verified. Native acceptance stays outside the dependency-free merge gate.
+
 ## Verification status
 
 Epic's MCP plugin was tried on an earlier Unreal build and an earlier UEFN build: it drives the editor and returns screenshots, but has no

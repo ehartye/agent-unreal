@@ -1,5 +1,7 @@
 # Landscape from Python through a C++ bridge
 
+Run the launcher commands below from the plugin root. They wrap each complete probe in the [shared owned process tree](../engine_lock/README.md); retained scientific results describe their original runs.
+
 Backs [Bridging editor Python to C++](../../../skills/unreal-editor-scripting/references/unreal-python-cpp-bridge.md). Unreal Engine 5.8, Windows, Visual Studio 2022 Build Tools.
 
 Python has no function that creates a Landscape. `ALandscapeProxy::Import` does, but it is C++ only. This example adds a small editor-only module, `LandscapeBridge`, whose `UFUNCTION(BlueprintCallable)` statics Python calls:
@@ -19,7 +21,7 @@ Python has no function that creates a Landscape. `ALandscapeProxy::Import` does,
 ## Run
 
 ```text
-node examples/unreal/landscape_bridge/landscape_bridge.mjs --engine "C:/Program Files/Epic Games/UE_5.8" [--keep] [--compiler 14.44.35228] [--sdk 10.0.26100.0]
+pwsh -NoProfile -File examples/unreal/engine_lock/with-engine-lock.ps1 node examples/unreal/landscape_bridge/landscape_bridge.mjs --engine "C:/Program Files/Epic Games/UE_5.8" [--keep] [--compiler 14.44.35228] [--sdk 10.0.26100.0]
 ```
 
 `--compiler` and `--sdk` override the discovered versions. The build and three editor runs take about three to five minutes. The build is hidden and logs to the project's `Saved/build.log`. The editors start with `-nullrhi`, so nothing is rendered. After changing the module the runner builds again and starts new editors; it does not use Live Coding or hot reload.
@@ -44,7 +46,7 @@ The module also holds five brush functions on the same library, and `landscape_w
 | `GetBrushOwningLandscape(Brush)` | `get_brush_owning_landscape` | `ALandscapeBlueprintBrushBase::GetOwningLandscape` |
 
 ```text
-node examples/unreal/landscape_bridge/landscape_world.mjs --engine "C:/Program Files/Epic Games/UE_5.8" [--only landmass|pcg|unload|pcgmerge] [--rendering] [--keep]
+pwsh -NoProfile -File examples/unreal/engine_lock/with-engine-lock.ps1 node examples/unreal/landscape_bridge/landscape_world.mjs --engine "C:/Program Files/Epic Games/UE_5.8" [--only landmass|pcg|unload|pcgmerge] [--rendering] [--keep]
 ```
 
 The runner builds a throwaway project with the module and the Landmass and PCG plugins, then starts one editor per phase and prints one line per check: `PASS` or `FAIL` for an assert, `OBSERVE` for a value that source reading does not decide (never fails the run). Use `--keep` to leave the JSON reports on disk. The build took 36 s in the recorded run. Editors start with `-nullrhi`; `--rendering` starts them with `-RenderOffScreen` instead (a machine with no desktop session needs that flag for any rendering editor) and the landmass phase then waits for the edit layer merge. In the `-nullrhi` run the collision heightfield peak delta was 0 and the height was not judged. In the first rendering run the Landmass step took 486 s.

@@ -1,5 +1,7 @@
 # Scripting the Unreal editor from Python: run modes and practices
 
+Use the [shared launcher](../../unreal-native/references/unreal-engine-launcher.md) for every editor/commandlet process. The route table describes engine arguments; supply them after the launcher’s `--` with project configuration, a fresh evidence directory and a bounded timeout. Existing consumer launchers remain until a verified migration.
+
 Unreal 5.8, Windows. Each statement is backed by a source below or a script in [`examples/unreal`](../../../examples/unreal/README.md).
 
 ## Pick the run mode

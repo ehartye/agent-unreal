@@ -4,7 +4,7 @@ The `perf` block of the [comparison scene](unreal-native-compare-scene.md) recor
 
 ## Reproduce it
 
-- [general] `node examples/unreal/compare-scene/compare_gpu_run.mjs --engine <UE_5.8 folder>` does the whole run on Windows (PowerShell 7 and Node only): it writes a throwaway code project holding the harness sources, builds the Editor target, makes an empty map with the commandlet, builds the Game target, packages with `RunUAT BuildCookRun`, runs `compare.ps1 -Set perf` rendered and then with `-Headless`, and judges each receipt with `compare_perf.mjs`. It exits 0 only when both judges pass. Read from the script; it is not part of `node scripts/check.mjs`.
+- [general] Run `pwsh -NoProfile -File examples/unreal/engine_lock/with-engine-lock.ps1 node examples/unreal/compare-scene/compare_gpu_run.mjs --engine <UE_5.8 folder>` from the plugin root. The complete probe inherits one owned Job: it writes a throwaway code project, builds the Editor target, makes a map, builds the Game target, packages, runs the rendered/headless comparisons and judges each receipt. It exits 0 only when both judges pass. This command route does not rerun the scientific evidence below; it is outside `node scripts/check.mjs`.
 - [general] Flags: `--engine` (or the `UE_ROOT` environment variable), `--keep` (keep the project folder after a pass; a failed step always keeps it), `--project <folder>` (reuse a folder the runner wrote, building incrementally), `--skip-package` (run the executable already under `<project>/Archive`; needs `--project`), `--modes rendered,headless` (the default; pass one to make one run), `--compiler` and `--sdk` (pin the toolchain `discoverToolchain` would otherwise find).
 
 ## What the run showed

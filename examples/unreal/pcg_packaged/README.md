@@ -1,5 +1,7 @@
 # PCG in a cooked game: runtime generation and streaming (run on the pinned engine build)
 
+Run the launcher commands below from the plugin root. They wrap each complete probe in the [shared owned process tree](../engine_lock/README.md); retained scientific results describe their original runs.
+
 Backs [PCG in a cooked game](../../../skills/unreal-procedural/references/unreal-pcg-cooked-game.md) and the streaming line of the World Partition reference. **Run on Windows: one throwaway project, one Development package, one machine class; 63 of 63 checks passed and 36 observations were recorded** (headless and rendered, three maps). The runner, game module, editor script and judge were written from reading the PCG plugin source; the run is what the references cite. Claims outside this run are listed under Not covered.
 
 ## The questions
@@ -10,7 +12,7 @@ Backs [PCG in a cooked game](../../../skills/unreal-procedural/references/unreal
 ## What it does
 
 ```text
-node examples/unreal/pcg_packaged/pcg_packaged.mjs --engine "C:/Program Files/Epic Games/UE_5.8" [--keep] [--rows p1,p2] [--modes headless,rendered] [--stop-after author|package]
+pwsh -NoProfile -File examples/unreal/engine_lock/with-engine-lock.ps1 node examples/unreal/pcg_packaged/pcg_packaged.mjs --engine "C:/Program Files/Epic Games/UE_5.8" [--keep] [--rows p1,p2] [--modes headless,rendered] [--stop-after author|package]
 ```
 
 1. Writes a throwaway code project in the OS temp folder (`../native-build.mjs`): the game module `module/PcgPackaged`, the PCG plugin listed, `MapsToCook` naming the maps and **no other cook rule** (no `DirectoriesToAlwaysCook`).
