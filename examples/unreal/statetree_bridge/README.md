@@ -1,5 +1,7 @@
 # Building, compiling and running a StateTree from C++
 
+Run the launcher commands below from the plugin root. They wrap each complete probe in the [shared owned process tree](../engine_lock/README.md); retained scientific results describe their original runs.
+
 Backs [StateTree authoring from C++](../../../skills/unreal-gameplay/references/unreal-statetree-authoring.md). Unreal Engine 5.8, Windows, Visual Studio 2022 Build Tools.
 
 The question: can an agent author a StateTree with no person at the editor, and does the compiled tree run? An editor module builds a small tree, compiles it and returns the compiler messages; a fresh editor session loads the saved tree and runs it on a pawn with an AI controller in Play-In-Editor.
@@ -24,7 +26,7 @@ Root
 ## Run
 
 ```text
-node examples/unreal/statetree_bridge/statetree_bridge.mjs --engine "C:/Program Files/Epic Games/UE_5.8" [--keep] [--compiler 14.44.35228] [--sdk 10.0.26100.0]
+pwsh -NoProfile -File examples/unreal/engine_lock/with-engine-lock.ps1 node examples/unreal/statetree_bridge/statetree_bridge.mjs --engine "C:/Program Files/Epic Games/UE_5.8" [--keep] [--compiler 14.44.35228] [--sdk 10.0.26100.0]
 ```
 
 About 70 s to build, 25 to 75 s for the build session and 30 s for the run session. The editors start hidden with `-nullrhi`.

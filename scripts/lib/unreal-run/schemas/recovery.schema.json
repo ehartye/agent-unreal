@@ -1,0 +1,10 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema", "$id": "unreal-run/recovery/1", "type": "object",
+  "required": ["version", "kind", "id", "lock", "allowed", "reason", "observed"],
+  "properties": {
+    "version": {"const": 1}, "kind": {"const": "unreal-run/recovery"}, "id": {"type": "string", "format": "uuid"},
+    "lock": {"type": "string"}, "allowed": {"type": "boolean"}, "reason": {"type": "string", "minLength": 1}, "observed": {"type": "string", "format": "date-time"},
+    "owner": {"type": "object"}, "observations": {"type": "array"}
+  },
+  "$comment": "Allowed decisions require owner evidence and a gone observation for every recorded creation identity under the matching mutex."
+}

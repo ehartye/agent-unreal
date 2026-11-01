@@ -1,11 +1,13 @@
 # World Partition example scenes (Unreal 5.8)
 
+Run the launcher commands below from the plugin root. They wrap each complete probe in the [shared owned process tree](../engine_lock/README.md); retained scientific results describe their original runs.
+
 These scenes back the facts in `skills/unreal-procedural/references/unreal-world-partition.md` and its companions `unreal-world-partition-landscape.md` and `unreal-world-partition-commandlets.md`. Each script writes a JSON report; `world-validate-checks.mjs` turns the reports into PASS or FAIL results, and `world-validate.test.mjs` tests that logic with recorded reports (no engine needed, part of `node scripts/check.mjs`).
 
 ## Run
 
 ```
-node world_validate.mjs --engine "C:/Program Files/Epic Games/UE_5.8" [--keep] [--shot overview.png]
+pwsh -NoProfile -File examples/unreal/engine_lock/with-engine-lock.ps1 node examples/unreal/world/world_validate.mjs --engine "C:/Program Files/Epic Games/UE_5.8" [--keep] [--shot overview.png]
 ```
 
 It builds a throwaway project in the OS temp folder, runs every script below in a hidden editor or commandlet, and prints one result per claim (30 in all). Engine steps add up to about nine minutes once shaders are cached; the first minimap build compiles shaders and took about six minutes more. The exit code is 0 when every claim passes. It is not part of `node scripts/check.mjs`.

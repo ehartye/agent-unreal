@@ -1,5 +1,7 @@
 # Niagara showcase and stage
 
+The launch transcript below is historical evidence of the earlier hand run. For current execution use the [shared launcher](../engine_lock/README.md) with fresh evidence; do not reuse bare `Start-Process` engine launches.
+
 Two Unreal 5.8 scenes built only from engine content and driven by Python, both flown with a keyboard and mouse or a gamepad:
 
 - **The arena** (`showcase_build.py`): eight stations that show what Epic's shipped Niagara systems do, plus one system authored through the Niagara toolsets.

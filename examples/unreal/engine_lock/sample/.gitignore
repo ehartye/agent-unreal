@@ -1,0 +1,8 @@
+Binaries/
+Intermediate/
+Saved/
+DerivedDataCache/
+*.local.json
+# Generated access-order traces, not this sample's packaging inputs.
+/Build/Windows/FileOpenOrder/EditorOpenOrder.log
+/Build/Windows/FileOpenOrder/CookerOpenOrder.log

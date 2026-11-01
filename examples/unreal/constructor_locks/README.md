@@ -1,5 +1,7 @@
 # Asset files locked by constructor-time loads
 
+Run the launcher commands below from the plugin root. They wrap each complete probe in the [shared owned process tree](../engine_lock/README.md); retained scientific results describe their original runs.
+
 Backs [Separate native gameplay from content-only asset construction](../../../skills/unreal-native/references/unreal-native-content-pipeline.md). Unreal Engine 5.8, Windows, Visual Studio 2022 Build Tools, plain Python 3 on `PATH`.
 
 A content stage that deletes or rewrites a folder of assets fails when another process holds the files. This example measures which loading styles hold them while an editor is open.
@@ -23,7 +25,7 @@ A content stage that deletes or rewrites a folder of assets fails when another p
 ## Run
 
 ```text
-node examples/unreal/constructor_locks/constructor_locks.mjs --engine "C:/Program Files/Epic Games/UE_5.8" [--keep] [--compiler 14.44.35228] [--sdk 10.0.26100.0]
+pwsh -NoProfile -File examples/unreal/engine_lock/with-engine-lock.ps1 node examples/unreal/constructor_locks/constructor_locks.mjs --engine "C:/Program Files/Epic Games/UE_5.8" [--keep] [--compiler 14.44.35228] [--sdk 10.0.26100.0]
 ```
 
 The build takes about 40 to 60 s and each editor run 20 to 110 s (a Play-In-Editor run is the longest). The editors start hidden with `-nullrhi`.

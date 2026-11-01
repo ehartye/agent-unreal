@@ -1,5 +1,7 @@
 # Editor probes: read back what was saved
 
+Run the launcher commands below from the plugin root. They wrap each complete probe in the [shared owned process tree](../engine_lock/README.md); retained scientific results describe their original runs.
+
 Three small editor-Python scripts and a headless launcher. Each script reads something the editor holds and writes one JSON report, so a build is judged by what was saved and not by what the log said. They back the "Read back what was saved" step in [Editor Python](../../../skills/unreal-editor-scripting/references/unreal-editor-python.md). Unreal Engine 5.8, Windows.
 
 | Probe | Script | Input (environment variable) | Use it |
@@ -13,9 +15,9 @@ All three take `PROBE_REPORT`, the absolute path of the report. Names are separa
 ## Run
 
 ```text
-node probe.mjs --engine "C:/Program Files/Epic Games/UE_5.8" --project <Project.uproject> --probe doc --report <report.json> --callables "EditorAssetLibrary.save_asset"
-node probe.mjs --engine ... --project ... --probe system --report ... --systems /Game/FX/NS_Example --modules InitializeParticle
-node probe.mjs --engine ... --project ... --probe asset  --report ... --assets /Game/Props/SM_Crate,/Game/Props/M_Crate
+pwsh -NoProfile -File examples/unreal/engine_lock/with-engine-lock.ps1 node examples/unreal/editor_probes/probe.mjs --engine "C:/Program Files/Epic Games/UE_5.8" --project <Project.uproject> --probe doc --report <report.json> --callables "EditorAssetLibrary.save_asset"
+pwsh -NoProfile -File examples/unreal/engine_lock/with-engine-lock.ps1 node examples/unreal/editor_probes/probe.mjs --engine ... --project ... --probe system --report ... --systems /Game/FX/NS_Example --modules InitializeParticle
+pwsh -NoProfile -File examples/unreal/engine_lock/with-engine-lock.ps1 node examples/unreal/editor_probes/probe.mjs --engine ... --project ... --probe asset  --report ... --assets /Game/Props/SM_Crate,/Game/Props/M_Crate
 ```
 
 The project needs PythonScriptPlugin and EditorScriptingUtilities; `system` also needs Niagara and NiagaraToolsets, and `doc` needs the plugin whose classes you ask about (for example GeometryScripting). The names can come from the environment variables instead of the flags. In Git Bash set `MSYS_NO_PATHCONV=1`, or `/Game/...` is rewritten into a Windows path.
@@ -32,7 +34,7 @@ It also takes `--timeout <ms>` (default 600000). The pure logic (arguments, repo
 **Status:** Run: `probes_validate.mjs` passed 21 of 21 asserted checks and recorded 5 observations on its first run (70 s). Its judge is also tested with canned reports.
 
 ```text
-node examples/unreal/editor_probes/probes_validate.mjs --engine "C:/Program Files/Epic Games/UE_5.8" [--keep]
+pwsh -NoProfile -File examples/unreal/engine_lock/with-engine-lock.ps1 node examples/unreal/editor_probes/probes_validate.mjs --engine "C:/Program Files/Epic Games/UE_5.8" [--keep]
 ```
 
 It makes a throwaway project in the OS temp folder (PythonScriptPlugin, EditorScriptingUtilities, Niagara, NiagaraToolsets) and builds the fixture with `probes_fixture.py` in a headless commandlet: two copies of the engine cube (one with Nanite saved on), a masked two-sided material with the sprite flag and an `Opacity` parameter, an instance of it, and a Niagara system `NS_Probe` made through the toolset with emitters `Dust` and `Motes` (Motes' `Lifetime Min` written as 2.5, its sprite renderer pointed at the material). It then runs `probe.mjs` for `doc`, `system` and `asset`, and once more from a copy of the launcher beside a `doc_probe.py` that does not parse. `probes-validate-checks.mjs` judges 21 values from the section below, and `probes-validate.test.mjs` runs the judge on canned reports with passing and failing cases; the test is part of `node scripts/check.mjs`, the editor runs are not. Five more values are observations: they are recorded and never fail the run (the template `Lifetime` input, the script stack names, the system's `problems` list, the `nearby` names and the launcher seconds). Exit code 0 when every asserted check passes. A passing run deletes the project; `--keep` (or a failing run) keeps it with the reports in `Saved` and the editor logs in `Saved/Logs`. Takes about five minutes.
@@ -42,7 +44,7 @@ It makes a throwaway project in the OS temp folder (PythonScriptPlugin, EditorSc
 **Status:** Prepared and first run 2026-10-26: `probe_timeout.mjs` passed 7 of 7 checks in 108 s (the first run) with no change to the probe. Rerun with the same result (7 of 7). The three probes above and their launcher runs are unchanged.
 
 ```text
-node examples/unreal/editor_probes/probe_timeout.mjs --engine "C:/Program Files/Epic Games/UE_5.8" [--timeout-ms 60000] [--keep]
+pwsh -NoProfile -File examples/unreal/engine_lock/with-engine-lock.ps1 node examples/unreal/editor_probes/probe_timeout.mjs --engine "C:/Program Files/Epic Games/UE_5.8" [--timeout-ms 60000] [--keep]
 ```
 
 `hang_probe.py` holds the editor for the seconds in `PROBE_HANG` (the launcher's `--probe hang --hold <seconds>`) and then writes a report, so the launcher can be tried at its `--timeout`. `probe_timeout.mjs` makes a throwaway project and runs the launcher twice: a control with a 3 s hold, which also pays for the project's slow first start, and a 600 s hold with the limit at `--timeout-ms` (default 60 s, minimum 20 s). It then lists the processes whose command line names the project (Windows only), stops them, and judges seven things in `probe-timeout-checks.mjs`:

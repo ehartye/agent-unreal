@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "unreal-run/config/1",
+  "type": "object",
+  "required": ["version", "project", "engine", "sourceRoot", "editorTarget", "gameTarget"],
+  "additionalProperties": false,
+  "properties": {
+    "version": {"const": 1},
+    "project": {"type": "string", "minLength": 1},
+    "engine": {"type": "string", "minLength": 1},
+    "sourceRoot": {"type": "string", "minLength": 1},
+    "editorTarget": {"type": "string", "pattern": "^[A-Za-z][A-Za-z0-9_]*$"},
+    "gameTarget": {"type": "string", "pattern": "^[A-Za-z][A-Za-z0-9_]*$"},
+    "configuration": {"enum": ["Debug", "DebugGame", "Development", "Shipping", "Test"]},
+    "platform": {"const": "Win64"},
+    "dotnet": {"type": "string", "minLength": 1},
+    "packageDirectory": {"type": "string", "minLength": 1},
+    "gameExecutable": {"type": "string", "minLength": 1}
+  }
+}

@@ -6,6 +6,8 @@ when_to_use: "Use when profiling frame time on a quiet machine, hitting a frame 
 
 # Native Unreal games
 
+- [general] Before any build, editor, game, commandlet or package, read the consumer launcher instructions and the [shared launcher](references/unreal-engine-launcher.md). Use its owned process tree; retain an existing consumer launcher until migration is separately verified.
+
 Unreal 5.8 on Windows, driven by an agent. Each reference holds the commands, the evidence behind them
 and what was not verified. Importing assets is `unreal-import`;
 choosing a system and Niagara are the domain skills (for example
@@ -16,12 +18,14 @@ reviewing its module and state structure is [unreal-architecture](../unreal-arch
 
 | You are about to | Read |
 |---|---|
+| Start an engine process, diagnose an engine lock, or adopt the prescribed launcher | [Shared launcher](references/unreal-engine-launcher.md) |
 | Pin the compiler, run real gameplay, verify screenshots, or find static parts at the world origin (`is not static`) | [Native game loop](references/unreal-native-game.md) |
 | Add plugins and modules to a native game, or fix a first C++ compile error | [Module setup](references/unreal-native-module-setup.md) |
 | Diagnose a build that passes then fails on code you did not change (adaptive unity, chunking, the git working set) | [Unity builds](references/unreal-native-unity-builds.md) |
 | Fix C2374, C2086, C4459 or C2872, name file-scope symbols safely, turn the grouping off, and gate replay and test steps on the build | [Unity build fixes](references/unreal-native-unity-build-fixes.md) |
 | Write a C++ automation test for 5.8, run it headless, read its report and why the exit code is not the verdict | [Automation tests](references/unreal-native-automation-tests.md) |
-| Generate materials and fonts, draw crisp Canvas text (it draws nothing without a `UFont`), record native audio | [Native presentation](references/unreal-native-presentation.md) |
+| Generate materials and fonts, draw crisp Canvas text (it draws nothing without a `UFont`) | [Native presentation](references/unreal-native-presentation.md) |
+| Record the master mix, handle unfocused volume or pace an explicit audio capture | [Native audio recording](references/unreal-native-audio-recording.md) |
 | Diagnose a near-black first frame, physical-camera exposure, an HDR palette pass or imported vertex colour that hides detail | [Exposure and vertex colour](references/unreal-native-exposure-and-vertex-color.md) |
 | Cook Windows; tell UAT policy failures from real Game EXE proof; cook a folder that code loads only by path | [Native packaging](references/unreal-native-packaging.md) |
 | Stage a cooked build from the target receipt, create the pak with UnrealPak, and read what a packaged Game EXE run proves | [Packaging staging](references/unreal-native-packaging-staging.md) |

@@ -1,5 +1,7 @@
 # Gameplay Effects, attribute sets, tags and abilities in C++
 
+Run the launcher commands below from the plugin root. They wrap each complete probe in the [shared owned process tree](../engine_lock/README.md); retained scientific results describe their original runs.
+
 Backs [Gameplay Effects, attribute sets, tags and abilities in C++](../../../skills/unreal-gameplay/references/unreal-gas-native-effects.md). Unreal Engine 5.8, Windows, Visual Studio 2022 Build Tools.
 
 The question: how does a native Gameplay Effect get its tag-granting component, and does the whole cost and cooldown loop work from code alone? The run builds a small module and drives it headless with no map and no assets.
@@ -22,7 +24,7 @@ The question: how does a native Gameplay Effect get its tag-granting component, 
 ## Run
 
 ```text
-node examples/unreal/gas_native/gas_native.mjs --engine "C:/Program Files/Epic Games/UE_5.8" [--keep] [--compiler 14.44.35228] [--sdk 10.0.26100.0]
+pwsh -NoProfile -File examples/unreal/engine_lock/with-engine-lock.ps1 node examples/unreal/gas_native/gas_native.mjs --engine "C:/Program Files/Epic Games/UE_5.8" [--keep] [--compiler 14.44.35228] [--sdk 10.0.26100.0]
 ```
 
 In the first 24-check run the build took 51 s and the probe 6 s.
@@ -73,7 +75,7 @@ Observe-only results (five cases, recorded and not asserted):
 The question: with a dedicated server and one client on the same machine, does an actor with an Ability System Component in Mixed replication mode (owner: a player state; avatar: the pawn) replicate a granted ability, an active Gameplay Effect and an attribute value to the client, and what does a client-side activation do?
 
 ```text
-node examples/unreal/gas_native/gas_rep.mjs --engine "C:/Program Files/Epic Games/UE_5.8" [--keep] [--reuse <kept folder>] [--render] [--pie-readback] [--timeout 150]
+pwsh -NoProfile -File examples/unreal/engine_lock/with-engine-lock.ps1 node examples/unreal/gas_native/gas_rep.mjs --engine "C:/Program Files/Epic Games/UE_5.8" [--keep] [--reuse <kept folder>] [--render] [--pie-readback] [--timeout 150]
 ```
 
 In the first run the build (the same module as `gas_native.mjs`) took 51 s, the server was ready 4 to 7 s after launch and the scenario finished in 23 to 27 s, both processes exiting 0. One engine process at a time except the scenario itself, which runs a server and a client together on a free UDP port.

@@ -4,7 +4,7 @@ A game mode that sets several ways of doing the same thing in a row on an empty 
 
 Use it to choose between implementations of one visible thing (mesh components moved by code, a Niagara system, instanced meshes, a material trick) before committing a real scene to one. It is a measuring stage, not a benchmark of a shipped game. The guidance behind it, with the traps found while building it, is in [the reference](../../../skills/unreal-native/references/unreal-native-compare-scene.md).
 
-**Status of the GPU time addition:** run (a packaged Windows Development build of a throwaway project, built, packaged and run by `compare_gpu_run.mjs`): the rendered `perf` run passes 7 of 7 and the headless run 4 of 4 (the headless judge was changed after a first run, see Headless below); both reran with the same result. The `example` set and the receipt fields that existed before are unchanged. To reproduce, `node compare_gpu_run.mjs --engine <UE_5.8 folder> [--keep] [--skip-package] [--project <folder>] [--modes rendered,headless] [--compiler <x.y.z>] [--sdk <10.0.n.n>]`.
+**Status of the GPU time addition:** run (a packaged Windows Development build of a throwaway project, built, packaged and run by `compare_gpu_run.mjs`): the rendered `perf` run passes 7 of 7 and the headless run 4 of 4 (the headless judge was changed after a first run, see Headless below); both reran with the same result. The `example` set and the receipt fields that existed before are unchanged. From the plugin root, reproduce through the shared launcher adapter: `pwsh -NoProfile -File examples/unreal/engine_lock/with-engine-lock.ps1 node examples/unreal/compare-scene/compare_gpu_run.mjs --engine <UE_5.8 folder> [--keep] [--skip-package] [--project <folder>] [--modes rendered,headless] [--compiler <x.y.z>] [--sdk <10.0.n.n>]`.
 
 ## Files
 
@@ -44,7 +44,7 @@ Built as part of a C++ project, cooked and packaged, and run with `compare.ps1` 
 ## Run it
 
 ```powershell
-./compare.ps1 -Exe <path to your packaged game's exe> `
+pwsh -NoProfile -File examples/unreal/engine_lock/with-engine-lock.ps1 pwsh -NoProfile -File examples/unreal/compare-scene/compare.ps1 -Exe <path to your packaged game's exe> `
     -Set example -OutputDirectory <a folder that does not exist yet> `
     -GameMode /Script/<YourModule>.AECompareGameMode -Map /Game/Maps/<AnyMap>
 ```

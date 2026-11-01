@@ -1,5 +1,7 @@
 # Gameplay Cameras rig, modifier rig and a view blend under time dilation
 
+Run the launcher commands below from the plugin root. They wrap each complete probe in the [shared owned process tree](../engine_lock/README.md); retained scientific results describe their original runs.
+
 Prepared for [Gameplay Cameras in Unreal 5.8](../../../skills/unreal-gameplay/references/unreal-gameplay-cameras.md). Unreal Engine 5.8, Windows, Visual Studio 2022 Build Tools.
 
 **Status:** Run on 2026-10-26: 34 of 34 checks pass; rerun with the same result. The first run (21 of 27) found three probe faults and the engine behaviours listed under Findings; the checks now assert what the engine does.
@@ -28,7 +30,7 @@ Every reading comes from `APlayerCameraManager::GetCameraCacheView()`, the view 
 ## Run
 
 ```text
-node examples/unreal/gameplay_cameras/gameplay_cameras.mjs --engine "C:/Program Files/Epic Games/UE_5.8" [--keep] [--compiler 14.44.35228] [--sdk 10.0.26100.0] [--map /Engine/Maps/Entry] [--sessions manager,component,stock]
+pwsh -NoProfile -File examples/unreal/engine_lock/with-engine-lock.ps1 node examples/unreal/gameplay_cameras/gameplay_cameras.mjs --engine "C:/Program Files/Epic Games/UE_5.8" [--keep] [--compiler 14.44.35228] [--sdk 10.0.26100.0] [--map /Engine/Maps/Entry] [--sessions manager,component,stock]
 ```
 
 `--engine` may be replaced by the `UE_ROOT` environment variable. The build takes under a minute (a single module; the plugin is prebuilt); each session is a game start and about ten seconds of fixed-step frames. Nothing is rendered.

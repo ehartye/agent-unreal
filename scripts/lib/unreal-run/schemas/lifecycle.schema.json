@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "unreal-run/lifecycle/1",
+  "type": "object",
+  "required": ["version", "kind", "id", "purpose", "operation", "requestHash", "lock", "started", "finished", "controller", "helper", "processes", "contained", "probeContained", "permitIssued", "permit", "exitCode", "cancelled", "timedOut", "drain", "errors"],
+  "$defs": {
+    "identity": {"type": "object", "required": ["pid", "created"], "properties": {"pid": {"type": "integer", "minimum": 1}, "created": {"type": "string", "pattern": "^[0-9]{15,20}$"}}},
+    "hash": {"type": "string", "pattern": "^[a-f0-9]{64}$"}
+  },
+  "properties": {
+    "version": {"const": 1}, "kind": {"const": "unreal-run/lifecycle"},
+    "id": {"type": "string", "format": "uuid"}, "purpose": {"enum": ["production", "fixture"]},
+    "operation": {"enum": ["build", "editor", "game", "commandlet", "package", "test", "doctor", "compat"]},
+    "requestHash": {"$ref": "#/$defs/hash"}, "lock": {"type": "string"},
+    "started": {"type": "string", "format": "date-time"}, "finished": {"type": "string", "format": "date-time"},
+    "controller": {"$ref": "#/$defs/identity"}, "helper": {"$ref": "#/$defs/identity"},
+    "processes": {"type": "array", "items": {"$ref": "#/$defs/identity"}},
+    "contained": {"type": "boolean"}, "probeContained": {"type": "boolean"}, "permitIssued": {"type": "boolean"},
+    "permit": {"type": ["object", "null"]}, "exitCode": {"type": "integer"}, "cancelled": {"type": "boolean"}, "timedOut": {"type": "boolean"},
+    "drain": {"type": "object", "required": ["proved", "active", "members", "requestHash", "observed"], "properties": {"proved": {"type": "boolean"}, "active": {"type": ["integer", "null"], "minimum": 0}, "members": {"type": ["array", "null"], "items": {"type": "integer"}}, "requestHash": {"$ref": "#/$defs/hash"}, "observed": {"type": ["string", "null"]}}},
+    "errors": {"type": "array", "items": {"type": "string"}}
+  },
+  "$comment": "Shape includes unsuccessful receipts. Eligibility requires verifyLifecycle, including expected request and production purpose; shape validation alone is never qualification."
+}

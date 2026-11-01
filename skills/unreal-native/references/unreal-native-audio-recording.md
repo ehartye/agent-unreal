@@ -1,0 +1,9 @@
+# Native audio recording and capture cadence
+
+These observations came from one consuming project on an earlier engine build; they were not reproduced in this repo. Preserve their evidence labels and capture-only limits. Use the [shared launcher](unreal-engine-launcher.md) for current engine execution. [Native presentation](unreal-native-presentation.md) covers fonts, Canvas text and generated scenery.
+
+## Record native audio
+
+- [documented] In the installed engine source, AudioComponent copies priority into ActiveSound at Play. Configure priority/concurrency before Play; SpawnSoundAtLocation already starts playback.
+- [general] In the consuming project, `UAudioMixerBlueprintLibrary::StartRecordingOutput`/`StopRecordingOutput` wrote 20 s stereo PCM from the game's master mix. Offscreen sound voices played into silence: the default unfocused volume was 0. A capture-only `-ini:Engine:[Audio]:UnfocusedVolumeMultiplier=1.0` made the unchanged EXE audible, with zero clipped samples. WAV export is asynchronous: require fresh complete PCM, duration and nonzero data, then bind WAV/EXE hashes before capture completion.
+- [general] Cadence auditions need paced gameplay as well as normal sample pitch. The engine's fixed-step/benchmark branch bypasses frame waiting (`UnrealEngine.cpp`), so MaxFPS alone cannot pace it. For an isolated 60Hz master recording, save FApp's fixed-step/benchmark flags and engine fixed-rate/FPS; during recording disable the former and enable engine fixed 60FPS. Restore on normal stop and teardown. One project observed 19.65 simulation seconds during 20.0095 wall seconds (ratio 0.9820), with settings restored. Validate both clocks, tick rate and restoration beside WAV/EXE hashes. Use the project's own rate, not 60 universally, and only for explicit captures. A normal-cadence excerpt is not a sustained-performance test or owner approval.

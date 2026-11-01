@@ -1,5 +1,7 @@
 # Unity builds: names that clash only when files share a chunk
 
+Run the launcher commands below from the plugin root. They wrap each complete probe in the [shared owned process tree](../engine_lock/README.md); retained scientific results describe their original runs.
+
 Backs [Unity builds and file-scope names](../../../skills/unreal-native/references/unreal-native-unity-builds.md) and [its fixes](../../../skills/unreal-native/references/unreal-native-unity-build-fixes.md). Unreal Engine 5.8, Windows, Visual Studio 2022 Build Tools.
 
 The question: which source changes decide whether two files share a translation unit, and what does the build say when they do? The run answers it with a three-file runtime module whose files build alone and fail together.
@@ -14,7 +16,7 @@ The question: which source changes decide whether two files share a translation 
 ## Run
 
 ```text
-node examples/unreal/unity_build/unity_build.mjs --engine "C:/Program Files/Epic Games/UE_5.8" [--keep] [--compiler 14.44.35228] [--sdk 10.0.26100.0]
+pwsh -NoProfile -File examples/unreal/engine_lock/with-engine-lock.ps1 node examples/unreal/unity_build/unity_build.mjs --engine "C:/Program Files/Epic Games/UE_5.8" [--keep] [--compiler 14.44.35228] [--sdk 10.0.26100.0]
 ```
 
 About six minutes: the first build of each project takes about a minute, the rest 1 to 15 s. Needs `git` on the path for project two. Unreal Build Tool and the compiler start hidden.
@@ -24,7 +26,7 @@ About six minutes: the first build of each project takes about a minute, the res
 **Status:** Prepared and first run 2026-10-26: `unity_build.mjs --only-readonly` passed 4 of 4 checks in 62 s (the first run) with no change to the probe. Rerun with the same result (4 of 4, and the full run 11 of 11). The default run above is unchanged.
 
 ```text
-node examples/unreal/unity_build/unity_build.mjs --engine "C:/Program Files/Epic Games/UE_5.8" --only-readonly [--keep]
+pwsh -NoProfile -File examples/unreal/engine_lock/with-engine-lock.ps1 node examples/unreal/unity_build/unity_build.mjs --engine "C:/Program Files/Epic Games/UE_5.8" --only-readonly [--keep]
 ```
 
 `--readonly` adds the group to the default run (15 checks); `--only-readonly` runs just the group (4 checks, about four minutes: one first build and two short ones).

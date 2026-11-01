@@ -2,6 +2,8 @@
 
 Observed in one consuming project on an earlier engine build; not reproduced in this repo. Engine source inspection and executed behaviour are labelled separately. These are editor/native-game integration observations, not screenshot-reference acceptance. The [native game loop](unreal-native-game.md) covers compiler selection, capture completion, tests and current cook/package status; exposure, palette and imported vertex colour are in [exposure and vertex colour](unreal-native-exposure-and-vertex-color.md).
 
+Current launches use the [shared launcher](unreal-engine-launcher.md) from the plugin root with a project configuration.
+
 ## Editor asset generation and fonts
 
 - [general] Native unlit material graphs were created and explicitly saved under `/Game/Art`. Connecting `VertexColor` output **"RGB"** failed even though the node looks RGB in the editor. Its compound RGB output has an **empty** name; `""` connects it, while `"A"` connects alpha. Check every material connection boolean instead of assuming success.
@@ -25,7 +27,7 @@ const FSlateFontInfo Info(Font, 18.f, TEXT("Bold")); // "Light", "Regular" or "B
 - [general] The fix observed once in that project copied the default composite font into the transient `UFont` instead (`Font->GetMutableInternalCompositeFont() = *FCoreStyle::GetDefaultFont();`; the public `CompositeFont` member is deprecated since 5.7, `Engine/Source/Runtime/Engine/Classes/Engine/Font.h`). The snippet above was not compiled or run in this repo, and whether a packaged build stages `Engine/Content/Slate/Fonts` is unchecked.
 
 ```powershell
-& "$ueRoot/Engine/Binaries/Win64/UnrealEditor.exe" $uproject "-ExecutePythonScript=$projectRoot/Scripts/build_content.py" -RenderOffScreen -nullrhi -unattended -nosplash -nosound -notraceserver "-abslog=$projectRoot/Saved/Logs/content.log"
+node scripts/unreal-run.mjs editor --config "$projectRoot/launcher.local.json" --evidence "$projectRoot/Saved/Verification/content-launch" --timeout 300 -- "-ExecutePythonScript=$projectRoot/Scripts/build_content.py" -RenderOffScreen -nullrhi -unattended -nosplash -nosound -notraceserver "-abslog=$projectRoot/Saved/Logs/content.log"
 if ($LASTEXITCODE -ne 0) { throw 'Editor content generation failed' }
 ```
 
@@ -39,6 +41,4 @@ Keep editor asset creation separate from shipped runtime modules. Explicitly sav
 
 ## Record native audio
 
-- [documented] In the installed engine source, AudioComponent copies priority into ActiveSound at Play. Configure priority/concurrency before Play; SpawnSoundAtLocation already starts playback.
-- [general] In the consuming project, `UAudioMixerBlueprintLibrary::StartRecordingOutput`/`StopRecordingOutput` wrote 20 s stereo PCM from the game's master mix. Offscreen sound voices played into silence: the default unfocused volume was 0. A capture-only `-ini:Engine:[Audio]:UnfocusedVolumeMultiplier=1.0` made the unchanged EXE audible, with zero clipped samples. WAV export is asynchronous: require fresh complete PCM, duration and nonzero data, then bind WAV/EXE hashes before capture completion.
-- [general] Cadence auditions need paced gameplay as well as normal sample pitch. The engine's fixed-step/benchmark branch bypasses frame waiting (`UnrealEngine.cpp`), so MaxFPS alone cannot pace it. For an isolated 60Hz master recording, save FApp's fixed-step/benchmark flags and engine fixed-rate/FPS; during recording disable the former and enable engine fixed 60FPS. Restore on normal stop and teardown. One project observed 19.65 simulation seconds during 20.0095 wall seconds (ratio 0.9820), with settings restored. Validate both clocks, tick rate and restoration beside WAV/EXE hashes. Use the project's own rate, not 60 universally, and only for explicit captures. A normal-cadence excerpt is not a sustained-performance test or owner approval.
+- [general] Read [Native audio recording and capture cadence](unreal-native-audio-recording.md) for the master-mix recording, unfocused-volume, asynchronous export and paced-capture observations and their limits.

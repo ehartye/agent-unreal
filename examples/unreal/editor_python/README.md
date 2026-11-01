@@ -1,11 +1,13 @@
 # Editor Python scene: build a map, materials and meshes from scripts
 
+Run the launcher commands below from the plugin root. They wrap each complete probe in the [shared owned process tree](../engine_lock/README.md); retained scientific results describe their original runs.
+
 Helpers and a validating scene for the practices in [Scripting the Unreal editor from Python: maps](../../../skills/unreal-editor-scripting/references/unreal-editor-python-maps.md) and the plane-cut note in [Geometry Scripting](../../../skills/unreal-procedural/references/unreal-geometry-scripting.md). Verified on Unreal Engine 5.8, Windows. Nothing here needs a project of yours: the validator makes a throwaway project in the OS temp folder.
 
 ## Run
 
 ```text
-node examples/unreal/editor_python/ep_validate.mjs --engine "C:/Program Files/Epic Games/UE_5.8" [--keep] [--shots <folder>]
+pwsh -NoProfile -File examples/unreal/engine_lock/with-engine-lock.ps1 node examples/unreal/editor_python/ep_validate.mjs --engine "C:/Program Files/Epic Games/UE_5.8" [--keep] [--shots <folder>]
 ```
 
 It takes a few minutes and is not part of `node scripts/check.mjs`; the pure check logic is tested there (`ep-validate.test.mjs`). The exit code is 0 when every check passes. `--shots` copies the pictures; `--keep` keeps the project and logs.

@@ -6,13 +6,17 @@ when_to_use: "Use when deciding whether an Unreal task can be scripted from Pyth
 
 # Scripting the Unreal editor
 
+Before starting an editor or commandlet, read the consumer launcher instructions and the [shared launcher](../unreal-native/references/unreal-engine-launcher.md). New integrations use it; retain existing consumer launchers until migration is separately verified.
+
 Unreal 5.8 on Windows. Pick the feature from the goal, then read that system's reference: when to use it, what to use instead, how an agent drives it. Other domains: `unreal-effects`, `unreal-animation`, `unreal-gameplay`, `unreal-procedural`, `unreal-rendering`, `unreal-native`, `unreal-import`, `uefn`, `unreal-architecture`, `unreal-quality`.
 
 | You are about to | Read |
 |---|---|
-| Run the example scenes (stylized, World Partition, PCG, Editor Python, bridges) | [Example scenes](references/unreal-example-scenes.md) |
-| Run the content-tooling, rendering-probe, Gameplay Effects or unity-build scenes | [Example scenes: tooling and native builds](references/unreal-example-scenes-tooling.md) |
-| Script the editor from Python: run modes, cameras, input, process cleanup | [Editor Python](references/unreal-editor-python.md) |
+| Run the example scenes (stylized, World Partition, PCG, Editor Python) | [Example scenes](references/unreal-example-scenes.md) |
+| Run content-tooling or rendering-probe scenes | [Tooling and rendering examples](references/unreal-example-scenes-tooling.md) |
+| Run native Landscape bridges, automation tests, Gameplay Effects or unity builds | [Native examples](references/unreal-example-scenes-native.md) |
+| Script the editor from Python: run modes, cameras and input | [Editor Python](references/unreal-editor-python.md) |
+| Run over SSH, inspect offscreen viewports or understand historical timeout/cleanup evidence | [Windows processes and remote rendering](references/unreal-editor-python-processes.md) |
 | Build a whole map from Python: recreate a map, set properties, make materials and meshes, run stages, trace to the ground | [Editor Python: maps, materials and meshes](references/unreal-editor-python-maps.md) |
 | Add what Python lacks, such as Landscape creation, with an editor C++ module | [Python to C++ bridge](references/unreal-python-cpp-bridge.md) |
 | Add a node to a Mutable Customizable Object's graph or link a pin from Python (bridge functions) | [Mutable graph bridge](references/unreal-mutable-bridge.md) |

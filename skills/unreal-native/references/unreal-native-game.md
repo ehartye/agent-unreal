@@ -2,6 +2,8 @@
 
 Observed in one consuming project on an earlier engine build; not reproduced in this repo. Toolchain: Unreal 5.8, VS2022 Build Tools **17.14.37516.0**, actual MSVC **14.44.35228**, SDK **10.0.26100.0**, bundled **.NET 10**, D3D12 on a discrete GPU. Engine source inspection and executed behaviour are labelled separately. Screenshots reveal rendering failures; delivery alone does not establish reference parity. Plugins, modules and first-compile pitfalls are in [module setup](unreal-native-module-setup.md).
 
+Use the [shared launcher](unreal-engine-launcher.md) from the plugin root with an ignored project configuration before executing the recipes below. Historical observations keep their original command names.
+
 ## Exact compiler and engine versions
 
 - [general] Read `Engine/Build/Build.version`, `Engine/Config/Windows/Windows_SDK.json` and the compiler's actual ProductVersion. The VS2022 folder was named **14.44.35207**, which looks banned, but `cl.exe` ProductVersion was **14.44.35228.0**, above the banned ceiling. UBT selected and logged the correct actual version.
@@ -12,7 +14,7 @@ Observed in one consuming project on an earlier engine build; not reproduced in 
 $ueRoot = 'C:/Program Files/Epic Games/UE_5.8'
 $projectRoot = 'C:/path/to/project'
 $uproject = "$projectRoot/MyGame.uproject"
-& "$ueRoot/Engine/Build/BatchFiles/Build.bat" MyGameEditor Win64 Development "-Project=$uproject" -WaitMutex -NoHotReloadFromIDE -2022 -CompilerVersion=14.44.35228 -WindowsSDKVersion=10.0.26100.0
+node scripts/unreal-run.mjs build --config "$projectRoot/launcher.local.json" --evidence "$projectRoot/Saved/Verification/build" --timeout 1200 -- -NoHotReloadFromIDE -2022 -CompilerVersion=14.44.35228 -WindowsSDKVersion=10.0.26100.0
 if ($LASTEXITCODE -ne 0) { throw 'Native compile failed' }
 ```
 
@@ -42,7 +44,7 @@ The `MyScenario`/`MyCaptureDir` flags below belong to the project's own harness;
 
 ```powershell
 $capture = "$projectRoot/Saved/Verification/fresh-run/scenario"
-& "$ueRoot/Engine/Binaries/Win64/UnrealEditor.exe" $uproject /Game/Maps/MyMap -game -RenderOffScreen -unattended -ResX=1920 -ResY=1080 -ForceRes -Deterministic -FPS=60 -MyScenario=drive "-MyCaptureDir=$capture" "-abslog=$capture/native.log"
+node scripts/unreal-run.mjs game --config "$projectRoot/launcher.local.json" --evidence "$capture/launcher" --timeout 180 -- /Game/Maps/MyMap -RenderOffScreen -unattended -ResX=1920 -ResY=1080 -ForceRes -Deterministic -FPS=60 -MyScenario=drive "-MyCaptureDir=$capture" "-abslog=$capture/native.log"
 ```
 
 Use a fresh output directory. Reject stale/missing PNG or JSON, invalid PNG dimensions, wrong scenario identity, wrong screenshot path, timeout and failure exit codes. Record exact command, source/build identity, engine version, launch mode, camera/exposure/seed and native state. `-Deterministic -FPS=60` selects a fixed simulation step/seed; do not report frames divided by simulated time as measured rendering FPS. It does not promise deterministic Chaos physics.

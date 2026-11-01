@@ -1,5 +1,7 @@
 # MetaHuman probe: create a character by script, assemble it, drive its face
 
+Run the launcher commands below from the plugin root. They wrap each complete probe in the [shared owned process tree](../engine_lock/README.md); retained scientific results describe their original runs.
+
 Opt-in probe for the questions behind a MetaHuman skill: can an agent create a MetaHuman Character from a preset, rig it, fetch its textures, assemble it, put it in a level and move its face from a script, and does the cloud sign-in come back after the editor is reopened. Windows, Unreal Engine 5.8. Nothing here needs a project of yours: the runner makes a throwaway project (MetaHuman Character, PythonScriptPlugin, EditorScriptingUtilities) in the OS temp folder and deletes it on a clean run. The probe keeps no MetaHuman asset and commits none.
 
 Status: four engine runs on 2026-10-29 in a windowed rendering editor, in a throwaway project at the default shader model (the run notes record that the editor warned that Nanite needs shader model 6; not in a saved log; not changed). A person was at the screen for the first launch of each run and nobody was at the editor for the repeat launches (runs 1, 3 and 4; run 2 had none). The runs differ, so every claim below names its run. The headless `--names` check ran once, before the core data was installed, and passed 5 of 6; the failing check was the missing core data folder. No offscreen or headless character run was made.
@@ -17,9 +19,9 @@ All of this is a probe result on one machine and is tested here against canned r
 ```text
 node examples/unreal/metahuman/mh_probe.mjs --engine "C:/Program Files/Epic Games/UE_5.8" --names
 node examples/unreal/metahuman/mh_probe.mjs --engine "C:/Program Files/Epic Games/UE_5.8" --plan
-node examples/unreal/metahuman/mh_probe.mjs --engine "C:/Program Files/Epic Games/UE_5.8" [--only create,assemble,drive,repeat] [--keep] [--out <folder>]
-node examples/unreal/metahuman/mh_probe.mjs --engine "C:/Program Files/Epic Games/UE_5.8" --phase prepare
-node examples/unreal/metahuman/mh_probe.mjs --phase judge --project <folder prepare printed> [--keep] [--out <folder>]
+pwsh -NoProfile -File examples/unreal/engine_lock/with-engine-lock.ps1 node examples/unreal/metahuman/mh_probe.mjs --engine "C:/Program Files/Epic Games/UE_5.8" [--only create,assemble,drive,repeat] [--keep] [--out <folder>]
+pwsh -NoProfile -File examples/unreal/engine_lock/with-engine-lock.ps1 node examples/unreal/metahuman/mh_probe.mjs --engine "C:/Program Files/Epic Games/UE_5.8" --phase prepare
+pwsh -NoProfile -File examples/unreal/engine_lock/with-engine-lock.ps1 node examples/unreal/metahuman/mh_probe.mjs --phase judge --project <folder prepare printed> [--keep] [--out <folder>]
 ```
 
 | Option | Effect |

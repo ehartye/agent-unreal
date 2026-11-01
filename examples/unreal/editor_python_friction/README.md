@@ -1,11 +1,13 @@
 # Editor Python friction scene: unreal.Box construction and an Interchange log line
 
+Run the launcher commands below from the plugin root. They wrap each complete probe in the [shared owned process tree](../engine_lock/README.md); retained scientific results describe their original runs.
+
 Backs the `unreal.Box` note in [Scripting the Unreal editor from Python](../../../skills/unreal-editor-scripting/references/unreal-editor-python.md) and the Interchange note in [Unreal import notes](../../../skills/unreal-import/references/unreal-import-notes.md). Verified on Unreal Engine 5.8, Windows. Nothing here needs a project or an asset of yours: the validator makes a throwaway project in the OS temp folder and writes two small glTF files itself.
 
 ## Run
 
 ```text
-node examples/unreal/editor_python_friction/epf_validate.mjs --engine "C:/Program Files/Epic Games/UE_5.8" [--keep]
+pwsh -NoProfile -File examples/unreal/engine_lock/with-engine-lock.ps1 node examples/unreal/editor_python_friction/epf_validate.mjs --engine "C:/Program Files/Epic Games/UE_5.8" [--keep]
 node examples/unreal/editor_python_friction/tiny_glb.mjs <folder>     # only writes the two .glb files
 ```
 

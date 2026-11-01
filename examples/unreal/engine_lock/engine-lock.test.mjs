@@ -1,110 +1,68 @@
-// node --test examples/unreal/engine_lock/engine-lock.test.mjs  (no Unreal; needs pwsh and Windows named mutexes)
+// Inert Windows compatibility tests. Isolated fixture receipts never qualify production.
 import { after, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawn, spawnSync } from 'node:child_process';
-import { rmSync } from 'node:fs';
+import { mkdtempSync, writeFileSync, existsSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { randomUUID } from 'node:crypto';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-
+import { scanAllowed } from './compat.mjs';
 const script = join(dirname(fileURLToPath(import.meta.url)), 'with-engine-lock.ps1');
-const hasPwsh = process.platform === 'win32' && spawnSync('pwsh', ['-NoProfile', '-Command', '1'], { encoding: 'utf8' }).status === 0;
-const skip = hasPwsh ? false : 'needs pwsh and Windows named mutexes';
-
-/** A mutex name no other run uses, so a test never waits on a real engine run. */
-const usedNames = [];
-const uniqueName = () => {
-  const name = `agent-unreal-test-${randomUUID()}`;
-  usedNames.push(name);
-  return name;
-};
-
-// A holder that the test kills cannot remove its own holder file, so the test does.
-after(() => {
-  for (const name of usedNames) rmSync(join(tmpdir(), `${name}.holder`), { force: true });
-});
-const wrapped = (name, args, env = {}) =>
-  spawnSync('pwsh', ['-NoProfile', '-File', script, ...args], {
-    encoding: 'utf8',
-    env: { ...process.env, ENGINE_LOCK_NAME: name, ...env },
-  });
-
+const skip = process.platform === 'win32' && spawnSync('pwsh', ['-NoProfile', '-Command', '1'], { encoding: 'utf8' }).status === 0 ? false : 'needs Windows and PowerShell 7';
+const roots = [];
+function fixture() {
+  const root = mkdtempSync(join(tmpdir(), 'engine-lock-compat-')); roots.push(root);
+  const config = join(root, 'fixture.json');
+  writeFileSync(config, JSON.stringify({ lock: `Global\\agent-unreal-fixture-${randomUUID()}`, state: join(root, 'state') }));
+  return { root, config };
+}
+after(() => { for (const root of roots) rmSync(root, { recursive: true, force: true }); });
+function environment(f, evidence = join(f.root, randomUUID()), extra = {}) {
+  return { ...process.env, ENGINE_LOCK_NAME: '', AGENT_UNREAL_TEST_ISOLATION: f.config, ENGINE_LOCK_EVIDENCE: evidence, ENGINE_RUN_TIMEOUT_SECONDS: '30', ...extra };
+}
+const wrapped = (f, args, extra) => spawnSync('pwsh', ['-NoProfile', '-File', script, ...args], { encoding: 'utf8', timeout: 45000, env: environment(f, undefined, extra) });
 test('a command with one argument runs with that argument', { skip }, () => {
-  const run = wrapped(uniqueName(), ['node', '--version']);
-  assert.equal(run.status, 0);
-  assert.match(run.stdout.trim(), /^v\d+\.\d+\.\d+/);
+  const r = wrapped(fixture(), ['node', '--version']); assert.equal(r.status, 0, r.stderr); assert.match(r.stdout.trim(), /^v\d+\.\d+\.\d+/);
 });
-
 test('a script path given as the only argument reaches the command whole', { skip }, () => {
-  const run = wrapped(uniqueName(), ['node', '-p', 'process.argv.length']);
-  assert.equal(run.status, 0);
-  assert.equal(run.stdout.trim(), '1');
+  const f = fixture(); const file = join(f.root, 'quoted script path.mjs'); writeFileSync(file, 'console.log("whole")');
+  const r = wrapped(f, ['node', file]); assert.equal(r.status, 0, r.stderr); assert.equal(r.stdout.trim(), 'whole');
 });
-
-test('an empty-string argument is kept', { skip }, () => {
-  const run = wrapped(uniqueName(), ['node', '-p', 'JSON.stringify(process.argv.slice(1))', '', 'x']);
-  assert.equal(run.status, 0);
-  assert.equal(run.stdout.trim(), '["","x"]');
+test('empty, quoted and trailing-backslash arguments remain exact', { skip }, () => {
+  const args = ['', 'a b', 'quote"value', 'trailing\\']; const r = wrapped(fixture(), ['node', '-p', 'JSON.stringify(process.argv.slice(1))', ...args]);
+  assert.equal(r.status, 0, r.stderr); assert.deepEqual(JSON.parse(r.stdout.trim()), args);
 });
-
-test('the wrapped command exit code is the wrapper exit code', { skip }, () => {
-  assert.equal(wrapped(uniqueName(), ['node', '-e', 'process.exit(7)']).status, 7);
+test('the wrapped command exit code is the wrapper exit code', { skip }, () => { assert.equal(wrapped(fixture(), ['node', '-e', 'process.exit(7)']).status, 7); });
+test('no command is a usage error', { skip }, () => { const r = wrapped(fixture(), []); assert.equal(r.status, 2); assert.match(r.stderr, /usage/); });
+test('--no-lock only admits known engine-free scans', () => {
+  assert.equal(scanAllowed('node', ['--version']), true);
+  assert.equal(scanAllowed('node', ['-e', 'launchEngine()']), false);
+  assert.equal(scanAllowed('UnrealEditor.exe', []), false);
 });
-
-test('no command is a usage error', { skip }, () => {
-  const run = wrapped(uniqueName(), []);
-  assert.equal(run.status, 2);
-  assert.match(run.stderr, /usage/);
+test('--no-lock runs a scan while another call holds the lock', { skip }, async () => {
+  const f = fixture(); const done = await startHolder(f); try { const r = wrapped(f, ['--no-lock', 'node', '--version']); assert.equal(r.status, 0, r.stderr); } finally { await done.promise; }
 });
-
-test('--no-lock runs the command while another call holds the lock', { skip }, async () => {
-  const name = uniqueName();
-  const holder = spawn('pwsh', ['-NoProfile', '-File', script, 'node', '-e', 'setTimeout(() => {}, 6000)'], {
-    env: { ...process.env, ENGINE_LOCK_NAME: name },
-    stdio: 'ignore',
-  });
-  try {
-    await new Promise((resolve) => setTimeout(resolve, 2500));
-    const started = Date.now();
-    const run = wrapped(name, ['--no-lock', 'node', '--version']);
-    assert.equal(run.status, 0);
-    assert.ok(Date.now() - started < 4000, 'the read-only call did not wait for the holder');
-  } finally {
-    holder.kill();
-  }
+async function startHolder(f) {
+  // Avoid async promise assimilation: return a holder object while the process runs.
+  const evidence = join(f.root, 'holder');
+  const child = spawn('pwsh', ['-NoProfile', '-File', script, 'node', '-e', 'setTimeout(()=>{},8000)'], { env: environment(f, evidence), windowsHide: true, stdio: 'ignore' });
+  const promise = new Promise((resolveExit, reject) => { child.once('error', reject); child.once('exit', resolveExit); });
+  const deadline = Date.now() + 20000;
+  while (!existsSync(join(evidence, 'workload-started.json'))) { if (child.exitCode !== null || Date.now() > deadline) throw Error('Holder did not start'); await new Promise(r => setTimeout(r, 50)); }
+  return { child, promise };
+}
+test('a second call names the holder while waiting, then runs', { skip }, async () => {
+  const f = fixture(); const h = await startHolder(f);
+  try { const r = wrapped(f, ['node', '--version']); assert.equal(r.status, 0, r.stderr); assert.match(r.stderr, /Waiting for.*holder:/); assert.match(r.stdout, /^v\d+/); } finally { await h.promise; }
 });
-
-test('a second call names the holder while it waits, then acquires and runs', { skip }, async () => {
-  const name = uniqueName();
-  const holder = spawn('pwsh', ['-NoProfile', '-File', script, 'node', '-e', 'setTimeout(() => {}, 5000)'], {
-    env: { ...process.env, ENGINE_LOCK_NAME: name },
-    stdio: 'ignore',
-  });
-  try {
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-    const run = wrapped(name, ['node', '--version'], { ENGINE_LOCK_HEARTBEAT_SECONDS: '1' });
-    assert.equal(run.status, 0);
-    assert.match(run.stderr, /waiting for engine lock .* held by: node /);
-    assert.match(run.stderr, /acquired/);
-    assert.match(run.stdout, /^v\d+/);
-  } finally {
-    holder.kill();
-  }
+test('bounded lock wait preserves exit code 3', { skip }, async () => {
+  const f = fixture(); const h = await startHolder(f);
+  try { const r = wrapped(f, ['node', '--version'], { ENGINE_LOCK_TIMEOUT_MIN: '0.01' }); assert.equal(r.status, 3, r.stderr); assert.match(r.stderr, /Bounded lock wait expired/); } finally { await h.promise; }
 });
-
-test('the lock is not acquired within the timeout', { skip }, async () => {
-  const name = uniqueName();
-  const holder = spawn('pwsh', ['-NoProfile', '-File', script, 'node', '-e', 'setTimeout(() => {}, 8000)'], {
-    env: { ...process.env, ENGINE_LOCK_NAME: name },
-    stdio: 'ignore',
-  });
-  try {
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-    const run = wrapped(name, ['node', '--version'], { ENGINE_LOCK_TIMEOUT_MIN: '0.05', ENGINE_LOCK_HEARTBEAT_SECONDS: '1' });
-    assert.equal(run.status, 3);
-    assert.match(run.stderr, /not acquired within/);
-  } finally {
-    holder.kill();
-  }
+test('production lock overrides and unsafe no-lock commands refuse before dispatch', { skip }, () => {
+  const f = fixture(); const marker = join(f.root, 'never-created');
+  const args = ['node', '-e', `require('fs').writeFileSync(${JSON.stringify(marker)},'bad')`];
+  assert.equal(wrapped(f, args, { ENGINE_LOCK_NAME: 'another-lock' }).status, 2);
+  assert.equal(wrapped(f, ['--no-lock', ...args]).status, 2); assert.equal(existsSync(marker), false);
 });

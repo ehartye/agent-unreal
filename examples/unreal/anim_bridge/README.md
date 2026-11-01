@@ -1,5 +1,7 @@
 # Animation Blueprints from Python, and the C++ bridge for the rest
 
+Run the launcher commands below from the plugin root. They wrap each complete probe in the [shared owned process tree](../engine_lock/README.md); retained scientific results describe their original runs.
+
 Backs [Animation Blueprints](../../../skills/unreal-animation/references/unreal-animation-blueprints.md) and the second example in [Bridging editor Python to C++](../../../skills/unreal-editor-scripting/references/unreal-python-cpp-bridge.md). Unreal Engine 5.8, Windows, Visual Studio 2022 Build Tools.
 
 The question: how much of an Animation Blueprint can an agent script, and what needs a small editor module? The run answers it with an engine skeleton (`/Engine/EngineMeshes/SkeletalCube`, bones `Bone01` and `Bone02`), two generated animation clips and a Play-In-Editor session that reads a bone back.
@@ -27,7 +29,7 @@ The question: how much of an Animation Blueprint can an agent script, and what n
 ## Run
 
 ```text
-node examples/unreal/anim_bridge/anim_bridge.mjs --engine "C:/Program Files/Epic Games/UE_5.8" [--keep] [--compiler 14.44.35228] [--sdk 10.0.26100.0]
+pwsh -NoProfile -File examples/unreal/engine_lock/with-engine-lock.ps1 node examples/unreal/anim_bridge/anim_bridge.mjs --engine "C:/Program Files/Epic Games/UE_5.8" [--keep] [--compiler 14.44.35228] [--sdk 10.0.26100.0]
 ```
 
 About 50 s to build and 30 to 40 s per editor session. The editors start hidden with `-nullrhi`.
@@ -47,7 +49,7 @@ About 50 s to build and 30 to 40 s per editor session. The editors start hidden 
 The item left open above, a state machine played at runtime, 2D Blend Spaces and linked layers, has its own runner, so the run above is unchanged:
 
 ```text
-node examples/unreal/anim_bridge/anim_runtime.mjs --engine "<UE_5.8 folder>" [--keep] [--compiler <x.y.z>] [--sdk <10.0.n.n>]
+pwsh -NoProfile -File examples/unreal/engine_lock/with-engine-lock.ps1 node examples/unreal/anim_bridge/anim_runtime.mjs --engine "<UE_5.8 folder>" [--keep] [--compiler <x.y.z>] [--sdk <10.0.n.n>]
 ```
 
 - `module/AnimMachine/` (runtime): `UMachineAnimInstance`, a parent class with two Boolean variables (`bGoWalk`, `bGoIdle`) that transition rules read, and `GetMachineNames` and `GetMachineState`, which read the baked state machine's current state name.

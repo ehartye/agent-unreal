@@ -7,7 +7,7 @@ Each scene builds a throwaway project in the OS temp folder, runs scripts on an 
 Backs the Drawn, ink and cel looks section of [Niagara](../../unreal-effects/references/unreal-niagara.md) and the Substrate Toon bullets of [Substrate](../../unreal-rendering/references/unreal-substrate.md).
 
 ```text
-node examples/unreal/stylized/stylized_validate.mjs --engine "C:/Program Files/Epic Games/UE_5.8" [--keep] [--shots <folder>]
+pwsh -NoProfile -File examples/unreal/engine_lock/with-engine-lock.ps1 node examples/unreal/stylized/stylized_validate.mjs --engine "C:/Program Files/Epic Games/UE_5.8" [--keep] [--shots <folder>]
 ```
 
 It builds a project with `r.Substrate=True` and the Blendable GBuffer plus a bare project, and prints 17 checks in about 2.5 minutes. Result: 17 of 17 pass. A Toon sphere draws 2 flat bands against 0 for a plain lit sphere; Toon on a masked and a translucent sprite draws 3 and 2 flat bands with one silhouette; a self-emissive flipbook sprite gives identical pixels under a bright and a dark backdrop; a floor-quantized ramp draws 3 flat bands against 16 luminance levels. A Toon Profile override set with the console `Set` command survived an editor restart. The [folder README](../../../examples/unreal/stylized/README.md) lists every station.
@@ -17,7 +17,7 @@ It builds a project with `r.Substrate=True` and the Blendable GBuffer plus a bar
 Scenes that back [World Partition](../../unreal-procedural/references/unreal-world-partition.md): the Open World template and a Water sample map, plus a four-cube level made with `LevelEditorSubsystem.new_level`, converted and rebuilt by commandlet, and read back by JSON report.
 
 ```
-node examples/unreal/world/world_validate.mjs --engine "C:/Program Files/Epic Games/UE_5.8" [--keep]
+pwsh -NoProfile -File examples/unreal/engine_lock/with-engine-lock.ps1 node examples/unreal/world/world_validate.mjs --engine "C:/Program Files/Epic Games/UE_5.8" [--keep]
 ```
 
 It builds a throwaway project in the OS temp folder, runs hidden editors and commandlets, and prints PASS or FAIL for 30 claims (the 17 from 0.3.0 and 13 new). The Landscape size rule is a pure Node check that runs in `node scripts/check.mjs`.
@@ -31,7 +31,7 @@ Headline: all 30 pass. A partitioned `new_level` works in all three modes and ho
 A small engine Landscape map gets two PCG volumes and five variants of the PCG World Actor and its Landscape cache. The scripts generate in the editor and in a game process (the editor binary with `-game`), run an experiment harness (graph variants generated on a test volume, instances counted) and check every claim in [PCG in a running game](../../unreal-procedural/references/unreal-pcg-game-process.md).
 
 ```
-node examples/unreal/pcg_game/pcg_validate.mjs --engine "C:/Program Files/Epic Games/UE_5.8" [--keep] [--shot <png>]
+pwsh -NoProfile -File examples/unreal/engine_lock/with-engine-lock.ps1 node examples/unreal/pcg_game/pcg_validate.mjs --engine "C:/Program Files/Epic Games/UE_5.8" [--keep] [--shot <png>]
 ```
 
 About ten minutes, GPU needed for the offscreen runs; `pcg-validate.test.mjs` runs in `node scripts/check.mjs`. See the [folder README](../../../examples/unreal/pcg_game/README.md).
@@ -45,7 +45,7 @@ Result: with the cache serialized the game process spawns instances; without it 
 `examples/unreal/editor_python/` has helpers (`soft_set`, a generator stage runner, `recreate_map`, `place_above_ground`, `allow_instancing`) and a validating scene. `ep_probe.py` runs headless; `ep_stages.py` and `ep_ground.py` run in a rendering editor (`-ExecCmds="py ..."`). Reference: [Editor Python: maps, materials and meshes](unreal-editor-python-maps.md).
 
 ```text
-node examples/unreal/editor_python/ep_validate.mjs --engine "C:/Program Files/Epic Games/UE_5.8" [--keep] [--shots <folder>]
+pwsh -NoProfile -File examples/unreal/engine_lock/with-engine-lock.ps1 node examples/unreal/editor_python/ep_validate.mjs --engine "C:/Program Files/Epic Games/UE_5.8" [--keep] [--shots <folder>]
 ```
 
 It builds a throwaway project, copies the Open World template (the Landscape source), and checks 21 claims. Result: 21 of 21 pass.
@@ -57,19 +57,13 @@ It builds a throwaway project, copies the Open World template (the Landscape sou
 - A Custom node takes `#define` macros, not helper functions; the instancing flag is `False` until set or drawn.
 - A fixed camera Z was under the Landscape at 12 of 81 points; `place_above_ground` was 200 cm up at all 81.
 
-## C++ bridge and automation test (`landscape_bridge/`, `automation_test/`)
+## C++ bridge and automation test
 
-Two throwaway code projects, built with Unreal Build Tool (compiler and SDK discovered, not hard-coded), then run headless.
-
-- `node examples/unreal/landscape_bridge/landscape_bridge.mjs --engine <UE_5.8 folder>`: an editor-only module exposes `ALandscapeProxy::Import` as `unreal.LandscapeBridgeLibrary.create_landscape_from_heights`. A 505 by 505 height array becomes a Landscape of 16 components (quad size 100); sampled heights match the input within half a height step (worst 0.379 cm). Same result in a non-partitioned map and in a `new_level(path, True)` World Partition map: grid size 0 keeps all 16 components on the Landscape actor, grid size 2 makes 4 streaming proxies. 19 of 19 checks. Reference: [Python to C++ bridge](unreal-python-cpp-bridge.md).
-- `node examples/unreal/landscape_bridge/landscape_world.mjs --engine <UE_5.8 folder> [--rendering]`: five brush functions on the same module, then three phases (Landmass brush attach, PCG on a partitioned Landscape, proxy unload). It passed 16 of 18 checks in `-nullrhi` editors and 18 of 18 with `--rendering`. References: [Landscape bridge brushes](unreal-landscape-bridge-brushes.md), [Landmass](../../unreal-procedural/references/unreal-landmass.md).
-- `node examples/unreal/automation_test/automation_test.mjs --engine <UE_5.8 folder>`: a passing and a deliberately failing `IMPLEMENT_SIMPLE_AUTOMATION_TEST` (`EditorContext | ProductFilter`), run with `-ExecCmds="Automation RunTests <filter>; Quit"`. The failing test is reported as `failed: 1`, state `Fail`, with message and line; exit codes are 255 with `; Quit` and 0 with `-TestExit`, so `automation_report.mjs` decides from `index.json`. 9 of 9 checks. Reference: [Automation tests](../../unreal-native/references/unreal-native-automation-tests.md).
-
-Both folders have a README and a pure Node test that runs in `node scripts/check.mjs`; the engine runs take three to five minutes each.
+See [Native bridge, automation and build examples](unreal-example-scenes-native.md) for the Landscape bridge and automation probes, commands, results and qualifications.
 
 ## More scenes
 
-[Example scenes: tooling and native builds](unreal-example-scenes-tooling.md) has the commands and results for these, and for `niagara_toolsets`, `editor_python_friction`, `constructor_locks`, `anim_bridge` and `contention`.
+[Tooling and rendering examples](unreal-example-scenes-tooling.md) cover `niagara_toolsets`, `editor_python_friction`, `constructor_locks`, `anim_bridge`, `contention` and rendering probes. [Native examples](unreal-example-scenes-native.md) cover Gameplay Effects and unity builds.
 
 | Folder | Runs | Backs |
 |---|---|---|

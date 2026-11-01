@@ -1,5 +1,7 @@
 # Unreal sample scene scripts
 
+Run the launcher commands below from the plugin root. They wrap each complete probe in the [shared owned process tree](engine_lock/README.md); retained scientific results describe their original runs.
+
 For a native C++ game rather than this import sample, see [native Unreal build and capture](../../skills/unreal-native/references/unreal-native-game.md). It records a separate Unreal 5.8 execution path and its observed build, material, font and capture traps. Do not assume this sample's PIE evidence establishes a packaged game.
 
 For comparing several implementations of one visible thing side by side in a native game, see [compare-scene](compare-scene/README.md).
@@ -22,7 +24,7 @@ unreal/SampleScene/SampleScene.uproject   plugins: PythonScriptPlugin, EditorScr
 Build (assets and level, no rendering, about 30 seconds):
 
 ```text
-UnrealEditor-Cmd.exe SampleScene.uproject -run=pythonscript -script=build_scene.py
+pwsh -NoProfile -File examples/unreal/engine_lock/with-engine-lock.ps1 UnrealEditor-Cmd.exe SampleScene.uproject -run=pythonscript -script=build_scene.py
     -unattended -nullrhi -nosplash -nopause -nosound -notraceserver
 ```
 
@@ -30,7 +32,7 @@ Run (Play-In-Editor offscreen on the GPU, samples state, writes `unreal/report-r
 screenshot under `Saved/Screenshots/WindowsEditor`, then quits):
 
 ```text
-UnrealEditor.exe SampleScene.uproject /Game/Maps/SampleScene -RenderOffScreen
+pwsh -NoProfile -File examples/unreal/engine_lock/with-engine-lock.ps1 UnrealEditor.exe SampleScene.uproject /Game/Maps/SampleScene -RenderOffScreen
     -ExecCmds="py run_scene.py" -log=run.log -notraceserver -nosplash -unattended
 ```
 
@@ -42,9 +44,9 @@ Do not use `-ExecutePythonScript` for the run: it quits the editor when the scri
 Six scripts back [Niagara in Unreal](../../skills/unreal-effects/references/unreal-niagara.md). They need a project with PythonScriptPlugin, EditorScriptingUtilities and Niagara, plus NiagaraToolsets (Experimental) for the second. Each writes a JSON report (`NIAGARA_PROBE_REPORT`, default under the project's `Saved/`).
 
 ```text
-UnrealEditor-Cmd.exe Project.uproject -run=pythonscript -script=niagara_build.py -unattended -nullrhi -nosplash -nopause -nosound -notraceserver
-UnrealEditor-Cmd.exe Project.uproject -run=pythonscript -script=niagara_toolset_author.py ...same flags...
-UnrealEditor.exe Project.uproject /Game/Maps/NiagaraProbe -RenderOffScreen -ExecCmds="py <path>/niagara_verify.py" -log=niagara.log -notraceserver -nosplash -unattended
+pwsh -NoProfile -File examples/unreal/engine_lock/with-engine-lock.ps1 UnrealEditor-Cmd.exe Project.uproject -run=pythonscript -script=niagara_build.py -unattended -nullrhi -nosplash -nopause -nosound -notraceserver
+pwsh -NoProfile -File examples/unreal/engine_lock/with-engine-lock.ps1 UnrealEditor-Cmd.exe Project.uproject -run=pythonscript -script=niagara_toolset_author.py ...same flags...
+pwsh -NoProfile -File examples/unreal/engine_lock/with-engine-lock.ps1 UnrealEditor.exe Project.uproject /Game/Maps/NiagaraProbe -RenderOffScreen -ExecCmds="py <path>/niagara_verify.py" -log=niagara.log -notraceserver -nosplash -unattended
 ```
 
 `niagara_validate.mjs` runs all of them in order on a throwaway project in the OS temp folder, plus `niagara_traps.py` (the API facts the reference states) and `niagara_templates.py` (the stock templates), reads the engine's Niagara plugin descriptors, and checks 27 claims, printing PASS or FAIL per claim (27 of 27 passed, in 86 to 92 seconds): `node niagara_validate.mjs --engine "C:/Program Files/Epic Games/UE_5.8"`. Its pure checks have node tests in the merge lane (`niagara-validate.test.mjs`); the Unreal run takes about a minute and is a manual lane. That step exits 1 on purpose.

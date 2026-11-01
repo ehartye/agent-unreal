@@ -1,5 +1,7 @@
 # C++ automation test, run headless
 
+Run the launcher commands below from the plugin root. They wrap each complete probe in the [shared owned process tree](../engine_lock/README.md); retained scientific results describe their original runs.
+
 Backs [Writing and running a C++ automation test](../../../skills/unreal-native/references/unreal-native-automation-tests.md). Unreal Engine 5.8, Windows, Visual Studio 2022 Build Tools.
 
 ## Files
@@ -12,7 +14,7 @@ Backs [Writing and running a C++ automation test](../../../skills/unreal-native/
 ## Run
 
 ```text
-node examples/unreal/automation_test/automation_test.mjs --engine "C:/Program Files/Epic Games/UE_5.8" [--keep] [--compiler 14.44.35228] [--sdk 10.0.26100.0]
+pwsh -NoProfile -File examples/unreal/engine_lock/with-engine-lock.ps1 node examples/unreal/automation_test/automation_test.mjs --engine "C:/Program Files/Epic Games/UE_5.8" [--keep] [--compiler 14.44.35228] [--sdk 10.0.26100.0]
 node examples/unreal/automation_test/automation_report.mjs <report folder>/index.json --filter AgentUnrealProbe
 ```
 
@@ -33,8 +35,8 @@ The runner takes about three to five minutes. Both engine binaries start hidden 
 Backs [Headless runs, reports and lanes](../../../skills/unreal-quality/references/unreal-quality-lanes.md). The run above uses `Automation RunTests` with a space after the semicolon; this phase uses the command shape the lanes reference gives, so a reader can paste it:
 
 ```text
-node examples/unreal/automation_test/automation_reference.mjs --engine "<UE_5.8 folder>" [--keep] [--compiler <x.y.z>] [--sdk <10.0.n.n>]
-node examples/unreal/automation_test/headless_routes.mjs --engine "<UE_5.8 folder>" [--json]
+pwsh -NoProfile -File examples/unreal/engine_lock/with-engine-lock.ps1 node examples/unreal/automation_test/automation_reference.mjs --engine "<UE_5.8 folder>" [--keep] [--compiler <x.y.z>] [--sdk <10.0.n.n>]
+pwsh -NoProfile -File examples/unreal/engine_lock/with-engine-lock.ps1 node examples/unreal/automation_test/headless_routes.mjs --engine "<UE_5.8 folder>" [--json]
 ```
 
 - `automation_reference.mjs` builds the same `AutomationProbe` module and runs `UnrealEditor-Cmd.exe <project> -Unattended -NullRHI -ExecCmds="Automation RunTest <filter>;Quit" -ReportExportPath=<dir>` for the passing and the failing test, then a `Group:<Name>` run for two groups defined in the project's `DefaultEngine.ini` (section `/Script/AutomationController.AutomationControllerSettings`, as the engine source declares it), a group that does not exist, and a `+ExcludeTest` run (section `AutomationTestExcludelist`; the exclusion is written last because it would otherwise skip the failing test in every earlier run). The Data Validation commandlet (`-run=DataValidation`) runs once as an observation: a project with no assets gives it nothing to fail on.

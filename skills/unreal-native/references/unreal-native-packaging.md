@@ -26,6 +26,8 @@ Record HEAD, dirty state and source fingerprint for active worktrees. An archive
 - [general] Adding the optional `-SkipEditorContent` optimization caused cook errors: enabled Landmass startup materials referenced Engine EditorMaterials that this flag excluded. `-DisablePlugins=Landmass` was parsed but did not override an already configured target plugin. Removing the optimization let the actual dependency graph cook cleanly. No `IgnoreCookErrors` or error suppression was used.
 - [documented] Source `CookCommandlet.cpp` supports CookAll and SkipZenStore. `PluginManager.cpp` processes extra DisablePlugins only when a name has not already been configured. Prefer a deliberately scoped project/plugin configuration for production; do not guess that an override worked because its flag appeared in the command line.
 
+Historical direct-tool transcript below; it records the observed workaround, not current launch instructions. Use the [shared launcher](unreal-engine-launcher.md) for new package/build/commandlet work.
+
 ```powershell
 $ueRoot = 'C:/Program Files/Epic Games/UE_5.8'
 $projectRoot = 'C:/path/to/frozen-project'

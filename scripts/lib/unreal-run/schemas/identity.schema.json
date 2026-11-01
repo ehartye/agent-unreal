@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema", "$id": "unreal-run/identity/1", "type": "object",
+  "required": ["version", "kind", "operation", "id", "requestHash", "source", "engine", "toolchain", "artifacts", "complete", "errors"],
+  "properties": {
+    "version": {"const": 1}, "kind": {"const": "unreal-run/identity"}, "operation": {"enum": ["build", "package"]},
+    "id": {"type": "string", "format": "uuid"}, "requestHash": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "source": {"type": "object", "required": ["commit", "snapshot", "dirty"], "properties": {"commit": {"type": "string", "pattern": "^[a-f0-9]{40,64}$"}, "snapshot": {"type": "string", "pattern": "^[a-f0-9]{64}$"}, "dirty": {"type": "boolean"}}},
+    "engine": {"type": ["object", "null"]}, "toolchain": {"type": ["object", "null"]},
+    "artifacts": {"type": "array", "items": {"type": "object", "required": ["path", "bytes", "sha256"], "properties": {"path": {"type": "string", "minLength": 1}, "bytes": {"type": "integer", "minimum": 1}, "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"}}}},
+    "complete": {"type": "boolean"}, "errors": {"type": "array", "items": {"type": "string"}}
+  },
+  "$comment": "verifyIdentity checks semantic completeness, source binding and lifecycle drain. verifyArtifactFiles checks current artifact bytes."
+}

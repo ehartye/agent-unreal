@@ -1,12 +1,14 @@
 # Audio Modulation and Quartz probe
 
+Run the launcher commands below from the plugin root. They wrap each complete probe in the [shared owned process tree](../engine_lock/README.md); retained scientific results describe their original runs.
+
 Status: ran on Unreal 5.8. Surface discovery and fresh-process asset readback passed. Under `-nosound`, neither world activated the mix or moved its bus value. With audio enabled, PIE delivered Quartz events within tolerance; the editor delivered none. The repaired nosound run also delivered PIE events within tolerance; the editor clock stayed stopped. This is an opt-in native-engine probe, separate from the dependency-free merge checks.
 
 ```powershell
 node examples/unreal/audio_modulation/am_probe.mjs --engine "<engine folder>" --plan
-node examples/unreal/audio_modulation/am_probe.mjs --engine "<engine folder>" --only surface --evidence "<new evidence folder>"
-node examples/unreal/audio_modulation/am_probe.mjs --engine "<engine folder>" --only assets,value,quartz --keep --evidence "<new evidence folder>"
-node examples/unreal/audio_modulation/am_probe.mjs --engine "<engine folder>" --only quartz --audio device --evidence "<new evidence folder>"
+pwsh -NoProfile -File examples/unreal/engine_lock/with-engine-lock.ps1 node examples/unreal/audio_modulation/am_probe.mjs --engine "<engine folder>" --only surface --evidence "<new evidence folder>"
+pwsh -NoProfile -File examples/unreal/engine_lock/with-engine-lock.ps1 node examples/unreal/audio_modulation/am_probe.mjs --engine "<engine folder>" --only assets,value,quartz --keep --evidence "<new evidence folder>"
+pwsh -NoProfile -File examples/unreal/engine_lock/with-engine-lock.ps1 node examples/unreal/audio_modulation/am_probe.mjs --engine "<engine folder>" --only quartz --audio device --evidence "<new evidence folder>"
 ```
 
 Use the documented engine lock when other engine users share the machine. The runner starts one engine process at a time, sets a four-minute deadline per process, and stops only the child it started. `--plan` starts nothing. A content-only project is created in a unique OS temporary directory with PythonScriptPlugin, EditorScriptingUtilities and AudioModulation enabled. Every phase uses null RHI. Sound is disabled unless `--audio device` is selected; that mode is accepted only with `--only quartz`. The machine's audio devices and drivers are never changed.
