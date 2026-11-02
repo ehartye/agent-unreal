@@ -9,6 +9,12 @@ import { commandFor, qualifyStep, inventory } from './qualification.mjs';
 
 const write = (path, value) => writeFileSync(path, JSON.stringify(value, null, 2) + '\n', { flag: 'wx' });
 const now = () => new Date().toISOString();
+function matchesDiagnostics(value, expected) {
+  if (!Array.isArray(value) || value.length !== expected.length) return false;
+  return value.every((entry, index) => entry && typeof entry === 'object' && !Array.isArray(entry)
+    && same(Object.keys(entry).sort(), ['code', 'message'])
+    && entry.code === expected[index].code && entry.message === expected[index].message);
+}
 export async function productionLaunch(command, prepared, signal) {
   const result = await runContainedProcess({ ...command, signal, onDiagnostic: text => process.stderr.write(text) });
   if (['build', 'package'].includes(command.operation)) write(join(command.evidence, 'identity.json'), collectIdentity(prepared.config, prepared.source, result));
@@ -28,7 +34,7 @@ export async function execute(prepared, output, { launch = productionLaunch, sig
   let halt = null;
   try {
     for (let index = 0; index < prepared.plan.length; index++) {
-      const step = prepared.plan[index], row = { id: step.id, kind: step.kind, required: step.required, directory: `${String(index).padStart(3, '0')}-${step.id}`, started: null, finished: null, status: 'not_run', errors: [], checks_run: 0, outcome: 'not_run', evidence: [] };
+      const step = prepared.plan[index], row = { id: step.id, kind: step.kind, required: step.required, directory: `${String(index).padStart(3, '0')}-${step.id}`, started: null, finished: null, status: 'not_run', errors: [], checks_run: 0, outcome: 'not_run', evidence: [], diagnostics: [] };
       aggregate.steps.push(row);
       if (signal?.aborted) halt = 'cancelled';
       if (halt) { row.errors = [`Dispatch halted: ${halt}`]; if (halt === 'cancelled') row.status = row.outcome = 'cancelled'; continue; }
@@ -42,12 +48,12 @@ export async function execute(prepared, output, { launch = productionLaunch, sig
         await launch(expected, prepared, signal);
         row.finished = now();
         Object.assign(row, qualifyStep(step, prepared, child, row, expected));
-      } catch (error) { row.status = row.outcome = 'unknown'; row.errors = [error.message]; }
+      } catch (error) { row.status = row.outcome = 'unknown'; row.errors = [error.message]; row.diagnostics = []; }
       row.finished ??= now();
-      try { row.evidence = inventory(child); } catch (error) { row.status = row.outcome = 'unknown'; row.errors.push(error.message); }
+      try { row.evidence = inventory(child); } catch (error) { row.status = row.outcome = 'unknown'; row.errors.push(error.message); row.diagnostics = []; }
       if (['unknown', 'cancelled'].includes(row.status)) halt = row.status;
     }
-    try { unchanged(prepared); } catch (error) { aggregate.errors.push(error.message); }
+    try { unchanged(prepared); } catch (error) { aggregate.errors.push(error.message); for (const row of aggregate.steps) row.diagnostics = []; }
   } finally {
     aggregate.finished = now(); aggregate.outcome = suiteOutcome(aggregate.steps);
     aggregate.qualified = aggregate.outcome === 'passed' && !aggregate.errors.length;
@@ -66,6 +72,7 @@ export function verifyReceipt(file) {
   const current = prepare({ project: p.project.path, manifest: p.manifest.path, suite: p.suite });
   if (!same(p, current)) errors.push('Planned inputs, source, configuration or plan changed');
   if (!Array.isArray(aggregate.steps) || aggregate.steps.length !== current.plan.length) throw Error('Missing or extra planned step');
+  const diagnostics = current.plan.map(() => []);
   let halted = false, previousFinished = Date.parse(aggregate.started);
   for (let index = 0; index < current.plan.length; index++) {
     const step = current.plan[index], row = aggregate.steps[index], expectedDirectory = `${String(index).padStart(3, '0')}-${step.id}`;
@@ -81,6 +88,7 @@ export function verifyReceipt(file) {
       const child = join(directory, row.directory);
       if (!same(inventory(child), row.evidence)) errors.push(`Referenced evidence bytes changed: ${step.id}`);
       const checked = qualifyStep(step, current, child, row);
+      diagnostics[index] = checked.diagnostics;
       for (const key of ['status', 'outcome', 'checks_run', 'errors']) if (!same(checked[key], row[key])) errors.push(`Recorded ${key} differs from verification: ${step.id}`);
       const expected = commandFor(step, current, child);
       if (!same(json(readArtifact(child, 'command.json')), expected)) errors.push(`Recorded command differs: ${step.id}`);
@@ -89,9 +97,10 @@ export function verifyReceipt(file) {
       if (row.status === 'passed' || row.evidence.length || row.checks_run !== 0 || !row.errors.length) errors.push(`Unexecuted step claims evidence: ${step.id}`);
       if (row.status === 'blocked_dependency' && !blocked.length) errors.push(`Unjustified dependency block: ${step.id}`);
     }
+    if (Object.hasOwn(row, 'diagnostics') && !matchesDiagnostics(row.diagnostics, diagnostics[index])) errors.push(`Recorded diagnostics differ from verification: ${step.id}`);
     if (['unknown', 'cancelled'].includes(row.status)) halted = true;
   }
   const outcome = suiteOutcome(aggregate.steps), qualified = outcome === 'passed' && aggregate.errors.length === 0;
   if (aggregate.qualified !== qualified || aggregate.outcome !== (outcome === 'passed' && !qualified ? 'failed' : outcome)) errors.push('Aggregate verdict contradicts required steps');
-  return { valid: errors.length === 0, qualified: errors.length === 0 && qualified, outcome: aggregate.outcome, errors, steps: aggregate.steps.map(({ id, status, checks_run, errors }) => ({ id, status, checks_run, errors })) };
+  return { valid: errors.length === 0, qualified: errors.length === 0 && qualified, outcome: aggregate.outcome, errors, steps: aggregate.steps.map(({ id, status, checks_run, errors: stepErrors }, index) => ({ id, status, checks_run, errors: stepErrors, diagnostics: errors.length ? [] : diagnostics[index] })) };
 }

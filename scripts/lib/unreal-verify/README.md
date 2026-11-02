@@ -122,3 +122,50 @@ and byte-identity checks, not a signature or hostile-producer attestation.
 An interrupted controller may leave incomplete output. That directory remains
 evidence of an incomplete attempt and cannot be reused. Never infer drain from a
 process exit or a controller's disappearance.
+
+## Launcher pre-dispatch refusal diagnostics
+
+New execution rows in the returned aggregate and `regression.json` always include
+a `diagnostics` array. Retained `verifyReceipt` step results independently derive
+the same metadata. The only supported entry has exactly these two fields:
+
+```json
+{"code":"launcher_pre_dispatch_refusal","message":"No workload dispatched. Launcher reason: External engine contention; no workload dispatched"}
+```
+
+At most one entry is derived, only when authoritative request and lifecycle
+evidence passes the existing request-hash, planned-command, operation, interval
+and drain checks and records `permitIssued === false`. Cancellation and timeout
+take precedence and have empty diagnostics. A gate can exist without a permit;
+exit code 74, a missing gate, exception text or an error substring alone cannot
+establish this refusal. Permit-issued failures have no pre-dispatch diagnostic;
+a permit alone also does not prove that the engine executed.
+
+The message is `No workload dispatched. Launcher reason: ` followed by readable
+`lifecycle.errors` strings joined with `; `, preserving each string and its order.
+Readable strings contain non-whitespace text; other members are omitted without
+coercion. If no readable reason exists, the exact fallback is
+`No workload dispatched. Launcher supplied no readable reason.` No cause is
+inferred. Every other state, including undispatched steps, has `diagnostics: []`.
+
+This is additive schema-version-1 metadata. Existing errors, status, outcome,
+counts, qualification, dependency/halt behavior and CLI exit mapping remain
+unchanged. A proved launcher refusal still fails with zero observed checks and
+cannot satisfy a declared `rejected_replay` AgentVerify rejection. A valid failed
+receipt can return `valid:true` and `qualified:false`.
+
+Retained verification accepts legacy rows without `diagnostics`, derives the
+public explanation from their authoritative files and never rewrites the old
+receipt bytes. A present array must exactly match that independent derivation,
+including the entry shape, code and message; extra fields or fabricated labels
+fail validation. Every returned step diagnostic is cleared to `[]` when retained
+verification returns `valid:false`, including a diagnostic mismatch or changed
+source, command, inventory or row. Existing malformed-input cases that throw
+still exit 2 through the CLI without a fabricated verification result.
+
+Shared launcher `status:idle` describes its ownership journal only; external
+engine, build or controller processes can still cause contention. Retain the
+failed output and recorded reasons. Follow the launcher's status/recovery
+procedure for ownership and drain, wait for exclusivity, and use a fresh output
+directory for a later authorized run. Preserve unrelated workloads: do not kill
+them or bypass the shared lock to clear a refusal.

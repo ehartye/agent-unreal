@@ -44,8 +44,8 @@ const worker = { pid: 77, created: '133000000000000000' };
 function inertLifecycle(command, { cancelled = false, timedOut = false } = {}) {
   mkdirSync(command.evidence, { recursive: true }); const identity = pid => ({ pid, created: '133000000000000000' });
   const request = { version: 1, kind: 'unreal-run/request', id: randomUUID(), nonce: 'a'.repeat(64), purpose: 'production', lock: LOCK, state: join(dirname(command.evidence), 'inert-state'), node: process.execPath, controllerPid: 1, controllerCreated: identity(1).created, ...command };
-  write(join(command.evidence, 'request.json'), request); const requestHash = hash(readFileSync(join(command.evidence, 'request.json')));
-  write(join(command.evidence, 'lifecycle.json'), { version: 1, kind: 'unreal-run/lifecycle', id: request.id, requestHash, operation: command.operation, purpose: 'production', lock: LOCK, controller: identity(1), helper: identity(2), gate: identity(3), probe: identity(4), processes: [1, 2, 3, 4].map(identity), started: now(), finished: now(), contained: true, probeContained: true, permitIssued: true, permit: { requestHash, gate: identity(3) }, exitCode: cancelled || timedOut ? 1 : 0, cancelled, timedOut, errors: [], drain: { proved: true, active: 0, members: [], requestHash, observed: now() } });
+  write(join(command.evidence, 'request.json'), request); const requestHash = hash(readFileSync(join(command.evidence, 'request.json'))), observed = now();
+  write(join(command.evidence, 'lifecycle.json'), { version: 1, kind: 'unreal-run/lifecycle', id: request.id, requestHash, operation: command.operation, purpose: 'production', lock: LOCK, controller: identity(1), helper: identity(2), gate: identity(3), probe: identity(4), processes: [1, 2, 3, 4].map(identity), started: observed, finished: observed, contained: true, probeContained: true, permitIssued: true, permit: { requestHash, gate: identity(3) }, exitCode: cancelled || timedOut ? 1 : 0, cancelled, timedOut, errors: [], drain: { proved: true, active: 0, members: [], requestHash, observed } });
   return { exitCode: cancelled || timedOut ? 1 : 0 };
 }
 function ready(f, directory) { const s = readState(directory, f.request); transition(directory, f.request, s, { phase: 'ready', worker }); return { pid: worker.pid }; }
@@ -350,6 +350,7 @@ test('R3 output and archive reject symlink/junction ancestors without changing t
 
 test('R3 successful Fetch calls the unchanged suite verifier on original paths and retains original receipt bytes', async t => {
   t.mock.timers.enable({ apis: ['Date'], now: Date.UTC(2026, 0, 1) });
+  for (const refused of [false, true]) {
   const f = fixture(t), j = job(f), engine = join(f.root, 'engine');
   const exe = join(engine, 'Engine/Binaries/Win64/UnrealEditor-Cmd.exe'); mkdirSync(dirname(exe), { recursive: true }); writeFileSync(exe, 'inert fixture');
   const configFile = join(f.root, 'project.json'); write(configFile, { version: 1, project: join(f.source, 'Sample.uproject'), engine, sourceRoot: f.source, editorTarget: 'SampleEditor', gameTarget: 'Sample' });
@@ -360,23 +361,32 @@ test('R3 successful Fetch calls the unchanged suite verifier on original paths a
     mkdirSync(command.evidence); const identity = pid => ({ pid, created: '133000000000000000' });
     const request = { version: 1, kind: 'unreal-run/request', id: randomUUID(), nonce: 'a'.repeat(64), purpose: 'production', lock: LOCK, state: join(f.root, 'inert-state'), node: process.execPath, controllerPid: 1, controllerCreated: identity(1).created, ...command };
     timedWrite(join(command.evidence, 'request.json'), request); const requestHash = hash(readFileSync(join(command.evidence, 'request.json')));
-    timedWrite(join(command.evidence, 'lifecycle.json'), { version: 1, kind: 'unreal-run/lifecycle', id: request.id, requestHash, operation: 'test', purpose: 'production', lock: LOCK, controller: identity(1), helper: identity(2), gate: identity(3), probe: identity(4), processes: [1, 2, 3, 4].map(identity), started: now(), finished: now(), contained: true, probeContained: true, permitIssued: true, permit: { requestHash, gate: identity(3) }, exitCode: 0, cancelled: false, timedOut: false, errors: [], drain: { proved: true, active: 0, members: [], requestHash, observed: now() } });
+    timedWrite(join(command.evidence, 'lifecycle.json'), { version: 1, kind: 'unreal-run/lifecycle', id: request.id, requestHash, operation: 'test', purpose: 'production', lock: LOCK, controller: identity(1), helper: identity(2), gate: identity(3), probe: identity(4), processes: [1, 2, 3, 4].map(identity), started: now(), finished: now(), contained: true, probeContained: true, permitIssued: !refused, permit: refused ? null : { requestHash, gate: identity(3) }, exitCode: refused ? 74 : 0, cancelled: false, timedOut: false, errors: refused ? ['External engine contention; no workload dispatched'] : [], drain: { proved: true, active: 0, members: [], requestHash, observed: now() } });
     const report = join(dirname(command.evidence), 'report'); mkdirSync(report);
     timedWrite(join(report, 'index.json'), { succeeded: 1, succeededWithWarnings: 0, failed: 0, notRun: 0, inProcess: 0, tests: [{ fullTestPath: 'RemoteFixture.Rule', state: 'Success', errors: 0, warnings: 0 }] });
   } });
-  assert.equal(aggregate.qualified, true, canonical(aggregate));
+  assert.equal(aggregate.qualified, !refused, canonical(aggregate));
+  const receiptBytes = readFileSync(join(suite, 'regression.json'));
   write(join(j.dir, 'dispatch-ledger.json'), { version: 1, kind: 'unreal-remote/dispatch-ledger', ...binding(f.request), paths: ['000-rules/launcher'] });
   write(join(j.dir, 'dispatch-000000.json'), { version: 1, ...binding(f.request), path: '000-rules/launcher', command_sha256: digest(json(join(suite, '000-rules/command.json'))) });
-  let s = transition(j.dir, f.request, j.state, { phase: 'ready', worker }); s = transition(j.dir, f.request, s, { phase: 'running' }); s = transition(j.dir, f.request, s, { phase: 'succeeded', drained: true });
-  write(join(j.dir, 'result.json'), { version: 1, kind: 'unreal-remote/result', ...binding(f.request), phase: 'succeeded', drained: true, drain: proveDrain(suite), suite_sha256: fileIdentity(join(suite, 'regression.json')).sha256 });
+  const phase = refused ? 'failed' : 'succeeded';
+  let s = transition(j.dir, f.request, j.state, { phase: 'ready', worker }); s = transition(j.dir, f.request, s, { phase: 'running' }); s = transition(j.dir, f.request, s, { phase, drained: true });
+  write(join(j.dir, 'result.json'), { version: 1, kind: 'unreal-remote/result', ...binding(f.request), phase, drained: true, drain: proveDrain(suite), suite_sha256: fileIdentity(join(suite, 'regression.json')).sha256 });
   const returned = publishReturn(j.dir, f.request), downloaded = join(f.root, 'download'), expected = verifyDownload(returned.archive, downloaded, returned.descriptor, f.request, false);
   assert.deepEqual(readFileSync(join(downloaded, 'suite/regression.json')), readFileSync(join(suite, 'regression.json')));
   assert.equal(json(join(downloaded, 'suite/regression.json')).output, suite);
   const qualified = qualifyReturn(j.dir, f.request, returned.archive, expected);
-  assert.equal(verifyQualification(qualified, returned.descriptor, f.request).qualified, true, canonical(qualified));
+  assert.equal(verifyQualification(qualified, returned.descriptor, f.request).qualified, !refused, canonical(qualified));
+  assert.equal(qualified.verification.suite.valid, true); assert.deepEqual(qualified.verification.suite.steps[0].diagnostics, aggregate.steps[0].diagnostics);
+  const output = join(f.source, 'out/result');
+  const fetched = await receive({ config: loadConfig(f.config), request: f.request, output, diagnostic: false, transport: { fetch: async () => publishReturn(j.dir, f.request), download: async (a, b) => cpSync(a, b), qualify: async (request, archive, expected) => qualifyReturn(j.dir, request, archive, expected) } });
+  assert.equal(fetched.transfer_valid, true); assert.equal(fetched.qualified, !refused);
+  assert.equal(fetched.descriptor.verification.suite.valid, true); assert.deepEqual(fetched.descriptor.verification.suite.steps[0].diagnostics, aggregate.steps[0].diagnostics);
+  assert.deepEqual(readFileSync(join(output, 'evidence/suite/regression.json')), receiptBytes); assert.deepEqual(readFileSync(join(suite, 'regression.json')), receiptBytes);
   appendFileSync(join(f.source, 'Sample.uproject'), '\n');
   const changed = qualifyReturn(j.dir, f.request, returned.archive, expected);
   assert.equal(verifyQualification(changed, returned.descriptor, f.request).qualified, false);
+  }
 });
 
 test('C1 typed worker identity ignores only property insertion order and never coerces ownership', () => {

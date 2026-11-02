@@ -63,6 +63,28 @@ Preserve original source, products and evidence at their original paths for
 retained verification. Remote Fetch runs verification at those remote paths and
 binds the result to the transfer; a relocated aggregate cannot be verified locally.
 
+## Launcher refusal
+
+Read step `diagnostics` alongside the unchanged verdict and errors. The
+`launcher_pre_dispatch_refusal` entry means validated request/lifecycle evidence
+proved `permitIssued:false`, after cancellation/timeout precedence and proven
+drain. The message preserves recorded readable reasons or says exactly
+`No workload dispatched. Launcher supplied no readable reason.` Every other state
+has an empty array. Neither exit 74 nor an absent gate proves this refusal; a
+permit alone does not prove engine execution. The linked suite contract defines
+the exact metadata shape and message derivation.
+
+Retained verification independently derives diagnostics, including for legacy
+rows without the field, without rewriting receipt bytes. Present metadata must
+match; a returned `valid:false` clears every step's diagnostics. Remote Fetch
+carries these results under its verification `suite`; valid transfer and valid
+failed-suite evidence can still be unqualified.
+
+Launcher `status:idle` describes the ownership journal, while external engine,
+build or controller processes can still cause contention. Preserve failed
+evidence, inspect ownership/drain, wait for exclusivity and use fresh output for
+a later authorized run. Preserve unrelated workloads and the shared lock.
+
 ## Expected rejection
 
 A `rejected_replay` step declares the exact `expected_refusal` code/path list,
@@ -71,6 +93,7 @@ zero actions and declared process exit. The bundled adapter exits zero after a
 recorded refusal; do not assume an older wrapper's exit convention. A crash,
 timeout, missing/empty report, unrelated or extra issue, normal success or wrong
 exit is a failure. Requested conditions remain mandatory even for a refusal.
+A launcher pre-dispatch refusal cannot satisfy this expected AgentVerify rejection.
 
 The fixture driver writes four steps: build, eight Automation tests, a passing
 two-check replay and one exact refusal. Its refusal requests no runtime conditions;

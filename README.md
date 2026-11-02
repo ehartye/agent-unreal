@@ -14,7 +14,7 @@ repository is marked as tested.
 
 ## Status
 
-Early (0.38.0). Fifteen skills.
+Early (0.38.1). Fifteen skills.
 
 The skills moved here from agent-engine 0.14.0, where their history up to that tag lives; `unreal-import` and its importer scripts followed in 0.2.0. The scripts in `examples/`
 were run on Windows against the engine build pinned in `engine-version.json` unless their README says an earlier build or a hand run; other platforms were not run. The sample scene, the `compare.ps1` example set and the showcase hand runs are earlier-build observations.
@@ -29,6 +29,13 @@ The [shared Windows launcher](scripts/lib/unreal-run/README.md) supplies build, 
 ## Verification status
 
 The [verification suite skill](skills/unreal-verify/SKILL.md) writes versioned manifests, plans without launching an engine, runs through the shared launcher and independently qualifies retained evidence. Read the [suite contract](scripts/lib/unreal-verify/README.md) and [disposable native fixture](examples/unreal/verification_suite/README.md). Consumer adoption requires a complete comparison at one source revision; automatic migration remains unsupported.
+
+Suite step diagnostics now explain validated launcher pre-dispatch refusals with
+the recorded reason, or an explicit missing-reason message, while qualification
+stays unchanged. Retained verification derives these explanations independently
+for legacy receipts without rewriting their bytes. Launcher `status:idle` only
+describes its ownership journal; external workloads can still cause contention.
+Preserve failed evidence and unrelated workloads, and wait for exclusivity.
 
 [Remote suite jobs](skills/unreal-verify/references/unreal-remote-jobs.md) provide typed Start/Status/Cancel/Fetch for an exact clean revision on a Windows engine host. Both ends need Node and Git; the host needs PowerShell 7, SSH access and the existing engine/toolchain. LFS sources also need Git LFS, hydrated objects and an already initialized local LFS repository format. Keep host configuration and fresh state/Fetch output Git-ignored under the source checkout. Qualification runs at original remote paths and is bound to verified returned bytes. [Fixture instructions and acceptance scope](examples/unreal/remote_jobs/README.md) distinguish normal SSH closure from untested forced network failure, and explain the separate no-engine real-LFS check. Remote engine and Git LFS acceptance are not added to merge CI.
 
