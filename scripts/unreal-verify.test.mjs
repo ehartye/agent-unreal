@@ -1,10 +1,10 @@
 import test, { beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync, cpSync, utimesSync, existsSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync, cpSync, utimesSync, existsSync, symlinkSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { execFileSync } from 'node:child_process';
+import { execFileSync, spawnSync } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { prepare, validateManifest, KINDS, assertUnchanged } from './lib/unreal-verify/manifest.mjs';
 import { execute, verifyReceipt } from './lib/unreal-verify/runner.mjs';
@@ -83,6 +83,11 @@ function fakeLauncher(mutate = () => {}) {
     life.drain.observed = life.finished = new Date().toISOString(); mutate({ life, dir, s, prepared }); write(join(command.evidence, 'lifecycle.json'), life);
   };
 }
+function refuse(life, { gate = false, reasons = ['External engine contention; no workload dispatched'] } = {}) {
+  life.permitIssued = false; life.permit = null; life.exitCode = 74; life.errors = reasons;
+  if (!gate) { life.gate = life.probe = null; life.processes = [life.controller, life.helper]; }
+}
+const refusalDiagnostic = message => [{ code: 'launcher_pre_dispatch_refusal', message }];
 
 test('A1 deterministic DAG and all v1 kinds; invalid plans launch nothing', async t => {
   const first = step('first'), last = step('last', 'automation', ['first']);
@@ -195,4 +200,107 @@ test('smoke uses AgentVerify checks; capture and audio require their actual arti
     rmSync(join(out, `000-${kind}/observation`, kind === 'capture' ? 'view.png' : 'audio.wav'));
     assert.equal(verifyReceipt(join(out, 'regression.json')).qualified, false);
   }
+});
+
+test('D1/D4 proved no-permit reasons persist and independently verify without changing dependency scheduling', async t => {
+  for (const gate of [false, true]) for (const reasons of [undefined, [' first ', null, 42, '', ' \t', 'second'], [], [null, {}, 7, ' \t']]) {
+    const f = fixture(t, [step('refused'), step('dependent', 'automation', ['refused']), step('independent')]), out = join(f.root, 'run');
+    const expected = refusalDiagnostic(reasons === undefined ? 'No workload dispatched. Launcher reason: External engine contention; no workload dispatched' : reasons.some(reason => typeof reason === 'string' && reason.trim()) ? 'No workload dispatched. Launcher reason:  first ; second' : 'No workload dispatched. Launcher supplied no readable reason.');
+    const result = await execute(f.prepare(), out, { launch: fakeLauncher(({ life, s }) => { if (s.id === 'refused') refuse(life, { gate, reasons }); }) });
+    assert.equal(result.schema_version, 1); assert.equal(result.qualified, false); assert.equal(result.outcome, 'failed');
+    assert.deepEqual(result.steps.map(({ status, checks_run, diagnostics }) => ({ status, checks_run, diagnostics })), [{ status: 'failed', checks_run: 0, diagnostics: expected }, { status: 'blocked_dependency', checks_run: 0, diagnostics: [] }, { status: 'passed', checks_run: 1, diagnostics: [] }]);
+    assert.deepEqual(result.steps[0].errors, ['Launcher workload exit or error differs from expectation']);
+    const file = join(out, 'regression.json'); assert.deepEqual(read(file), result);
+    const checked = verifyReceipt(file); assert.equal(checked.valid, true, JSON.stringify(checked)); assert.equal(checked.qualified, false); assert.deepEqual(checked.steps.map(s => s.diagnostics), result.steps.map(s => s.diagnostics));
+    const printed = []; assert.equal(await main(['--verify-receipt', file], value => printed.push(value)), 1); assert.deepEqual(printed, [checked]);
+  }
+});
+
+test('D2 invalid or superseding lifecycle facts never assert a pre-dispatch cause', async t => {
+  for (const mode of ['cancel', 'timeout', 'both', 'request', 'hash', 'command', 'interval', 'operation', 'drain', 'drain-time', 'missing-errors', 'permit-issued', 'missing-report', 'stale-report', 'zero-count']) {
+    const f = fixture(t, [step('one'), step('dependent', 'automation', ['one']), step('independent')]), out = join(f.root, 'run');
+    const result = await execute(f.prepare(), out, { launch: fakeLauncher(({ life, dir, s }) => {
+      if (s.id !== 'one') return;
+      if (!['permit-issued', 'missing-report', 'stale-report', 'zero-count'].includes(mode)) refuse(life);
+      if (mode === 'cancel' || mode === 'both') life.cancelled = true;
+      if (mode === 'timeout' || mode === 'both') life.timedOut = true;
+      if (mode === 'hash') life.requestHash = 'b'.repeat(64);
+      if (mode === 'request' || mode === 'command') {
+        const file = join(dir, 'launcher/request.json'), request = read(file);
+        if (mode === 'request') request.nonce = 'invalid'; else request.arguments.push('-Unexpected');
+        write(file, request); life.requestHash = life.drain.requestHash = sha256(readFileSync(file));
+      }
+      if (mode === 'interval') life.started = new Date(Date.now() - 1).toISOString();
+      if (mode === 'operation') life.operation = 'game';
+      if (mode === 'drain') life.drain.proved = false;
+      if (mode === 'drain-time') life.drain.observed = new Date(Date.now() + 1).toISOString();
+      if (mode === 'missing-errors') delete life.errors;
+      if (mode === 'permit-issued') { life.exitCode = 74; life.errors = ['External engine contention; no workload dispatched']; }
+      if (mode === 'missing-report') rmSync(join(dir, 'report/index.json'));
+      if (mode === 'stale-report') utimesSync(join(dir, 'report/index.json'), new Date(0), new Date(0));
+      if (mode === 'zero-count') write(join(dir, 'report/index.json'), { ...report(), succeeded: 0, tests: [] });
+    }) });
+    const status = ['cancel', 'both'].includes(mode) ? 'cancelled' : mode === 'timeout' ? 'timed_out' : ['permit-issued', 'missing-report', 'stale-report', 'zero-count'].includes(mode) ? 'failed' : 'unknown';
+    assert.equal(result.steps[0].status, status, mode); assert.equal(result.qualified, false, mode);
+    assert.ok(result.steps.every(s => Array.isArray(s.diagnostics) && s.diagnostics.length === 0), mode);
+    assert.equal(result.steps[2].status, ['unknown', 'cancelled'].includes(status) ? status === 'cancelled' ? 'cancelled' : 'not_run' : 'passed', mode);
+    const checked = verifyReceipt(join(out, 'regression.json')); assert.equal(checked.valid, true, `${mode}: ${JSON.stringify(checked)}`); assert.ok(checked.steps.every(s => s.diagnostics.length === 0));
+  }
+  const f = fixture(t, [step('reject', 'rejected_replay')]);
+  const refused = await execute(f.prepare(), join(f.root, 'refused'), { launch: fakeLauncher(({ life }) => refuse(life)) });
+  assert.equal(refused.qualified, false); assert.equal(refused.steps[0].checks_run, 0); assert.equal(refused.steps[0].diagnostics.length, 1);
+  const accepted = await execute(f.prepare(), join(f.root, 'accepted'), { launch: fakeLauncher() }); assert.equal(accepted.qualified, true); assert.deepEqual(accepted.steps[0].diagnostics, []);
+});
+
+test('D3 legacy receipts derive diagnostics without rewriting bytes; exact metadata is independently checked', async t => {
+  const f = fixture(t, [step('one'), step('two')]), out = join(f.root, 'run'), file = join(out, 'regression.json');
+  const original = await execute(f.prepare(), out, { launch: fakeLauncher(({ life }) => refuse(life)) });
+  const legacy = structuredClone(original); for (const row of legacy.steps) delete row.diagnostics; write(file, legacy);
+  const bytes = readFileSync(file), hash = sha256(bytes), checked = verifyReceipt(file);
+  assert.equal(checked.valid, true); assert.equal(checked.qualified, false); assert.deepEqual(checked.steps.map(s => s.diagnostics), original.steps.map(s => s.diagnostics));
+  assert.deepEqual(readFileSync(file), bytes); assert.equal(sha256(readFileSync(file)), hash);
+  const reordered = structuredClone(original); reordered.steps[0].diagnostics = original.steps[0].diagnostics.map(({ code, message }) => ({ message, code })); write(file, reordered); assert.equal(verifyReceipt(file).valid, true);
+  for (const value of [null, {}, 'refused', [], [null], [original.steps[0].diagnostics[0], original.steps[0].diagnostics[0]], [{ ...original.steps[0].diagnostics[0], code: 'unknown' }], [{ ...original.steps[0].diagnostics[0], extra: true }], [{ ...original.steps[0].diagnostics[0], message: 'invented cause' }], [{ code: 'launcher_pre_dispatch_refusal' }]]) {
+    const changed = structuredClone(original); changed.steps[1].diagnostics = value; write(file, changed);
+    const invalid = verifyReceipt(file); assert.equal(invalid.valid, false, JSON.stringify(value)); assert.equal(invalid.qualified, false); assert.ok(invalid.errors.some(error => error.includes('diagnostics'))); assert.deepEqual(invalid.steps.map(s => s.diagnostics), [[], []]);
+  }
+  for (const mutate of [r => r.prepared.source.snapshot = 'b'.repeat(64), r => r.steps[1].id = 'changed', r => r.steps[1].checks_run = 1, r => r.steps[1].started = new Date(Date.now() - 1).toISOString(), r => r.qualified = true]) {
+    const changed = structuredClone(original); mutate(changed); write(file, changed); const invalid = verifyReceipt(file);
+    assert.equal(invalid.valid, false); assert.equal(invalid.qualified, false); assert.deepEqual(invalid.steps.map(s => s.diagnostics), [[], []]);
+  }
+  write(file, original); const commandFile = join(out, '001-two/command.json'), command = read(commandFile); write(commandFile, { ...command, timeoutMs: 1 });
+  const invalidCommand = verifyReceipt(file); assert.equal(invalidCommand.valid, false); assert.deepEqual(invalidCommand.steps.map(s => s.diagnostics), [[], []]);
+  write(commandFile, command); writeFileSync(join(out, '001-two/additional-evidence'), 'unbound');
+  const invalidInventory = verifyReceipt(file); assert.equal(invalidInventory.valid, false); assert.deepEqual(invalidInventory.steps.map(s => s.diagnostics), [[], []]);
+});
+
+test('D3/D4 undispatched and fabricated refusal labels, existing thrown input and CLI exits stay strict', async t => {
+  const f = fixture(t, [step('one'), step('blocked', 'automation', ['one'])]), out = join(f.root, 'run'), file = join(out, 'regression.json');
+  const original = await execute(f.prepare(), out, { launch: fakeLauncher(({ life }) => refuse(life)) });
+  const fabricated = structuredClone(original); fabricated.steps[1].diagnostics = original.steps[0].diagnostics; write(file, fabricated);
+  const invalid = verifyReceipt(file); assert.equal(invalid.valid, false); assert.deepEqual(invalid.steps.map(s => s.diagnostics), [[], []]);
+  const invoke = () => spawnSync(process.execPath, [join(repo, 'scripts/unreal-verify.mjs'), '--verify-receipt', file], { encoding: 'utf8', windowsHide: true });
+  assert.equal(invoke().status, 1); write(file, original); const unqualified = invoke(); assert.equal(unqualified.status, 1); assert.equal(JSON.parse(unqualified.stdout).steps[0].diagnostics.length, 1);
+  for (const mutate of [r => r.prepared.project = null, r => r.steps[0] = null, r => r.steps[0].evidence = null]) {
+    const malformed = structuredClone(original); mutate(malformed); write(file, malformed); const printed = [];
+    assert.throws(() => verifyReceipt(file)); await assert.rejects(main(['--verify-receipt', file], value => printed.push(value))); assert.deepEqual(printed, []);
+    const exited = invoke(); assert.equal(exited.status, 2); assert.equal(exited.stdout, ''); assert.ok(exited.stderr.length > 0);
+  }
+  write(file, original); symlinkSync(join(out, '000-one/report'), join(out, '000-one/linked-artifact'), process.platform === 'win32' ? 'junction' : 'dir');
+  assert.throws(() => verifyReceipt(file), /symlink/i); const artifactExit = invoke(); assert.equal(artifactExit.status, 2); assert.equal(artifactExit.stdout, '');
+  const g = fixture(t), passedOut = join(g.root, 'run'); await execute(g.prepare(), passedOut, { launch: fakeLauncher() });
+  const printed = []; assert.equal(await main(['--verify-receipt', join(passedOut, 'regression.json')], value => printed.push(value)), 0); assert.equal(printed[0].qualified, true); assert.deepEqual(printed[0].steps[0].diagnostics, []);
+  const passed = read(join(passedOut, 'regression.json')); passed.steps[0].diagnostics = original.steps[0].diagnostics; write(join(passedOut, 'regression.json'), passed); assert.equal(verifyReceipt(join(passedOut, 'regression.json')).valid, false);
+});
+
+test('D4 later evidence or source errors clear execution diagnostics and abort leaves empty undispatched arrays', async t => {
+  const f = fixture(t), out = join(f.root, 'inventory-error');
+  const unknown = await execute(f.prepare(), out, { launch: fakeLauncher(({ life, dir }) => { refuse(life); symlinkSync(join(dir, 'report'), join(dir, 'link'), process.platform === 'win32' ? 'junction' : 'dir'); }) });
+  assert.equal(unknown.steps[0].status, 'unknown'); assert.deepEqual(unknown.steps[0].diagnostics, []);
+  let checks = 0;
+  const invalidated = await execute(f.prepare(), join(f.root, 'source-error'), { launch: fakeLauncher(({ life }) => refuse(life)), unchanged: prepared => { assertUnchanged(prepared); if (++checks === 2) throw Error('Inputs changed after dispatch'); } });
+  assert.deepEqual(invalidated.errors, ['Inputs changed after dispatch']); assert.deepEqual(invalidated.steps[0].diagnostics, []);
+  const control = new AbortController(); control.abort();
+  const cancelled = await execute(f.prepare(), join(f.root, 'aborted'), { signal: control.signal, launch: async () => assert.fail('Must not dispatch') });
+  assert.equal(cancelled.steps[0].status, 'cancelled'); assert.deepEqual(cancelled.steps[0].diagnostics, []); assert.equal(verifyReceipt(join(f.root, 'aborted/regression.json')).valid, true);
 });

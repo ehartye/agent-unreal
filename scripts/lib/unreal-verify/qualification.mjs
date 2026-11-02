@@ -48,7 +48,7 @@ export function qualifyObservation(receipt, document, step, options) {
 }
 export function qualifyStep(step, prepared, directory, interval, expectedCommand) {
   let lifecycle, request;
-  const failure = (status, errors, extra = {}) => ({ status, errors, checks_run: 0, outcome: status, ...extra });
+  const failure = (status, errors, extra = {}) => ({ status, errors, checks_run: 0, outcome: status, diagnostics: [], ...extra });
   try {
     if (!Number.isFinite(Date.parse(interval.started)) || !Number.isFinite(Date.parse(interval.finished)) || Date.parse(interval.finished) < Date.parse(interval.started)) throw Error('Invalid step interval');
     const requestBytes = readArtifact(join(directory, 'launcher'), 'request.json'); request = json(requestBytes);
@@ -62,6 +62,11 @@ export function qualifyStep(step, prepared, directory, interval, expectedCommand
   } catch (error) { return failure('unknown', [error.message]); }
   if (lifecycle.cancelled) return failure('cancelled', ['Launcher recorded cancellation']);
   if (lifecycle.timedOut) return failure('timed_out', ['Launcher recorded timeout']);
+  if (lifecycle.permitIssued === false) {
+    const reasons = lifecycle.errors.filter(reason => typeof reason === 'string' && reason.trim().length > 0);
+    const message = reasons.length ? `No workload dispatched. Launcher reason: ${reasons.join('; ')}` : 'No workload dispatched. Launcher supplied no readable reason.';
+    return failure('failed', ['Launcher workload exit or error differs from expectation'], { diagnostics: [{ code: 'launcher_pre_dispatch_refusal', message }] });
+  }
   const expectedExit = step.kind === 'rejected_replay' ? step.expected_exit_code : 0;
   if (!lifecycle.permitIssued || lifecycle.errors.length || lifecycle.exitCode !== expectedExit) return failure('failed', ['Launcher workload exit or error differs from expectation']);
   try {
@@ -85,7 +90,7 @@ export function qualifyStep(step, prepared, directory, interval, expectedCommand
       checked = qualifyObservation(receipt, document, step, { requestSha256: sha256(input), expectedSource: prepared.observation_source.identity, artifacts });
       if (step.kind !== 'rejected_replay' && receipt.environment?.configuration !== prepared.config.configuration) { checked.valid = false; checked.errors.push('Observed configuration differs from launcher configuration'); }
     }
-    return { status: checked.valid ? 'passed' : 'failed', errors: checked.errors, checks_run: checked.checks_run, outcome: checked.outcome };
+    return { status: checked.valid ? 'passed' : 'failed', errors: checked.errors, checks_run: checked.checks_run, outcome: checked.outcome, diagnostics: [] };
   } catch (error) { return failure('failed', [error.message]); }
 }
 export function inventory(directory, relative = '') {
