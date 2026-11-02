@@ -144,26 +144,11 @@
     "yoda"
   ],
   "wiki-master": [
-    "clip-confluence",
-    "clip-docx",
-    "clip-gh",
-    "clip-pdf",
-    "clip-pptx",
-    "clip-xlsx",
-    "obsidian-cli",
-    "wiki-author",
-    "wiki-discover",
-    "wiki-health",
-    "wiki-ingest",
-    "wiki-init",
-    "wiki-lint",
     "wiki-maintainer",
+    "wiki-project",
     "wiki-purge",
-    "wiki-query",
-    "wiki-relink",
-    "wiki-repair",
+    "wiki-researcher",
     "wiki-search",
-    "wiki-stale",
-    "wiki-triage"
+    "wiki-setup"
   ]
 }
