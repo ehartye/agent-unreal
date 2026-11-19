@@ -156,3 +156,5 @@ For actual build, commandlet, editor/game and package smoke checks, use the
 For a targeted owner-death repair check, append `--only owner-death,helper-death`
 to the native acceptance command. The report names the selected cases and marks
 `fullSuite: false`; a partial report never substitutes for full native acceptance.
+
+Member identity observations pin a Job-verified process handle until the member is no longer listed. If PID lookup reports that this previously observed process has disappeared, only an exited exact handle still belonging to this same Job can witness that exit. Unknowns, access failure, live members, and ambiguous terminal accounting still fail closed. Pins are closed before final accounting; an exit witness is not the request-bound zero-member, zero-active Job drain.
