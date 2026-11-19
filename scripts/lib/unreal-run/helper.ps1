@@ -47,6 +47,8 @@ function Publish-Owner {
     $owner.processes=$processes.ToArray()
     Write-Json $ownerPath $owner
 }
+. (Join-Path $PSScriptRoot 'pinned-members.ps1')
+$pins=@{}
 function Observe-JobMember([int]$MemberId) {
     # Membership is a snapshot: an exiting process can remain listed briefly
     # after GetProcessById can no longer open it. Reconcile for at most one second;
@@ -66,10 +68,24 @@ function Observe-JobMember([int]$MemberId) {
                 $diagnostic=@{pid=$MemberId;stage=$stage;attempt=$attempt;elapsedMs=$clock.ElapsedMilliseconds;listed=$true;outcome='identity-observed';identity=$value;error=$lastFailure;observed=[DateTime]::UtcNow.ToString('o')}
                 [IO.File]::AppendAllText((Join-Path $r.evidence 'member-observations.jsonl'),(($diagnostic|ConvertTo-Json -Depth 10 -Compress)+[Environment]::NewLine))
             }
+            if(-not $pins.ContainsKey($MemberId)){$pins[$MemberId]=@{process=$member;identity=$value;reported=$false};$member=$null}
             return $value
         } catch {
-            $failure=@{type=$_.Exception.GetType().FullName;message=$_.Exception.Message;detail=$_.Exception.ToString();stack=$_.ScriptStackTrace}
+            $missing=$_.Exception.GetBaseException() -is [ArgumentException]
+            $failure=@{missing=$missing;type=$_.Exception.GetType().FullName;message=$_.Exception.Message;detail=$_.Exception.ToString();stack=$_.ScriptStackTrace}
         } finally {if($member){$member.Dispose()}}
+        if($stage -eq 'open' -and $failure.missing){
+            # A pinned handle prevents PID reuse while its kernel object is referenced.
+            # Its signaled state is an exit observation, never proof of Job drain.
+            $saved=Find-PinnedExit $pins $MemberId $job
+            if($null -ne $saved){
+                if(-not $saved.reported){
+                    $record=@{pid=$MemberId;stage=$stage;attempt=$attempt;outcome='pinned-exit';identity=$saved.identity;observed=[DateTime]::UtcNow.ToString('o')}
+                    [IO.File]::AppendAllText((Join-Path $r.evidence 'member-observations.jsonl'),(($record|ConvertTo-Json -Depth 10 -Compress)+[Environment]::NewLine));$saved.reported=$true
+                }
+                return $saved.identity
+            }
+        }
         $lastFailure=$failure
         try {$listed=$MemberId -in $job.ProcessIds()} catch {
             throw ("Job membership recheck failed for PID {0} after {1}: {2}; membership query: {3}" -f $MemberId,$stage,$failure.detail,$_.Exception.ToString())
@@ -173,7 +189,8 @@ try {
     while(-not $gate.HasExited){
         Check-Owner
         if($workWatch.ElapsedMilliseconds -ge $r.timeoutMs){$timedOut=$true;throw 'Bounded workload timeout'}
-        foreach($memberId in $job.ProcessIds()){
+        $listedIds=@($job.ProcessIds());Close-PinsExcept $pins $listedIds
+        foreach($memberId in $listedIds){
             $memberIdentity=Observe-JobMember $memberId
             if($null -ne $memberIdentity -and -not @($processes|Where-Object {$_.pid -eq $memberIdentity.pid -and $_.created -eq $memberIdentity.created}).Count){$processes.Add($memberIdentity);Publish-Owner}
         }
@@ -188,6 +205,7 @@ try {
     if($Action -eq 'clear-stale'){Write-Json (Join-Path $r.evidence 'recovery.json') @{version=1;kind='unreal-run/recovery';id=$r.id;lock=$r.lock;allowed=$false;reason=$_.Exception.Message;observed=[DateTime]::UtcNow.ToString('o')}}
 }
 finally {
+    Close-PinsExcept $pins @()
     if($owner){
         try {
             if($job -and $job.ActiveProcesses() -gt 0){$forced=$true;$job.Terminate()}

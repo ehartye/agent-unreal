@@ -179,6 +179,7 @@ try {
     return { cases: records.length, evidence: join(root, 'recovery-cases.json') };
   });
   await check('rapid child and grandchild exits reconcile membership snapshots before strict drain', async () => {
+    execFileSync('pwsh',['-NoProfile','-NonInteractive','-File',join(here,'fixtures/pinned-exit.ps1'),'-Node',process.execPath],{windowsHide:true,timeout:15000});
     const r = await run({ ...options('rapid-exit', 'rapid'), timeoutMs: 30000 });
     assert.equal(r.exitCode, 0, JSON.stringify(r.lifecycle?.errors));
     assert.equal(verifyLifecycle(r.lifecycle, { purpose: 'fixture' }).valid, true);
