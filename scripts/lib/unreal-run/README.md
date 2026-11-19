@@ -4,7 +4,7 @@ Use `node scripts/unreal-run.mjs --help` for the public operations: `build`,
 `editor`, `game`, `commandlet`, `package`, `test`, `status`, `doctor`, `clear-stale`.
 Windows, Node and PowerShell 7 are required. Native acceptance is separate from
 the dependency-free Linux merge gate. Existing projects keep their own launcher
-until a separately verified migration; do not nest two exclusion mechanisms.
+until a separately verified migration.
 
 Store machine paths in an ignored project configuration, never in plugin source:
 
@@ -49,11 +49,9 @@ propagate; launcher/cleanup/identity failures return 74 and invalid input return
 
 ## Ownership and recovery
 
-Production always uses `Global\agent-plugins-engine-runs`. The journal is
-`%ProgramData%/agent-unreal/engine-runs/owner.json`; inability to access it refuses
-the launch. There is no production lock-name override or supported launch bypass.
-All participating users must have access to the same journal and global mutex;
-the launcher never broadens machine permissions automatically.
+Each launch keeps its ownership journal in its own evidence directory. Independent
+launches can overlap. A missing drain affects the evidence for that request alone.
+The launcher neither acquires a machine-wide process lock nor scans other engines.
 
 The Node controller binds its PID and creation time into a fresh request. The
 helper owns an unnamed, non-inheritable, kill-on-close Job without breakaway. A
@@ -72,37 +70,30 @@ exception and reconciliation outcome in `member-observations.jsonl`. Persistent
 failure refuses the run; a reconciled snapshot never substitutes for final drain.
 
 Ctrl+C and SIGTERM request cancellation; the controller waits for cleanup.
-Controller death is separately detected through creation identity. Helper death
-leaves the persistent journal unresolved even when Windows closes the Job and
-terminates its members. Later launches refuse that journal, including after an
-abandoned mutex is acquired. Diagnostic receipts remain available on refusal.
-A small hidden Node host is detached from the controller's child lifetime and
-starts PowerShell normally, so the helper can observe controller death and
-finish cleanup. Its creation identity joins the ownership record. The controller
-still awaits normal completion. This does not detach workloads from the helper's
-owned Job or establish survival after an entire hosting session is terminated.
+The detached supervisor lets the helper observe controller death and finish
+cleanup. While it still owns the Job, the helper polls both accounting and the
+member list, persists the request-bound lifecycle and releases the owner record
+after a proved drain. Abrupt helper death can leave an owner record with no
+drain. Preserve that request's evidence as an unknown outcome.
 
-`status` reports owner, command, start/elapsed time and effective lock. Waiters
-report the holder promptly and every five seconds. `doctor` exercises only inert
-children through the same containment path. `clear-stale` acquires the mutex and
-refuses missing, malformed, live, reused-PID or unknown ownership. It accepts only
-no-permit evidence with every recorded creation identity gone, or a valid owned
-zero-member drain proof with those identities gone. Every recovery decision gets
-`recovery.json`. Age is irrelevant; there is no force-clear option.
+`status` reports the independent launch policy and any pre-upgrade journal in
+`legacyOwner`. For a current run, inspect `owner.json` or `lifecycle.json` in
+its evidence directory. `doctor` exercises the same Job with an inert workload.
 
-The launcher detects known external editor/game/build/tool processes before
-dispatch and refuses with `contention.json`; it never stops them. It cannot
-prevent arbitrary manual launches or broker-created processes outside its Job,
-nor recognize every renamed/custom executable. Participating consumers must use
-the same launcher. The mutex and journal are coordination, not an adversarial
-security boundary against other code running as the same user.
+Plain `clear-stale` retains the original proof rules for a legacy journal under
+`%ProgramData%/agent-unreal/engine-runs`. If the helper died after issuing a
+permit and its drain witness was lost, explicitly archive the original journal:
 
-The exact `EOSOverlayRenderer-Win32-Shipping.exe` and
-`EOSOverlayRenderer-Win64-Shipping.exe` names identify Epic's separately
-distributed EOS overlay, not a game workload; they are excluded from the
-packaged-game suffix check. Near-name games still block dispatch. Classifier
-failure or malformed observations refuse dispatch rather than reporting an
-empty scan. This name-based exception is not executable authentication.
+```powershell
+node scripts/unreal-run.mjs clear-stale --archive-unwitnessed Saved/interrupted/request.json --evidence Saved/archive-proof
+```
+
+Recovery holds the legacy mutex during inspection and compares the supplied
+request ID and SHA-256 with the owner. Every recorded creation identity must be
+gone. A matching unwitnessed journal is renamed byte-for-byte in its original
+directory. The recovery receipt records `archived-unwitnessed` and the archive
+path. The interrupted workload retains an unknown outcome. The command never
+uses `last.json` as evidence.
 
 ## Receipt contract and embedding API
 
@@ -127,9 +118,9 @@ unvalidated archive path. Receipt success does not prove arbitrary test assertio
 
 `runContainedProcess(options)` in `controller.mjs` is the internal embedding API
 for the compatibility adapter: `{executable, arguments, cwd, evidence, timeoutMs,
-waitMs, operation:'compat', signal, onDiagnostic, onStdout, onStderr}`. It owns the lock once around
+waitMs, operation:'compat', signal, onDiagnostic, onStdout, onStderr}`. It owns one Job around
 the whole child tree, so a Node probe may launch its engine children inside that
-Job without recursively acquiring the same lock. It returns the child exit,
+Job. It returns the child exit,
 request, lifecycle and validation. `fixtureIsolation` is only for the inert
 harness; fixture receipts cannot qualify production evidence and the public CLI
 does not expose this option. Production consumers cannot change state or lock.
@@ -149,10 +140,10 @@ node scripts/lib/unreal-run/verify-receipt.mjs Saved/editor-proof
 
 The first two need no engine or Windows helper. The native-acceptance command requires Windows and
 returns its unique retained OS-temp evidence directory; an optional first path
-selects an empty output directory. It uses isolated global mutexes, never the
-production mutex, and only inert child/grandchild workloads. It covers exact
+selects an empty output directory. It uses inert child/grandchild workloads and
+a fixture-only mutex for legacy recovery. It covers exact
 arguments, exit propagation, timeout, cancellation, containment refusal,
-controller/helper death, accounting quarantine, two independent consumers,
+controller/helper death, missing accounting, overlapping consumers,
 recovery refusal/acceptance and survival of an unrelated sentinel. Run the same
 command through a remote session for that host's fixture acceptance. Engine
 build/editor/game/commandlet/package smoke acceptance is a separate native lane;

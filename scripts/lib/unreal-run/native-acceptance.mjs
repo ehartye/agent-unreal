@@ -11,7 +11,7 @@ import { verifyLifecycle, hash, recoveryDecision } from './contracts.mjs';
 import { corruptRecoveryCases } from './fixtures/recovery-cases.mjs';
 if (process.platform !== 'win32') throw Error('Native acceptance requires Windows; a skip is not acceptance');
 const here = dirname(fileURLToPath(import.meta.url));
-const caseIds = ['normal', 'nonzero', 'timeout', 'cancel', 'containment', 'owner-death', 'accounting', 'helper-death', 'exclusion', 'recovery', 'rapid-exit', 'observation'];
+const caseIds = ['normal', 'nonzero', 'timeout', 'cancel', 'containment', 'owner-death', 'accounting', 'helper-death', 'overlap', 'recovery', 'rapid-exit', 'observation'];
 const argv = process.argv.slice(2);
 const output = argv[0] && !argv[0].startsWith('--') ? argv.shift() : null;
 let selected = caseIds;
@@ -55,11 +55,13 @@ try {
     const o = options('cancel', 'long'); const abort = new AbortController(); const promise = run({ ...o, signal: abort.signal });
     await until(() => existsSync(join(o.evidence, 'workload-started.json'))); abort.abort();
     const r = await promise; assert.equal(r.lifecycle.cancelled, true); assert.equal(r.lifecycle.drain.proved, true);
+    assert.equal(r.lifecycle.drain.requestHash, r.requestHash); assert.equal(r.lifecycle.id, r.request.id);
+    assert.equal(existsSync(join(o.evidence, 'owner.json')), false);
   });
   await check('failed containment refuses before workload and releases proved empty ownership', async () => {
     const o = options('containment'); o.fixtureIsolation.fault = 'containment'; const r = await run(o);
     assert.equal(r.exitCode, 74); assert.equal(r.lifecycle.permitIssued, false); assert.equal(r.lifecycle.drain.proved, true);
-    assert.equal(existsSync(join(root, 'containment-workload.json')), false); assert.equal(existsSync(join(o.fixtureIsolation.state, 'owner.json')), false);
+    assert.equal(existsSync(join(root, 'containment-workload.json')), false); assert.equal(existsSync(join(o.evidence, 'owner.json')), false);
   });
   await check('controller death drains owned descendants', async () => {
     const o = options('owner-death', 'long'); const config = join(root, 'owner-death-options.json'); writeJson(config, o);
@@ -69,46 +71,46 @@ try {
     const receipt = readJson(join(o.evidence, 'lifecycle.json')); assert.equal(receipt.cancelled, true); assert.equal(receipt.drain.proved, true);
     assert.equal(verifyLifecycle(receipt, { purpose: 'fixture', requireSuccess: false }).valid, true);
     assert.match(receipt.errors.join('\n'), /Controller process identity is no longer live/);
-    assert.equal(existsSync(join(o.fixtureIsolation.state, 'owner.json')), false);
+    assert.equal(existsSync(join(o.evidence, 'owner.json')), false);
     return { receipt: join(o.evidence, 'lifecycle.json') };
   });
-  await check('ambiguous accounting quarantines and refuses recovery', async () => {
+  await check('ambiguous accounting retains the request-local journal', async () => {
     const o = options('accounting', 'long'); o.fixtureIsolation.fault = 'accounting'; const r = await run(o);
-    assert.equal(r.exitCode, 74); assert.equal(r.lifecycle.drain.proved, false); assert.equal(existsSync(join(o.fixtureIsolation.state, 'owner.json')), true);
-    const recovery = await run({ ...options('accounting-recovery', 'normal', { lock: o.fixtureIsolation.lock, state: o.fixtureIsolation.state }), action: 'clear-stale' });
-    assert.notEqual(recovery.exitCode, 0); assert.equal(existsSync(join(o.fixtureIsolation.state, 'owner.json')), true);
+    assert.equal(r.exitCode, 74); assert.equal(r.lifecycle.drain.proved, false); assert.equal(existsSync(join(o.evidence, 'owner.json')), true);
+    assert.equal(readJson(join(o.evidence, 'owner.json')).requestHash, r.requestHash);
   });
   await check('helper death leaves unknown journal and cannot turn handle-close into drain proof', async () => {
     const o = options('helper-death', 'long');
     const promise = run(o);
     await until(() => existsSync(join(o.evidence, 'workload-started.json')));
-    const ownedHelper = readJson(join(o.fixtureIsolation.state, 'owner.json')).helper;
+    const ownedHelper = readJson(join(o.evidence, 'owner.json')).helper;
     execFileSync('pwsh', ['-NoProfile', '-NonInteractive', '-File', join(here, 'fixtures/kill-identity.ps1'), '-ProcessId', String(ownedHelper.pid), '-Created', ownedHelper.created], { windowsHide: true, timeout: 10000 });
     const r = await promise;
     assert.notEqual(r.exitCode, 0); assert.equal(r.lifecycle, null);
-    const journal = readJson(join(o.fixtureIsolation.state, 'owner.json')); assert.equal(journal.permitIssued, true); assert.equal(journal.drain, null);
-    const refused = await run({ ...options('helper-death-next', 'normal', o.fixtureIsolation) });
-    assert.notEqual(refused.exitCode, 0); assert.equal(existsSync(join(root, 'helper-death-next-workload.json')), false);
+    const journal = readJson(join(o.evidence, 'owner.json')); assert.equal(journal.permitIssued, true); assert.equal(journal.drain, null);
+    const next = await run(options('helper-death-next', 'normal', o.fixtureIsolation));
+    assert.equal(next.exitCode, 0); assert.deepEqual(readJson(join(o.evidence, 'owner.json')), journal);
   });
-  await check('two independent consumers never overlap and waiter reports holder', async () => {
-    const shared = isolation(); const first = options('consumer-a', 'exclusion', shared); const second = options('consumer-b', 'normal', shared);
-    const configA = join(root, 'consumer-a-options.json'); const configB = join(root, 'consumer-b-options.json'); writeJson(configA, first); writeJson(configB, second);
-    const a = spawn(process.execPath, [join(here, 'fixtures/controller.mjs'), configA], { windowsHide: true, stdio: 'ignore' });
-    await until(() => existsSync(join(first.evidence, 'workload-permit.json')));
-    const status = await run({ ...options('consumer-status', 'normal', shared), action: 'status', operation: 'status' });
-    assert.equal(status.exitCode, 0);
-    const observedStatus = JSON.parse(status.output); assert.equal(observedStatus.lock, shared.lock); assert.equal(observedStatus.owner.id, readJson(join(first.evidence, 'request.json')).id);
-    assert.ok(observedStatus.owner.command.length > 0 && observedStatus.owner.started && observedStatus.elapsedSeconds >= 0);
-    const refused = await run({ ...options('consumer-wait-timeout', 'normal', shared), waitMs: 250 });
-    assert.notEqual(refused.exitCode, 0); assert.match(refused.lifecycle.errors.join('\n'), /Bounded lock wait expired/);
-    assert.equal(existsSync(join(root, 'consumer-wait-timeout-workload.json')), false);
-    const b = spawn(process.execPath, [join(here, 'fixtures/controller.mjs'), configB], { windowsHide: true, stdio: 'ignore' });
-    const done = p => new Promise(resolveExit => { if (p.exitCode !== null) resolveExit(p.exitCode); else p.once('exit', resolveExit); });
-    const codes = await Promise.all([done(a), done(b)]); assert.deepEqual(codes, [0, 0]);
-    const aResult = readJson(join(first.evidence, 'workload-result.json')); const bResult = readJson(join(second.evidence, 'workload-result.json'));
-    assert.ok(Date.parse(aResult.finished) <= Date.parse(bResult.started));
-    assert.equal(readJson(join(first.evidence, 'lifecycle.json')).lock, readJson(join(second.evidence, 'lifecycle.json')).lock);
-    assert.match(readFileSync(join(second.evidence, 'helper.stderr.log'), 'utf8'), /Waiting for.*holder:/);
+  await check('independent requests overlap despite an unresolved legacy journal', async () => {
+    const shared = isolation(); mkdirSync(shared.state);
+    const legacy = Buffer.from('old unresolved journal');
+    writeFileSync(join(shared.state, 'owner.json'), legacy);
+    const first = options('consumer-a', 'long', shared);
+    const abort = new AbortController();
+    const a = run({ ...first, signal: abort.signal, timeoutMs: 30000 });
+    let b;
+    try {
+      await until(() => existsSync(join(first.evidence, 'workload-started.json')));
+      b = await run(options('consumer-b', 'normal', shared));
+    } finally { abort.abort(); }
+    const cancelled = await a;
+    assert.equal(b.exitCode, 0);
+    assert.equal(cancelled.lifecycle.cancelled, true);
+    for (const r of [b, cancelled]) {
+      assert.equal(verifyLifecycle(r.lifecycle, { purpose: 'fixture', requireSuccess: false, requestId: r.request.id, requestHash: r.requestHash }).valid, true);
+    }
+    assert.notEqual(b.requestHash, cancelled.requestHash);
+    assert.deepEqual(readFileSync(join(shared.state, 'owner.json')), legacy);
   });
   await check('clear-stale refuses absent corrupt live reused and ambiguous; accepts both proven cases', async () => {
     // Seeded recovery records are explicit fixture data, never production receipts.
@@ -139,6 +141,23 @@ try {
       assert.equal(existsSync(join(r.evidence, 'workload-started.json')), false);
       records.push({ scenario, allowed, pure, evidence: r.evidence, ownerPreserved: original !== null && !allowed });
     }
+    const shared = isolation(); mkdirSync(shared.state);
+    const ownerPath = join(shared.state, 'owner.json');
+    const oldRequest = { ...normal.request, id: randomUUID(), lock: shared.lock, state: shared.state };
+    const oldPath = join(root, 'legacy-request.json'); writeJson(oldPath, oldRequest);
+    const original = { version: 1, kind: 'unreal-run/owner', id: oldRequest.id, started: normal.lifecycle.started, purpose: 'fixture', lock: shared.lock, requestHash: hash(readFileSync(oldPath)), permitIssued: true, phase: 'running', controller: normal.lifecycle.gate, helper: normal.lifecycle.helper, processes: [normal.lifecycle.gate, normal.lifecycle.helper], drain: null };
+    writeJson(ownerPath, original);
+    writeJson(join(shared.state, 'last.json'), normal.lifecycle);
+    const bytes = readFileSync(ownerPath);
+    const recover = (name, path) => run({ ...options(name, 'normal', shared), action: 'clear-stale', archiveRequest: path });
+    const mismatch = await recover('archive-mismatch', join(normal.evidence, 'request.json'));
+    assert.notEqual(mismatch.exitCode, 0); assert.deepEqual(readFileSync(ownerPath), bytes);
+    const archived = await recover('archive-exact', oldPath);
+    assert.equal(archived.exitCode, 0, archived.output);
+    const receipt = readJson(join(archived.evidence, 'recovery.json'));
+    assert.equal(receipt.disposition, 'archived-unwitnessed'); assert.equal(receipt.owner.drain, null);
+    assert.deepEqual(readFileSync(receipt.archivePath), bytes); assert.equal(existsSync(ownerPath), false);
+    assert.equal(existsSync(join(archived.evidence, 'lifecycle.json')), false);
     // Break only disposable policy copies: the real helper must preserve owner
     // bytes when its policy process fails or emits malformed/coerced output.
     for (const [scenario, source] of [['policy-exit', 'process.exit(9);'], ['policy-json', 'console.log("{bad");'], ['policy-shape', 'console.log(JSON.stringify({allowed:"true"}));'], ['policy-binding-types', 'console.log(JSON.stringify({allowed:true,reason:"invalid binding types",ownerHash:[],lock:[]}));']]) {

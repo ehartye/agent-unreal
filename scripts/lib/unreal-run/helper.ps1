@@ -4,7 +4,10 @@ $r=Get-Content -Raw -LiteralPath $Request | ConvertFrom-Json -AsHashtable
 $requestHash=(Get-FileHash -LiteralPath $Request -Algorithm SHA256).Hash.ToLowerInvariant()
 $productionLock='Global\agent-plugins-engine-runs'
 if($r.version -ne 1 -or $r.kind -ne 'unreal-run/request'){throw 'Invalid request version'}
-if($r.purpose -eq 'production'){
+if($Action -eq 'run'){
+    if($null -ne $r.lock -or $r.state -cne $r.evidence){throw 'Run requires a request-local journal'}
+    if($r.purpose -notin @('fixture','production') -or ($r.purpose -eq 'production' -and $r.fault)){throw 'Invalid run purpose or fault'}
+} elseif($r.purpose -eq 'production'){
     if($r.lock -ne $productionLock -or $r.fault){throw 'Production isolation override refused'}
     if([IO.Path]::GetFullPath($r.state) -ne [IO.Path]::GetFullPath((Join-Path $env:ProgramData 'agent-unreal/engine-runs'))){throw 'Production state override refused'}
 } elseif($r.purpose -ne 'fixture' -or $r.lock -notmatch '^Global\\agent-unreal-fixture-[a-f0-9-]{36}$'){throw 'Invalid isolated fixture request'}
@@ -79,20 +82,13 @@ function Observe-JobMember([int]$MemberId) {
         Start-Sleep -Milliseconds 25
     }
 }
-function External-Engines {
-    # Detection only. These processes are NEVER terminated by this helper.
-    @(Get-EngineContention -Processes @(Get-CimInstance Win32_Process -ErrorAction Stop) -Node $r.node)
-}
-. (Join-Path $PSScriptRoot 'contention.ps1')
-[IO.Directory]::CreateDirectory($r.state)|Out-Null
 $ownerPath=Join-Path $r.state 'owner.json'
-$lastPath=Join-Path $r.state 'last.json'
 if($Action -eq 'status'){
-    $value=@{version=1;kind='unreal-run/status';lock=$r.lock;owner=$null;state='idle'}
-    if(Test-Path -LiteralPath $ownerPath){try {$value.owner=Read-Json $ownerPath;$value.state='held-or-quarantined';$value.elapsedSeconds=([DateTime]::UtcNow-[DateTime]::Parse($value.owner.started)).TotalSeconds}catch{$value.state='corrupt';$value.error=$_.Exception.Message}}
+    $value=@{version=1;kind='unreal-run/status';state='independent';lock=$null;owner=$null;legacyOwner=$null}
+    if(Test-Path -LiteralPath $ownerPath){try {$value.legacyOwner=Read-Json $ownerPath}catch{$value.legacyError=$_.Exception.Message}}
     $value|ConvertTo-Json -Depth 30;exit 0
 }
-$mutex=[Threading.Mutex]::new($false,$r.lock)
+$mutex=$null
 $held=$false;$job=$null;$gate=$null;$probe=$null;$controller=$null;$helper=$null;$owner=$null
 $processes=[Collections.Generic.List[object]]::new();$errors=[Collections.Generic.List[string]]::new()
 $permitIssued=$false;$contained=$false;$probeContained=$false;$cancelled=$false;$timedOut=$false;$exitCode=74;$forced=$false
@@ -105,19 +101,11 @@ try {
     try {$helper=Identity $helperProcess} finally {$helperProcess.Dispose()}
     $supervisorProcess=[Diagnostics.Process]::GetProcessById($SupervisorPid)
     try {$supervisor=Identity $supervisorProcess} finally {$supervisorProcess.Dispose()}
-    $watch=[Diagnostics.Stopwatch]::StartNew();$nextHeartbeat=0
-    while(-not $held){
-        Check-Owner
-        try {$held=$mutex.WaitOne([Math]::Min(250,[int]$r.waitMs))}catch [Threading.AbandonedMutexException]{$held=$true}
-        if($held){break}
-        if($watch.ElapsedMilliseconds -ge $nextHeartbeat){
-            $holder=if(Test-Path -LiteralPath $ownerPath){Get-Content -Raw -LiteralPath $ownerPath}else{'legacy holder or ownership evidence unavailable'}
-            [Console]::Error.WriteLine("Waiting for $($r.lock); holder: $holder")
-            $nextHeartbeat=$watch.ElapsedMilliseconds+5000
-        }
-        if($watch.ElapsedMilliseconds -ge $r.waitMs){throw 'Bounded lock wait expired'}
-    }
     if($Action -eq 'clear-stale'){
+        # Serialize legacy journal maintenance with older launchers only.
+        $mutex=[Threading.Mutex]::new($false,$r.lock)
+        try {$held=$mutex.WaitOne([int]$r.waitMs)}catch [Threading.AbandonedMutexException]{$held=$true}
+        if(-not $held){throw 'Legacy launcher is active; bounded recovery wait expired'}
         if(-not(Test-Path -LiteralPath $ownerPath)){throw 'Recovery refused: absent ownership evidence'}
         $ownerHash=(Get-FileHash -LiteralPath $ownerPath -Algorithm SHA256).Hash.ToLowerInvariant()
         $old=Read-Json $ownerPath
@@ -127,6 +115,7 @@ try {
         }
         # The mutex stays held across observation, shared policy and removal.
         $policyInput=@{ownerPath=$ownerPath;ownerHash=$ownerHash;lock=$r.lock;purpose=$r.purpose;observations=$observations}
+        if($r.ContainsKey('archive')){$policyInput.archive=$r.archive}
         $policyOutput=ConvertTo-Json -InputObject $policyInput -Depth 30 -Compress | & $r.node (Join-Path $PSScriptRoot 'recovery.mjs')
         if($LASTEXITCODE -ne 0){throw 'Recovery refused: policy process failed'}
         $decision=ConvertFrom-Json -InputObject ($policyOutput -join [Environment]::NewLine) -AsHashtable -NoEnumerate
@@ -134,21 +123,26 @@ try {
         if(-not $decision.allowed){throw "Recovery refused: $($decision.reason)"}
         if((Get-FileHash -LiteralPath $ownerPath -Algorithm SHA256).Hash.ToLowerInvariant() -cne $ownerHash){throw 'Recovery refused: ownership evidence changed'}
         $recovery=@{version=1;kind='unreal-run/recovery';id=$r.id;lock=$r.lock;allowed=$true;owner=$old;ownerHash=$ownerHash;observations=$observations;reason=$decision.reason;observed=[DateTime]::UtcNow.ToString('o')}
+        if($r.ContainsKey('archive')){
+            if($decision.disposition -cne 'archived-unwitnessed'){throw 'Recovery refused: missing archive decision'}
+            $recovery.disposition='archived-unwitnessed'
+            $recovery.archivePath=Join-Path $r.state ("unwitnessed-{0}-{1}.json" -f $old.id,$ownerHash)
+            # Same-directory atomic rename retains the exact original bytes.
+        }
         Write-Json (Join-Path $r.evidence 'recovery.json') $recovery
-        Remove-Item -LiteralPath $ownerPath
+        if($r.ContainsKey('archive')){
+            [IO.File]::Move($ownerPath,$recovery.archivePath)
+        } else {
+            Remove-Item -LiteralPath $ownerPath
+        }
         $recovery|ConvertTo-Json -Depth 30
         exit 0
     }
-    if(Test-Path -LiteralPath $ownerPath){throw 'Unresolved ownership blocks launch; inspect status and evidence before clear-stale'}
     $processes.Add($controller);$processes.Add($supervisor);$processes.Add($helper)
     $owner=@{version=1;kind='unreal-run/owner';id=$r.id;requestHash=$requestHash;lock=$r.lock;purpose=$r.purpose;started=$started;command=@($r.executable)+@($r.arguments);controller=$controller;helper=$helper;phase='pre-permit';permitIssued=$false;processes=@();drain=$null;evidence=$r.evidence}
     Publish-Owner
     Add-Type -Path (Join-Path $PSScriptRoot 'native.cs')
     $job=[UnrealRun.EngineJob]::new()
-    if($r.purpose -eq 'production'){
-        $external=@(External-Engines)
-        if($external.Count){Write-Json (Join-Path $r.evidence 'contention.json') @{observed=[DateTime]::UtcNow.ToString('o');processes=$external};throw 'External engine contention; no workload dispatched'}
-    }
     if(($job.LimitFlags() -band 0x2000) -eq 0 -or ($job.LimitFlags() -band 0x1800) -ne 0){throw 'Job containment flags invalid'}
     $start=[Diagnostics.ProcessStartInfo]::new($r.node)
     $start.UseShellExecute=$false;$start.CreateNoWindow=$true
@@ -171,7 +165,6 @@ try {
     Write-Json (Join-Path $r.evidence 'probe-complete.json') $permit
     $null=Wait-Record 'probe-exited.json'
     Check-Owner
-    if($r.purpose -eq 'production' -and @(External-Engines).Count){throw 'External engine contention before workload permit'}
     # Persist intent BEFORE publishing permission. A crash between these writes is conservative.
     $owner.permitIssued=$true;$owner.phase='running';Publish-Owner
     $permitIssued=$true
@@ -187,7 +180,7 @@ try {
         if($r.fault -eq 'accounting' -and $workWatch.ElapsedMilliseconds -gt 400){throw 'Injected ambiguous accounting'}
         Start-Sleep -Milliseconds 50;$gate.Refresh()
     }
-    $gate.WaitForExit();$exitCode=$gate.ExitCode
+    $gate.WaitForExit();Check-Owner;$exitCode=$gate.ExitCode
     $result=Read-Json (Join-Path $r.evidence 'workload-result.json')
     if($result.requestHash -ne $requestHash -or $result.exitCode -ne $exitCode -or $result.error){throw 'Missing or contradictory workload result'}
 } catch {
@@ -200,16 +193,23 @@ finally {
             if($job -and $job.ActiveProcesses() -gt 0){$forced=$true;$job.Terminate()}
             # This exact handle is a pre-permit gate, never an arbitrary PID/name.
             if($gate -and -not $permitIssued -and -not $gate.HasExited){$gate.Kill();if(-not $gate.WaitForExit(5000)){throw 'Uncontained inert gate did not exit'}}
-            $end=[DateTime]::UtcNow.AddSeconds(10)
-            while($job -and $job.ActiveProcesses() -gt 0 -and [DateTime]::UtcNow -lt $end){Start-Sleep -Milliseconds 50}
-            if($job){$active=$job.ActiveProcesses();$members=@($job.ProcessIds());$drain=@{proved=($active -eq 0 -and $members.Count -eq 0);active=$active;members=$members;requestHash=$requestHash;observed=[DateTime]::UtcNow.ToString('o')}}
+            if($job){
+                $clock=[Diagnostics.Stopwatch]::StartNew()
+                do {
+                    $active=$job.ActiveProcesses()
+                    $members=@($job.ProcessIds())
+                    $empty=$active -eq 0 -and $members.Count -eq 0
+                    if($empty -or $clock.ElapsedMilliseconds -ge 10000){break}
+                    Start-Sleep -Milliseconds 50
+                } while($true)
+                $drain=@{proved=$empty;active=$active;members=$members;requestHash=$requestHash;observed=[DateTime]::UtcNow.ToString('o')}
+            }
             if($r.fault -eq 'accounting'){$drain.proved=$false;$drain.active=$null;$drain.members=$null}
         } catch {$errors.Add('cleanup: '+$_.Exception.Message)}
         $receipt=@{version=1;kind='unreal-run/lifecycle';id=$r.id;purpose=$r.purpose;operation=$r.operation;requestHash=$requestHash;lock=$r.lock;started=$started;finished=[DateTime]::UtcNow.ToString('o');controller=$controller;helper=$helper;gate=$gateIdentity;probe=$probeIdentity;processes=$processes.ToArray();contained=$contained;probeContained=$probeContained;permitIssued=$permitIssued;permit=if($permitIssued){$permit}else{$null};exitCode=$exitCode;cancelled=$cancelled;timedOut=$timedOut;forcedCleanup=$forced;drain=$drain;errors=$errors.ToArray()}
         try {
             Write-Json (Join-Path $r.evidence 'lifecycle.json') $receipt
             $owner.drain=$drain;$owner.phase=if($drain.proved){'drained'}elseif($permitIssued){'unknown-after-permit'}else{'pre-permit'};Publish-Owner
-            Write-Json $lastPath $receipt
             if($drain.proved){Remove-Item -LiteralPath $ownerPath}
             elseif(-not $permitIssued -and -not $gate){Remove-Item -LiteralPath $ownerPath}
         } catch {$errors.Add('receipt: '+$_.Exception.Message);[Console]::Error.WriteLine($_.Exception.Message)}
@@ -218,7 +218,7 @@ finally {
         Write-Json (Join-Path $r.evidence 'lifecycle.json') @{version=1;kind='unreal-run/lifecycle';id=$r.id;purpose=$r.purpose;operation=$r.operation;requestHash=$requestHash;lock=$r.lock;started=$started;finished=[DateTime]::UtcNow.ToString('o');controller=$controller;helper=$helper;gate=$null;probe=$null;processes=@($controller,$helper)|Where-Object {$null -ne $_};contained=$false;probeContained=$false;permitIssued=$false;permit=$null;exitCode=74;cancelled=$cancelled;timedOut=$false;drain=$drain;errors=$errors.ToArray()}
     }
     if($probe){$probe.Dispose()};if($gate){$gate.Dispose()};if($job){$job.Dispose()}
-    if($held){$mutex.ReleaseMutex()};$mutex.Dispose()
+    if($held){$mutex.ReleaseMutex()};if($mutex){$mutex.Dispose()}
 }
 if($errors.Count -or ($owner -and -not $drain.proved)){exit 74}
 exit $exitCode

@@ -15,8 +15,8 @@ node scripts/unreal-run.mjs package --config D:/Project/launcher.local.json --ev
 ```
 
 - [general] Each evidence directory must be fresh. Arguments after `--` are preserved as an array. A workload timeout or cancellation cleans only its owned Job and requires a zero-member drain proof. Missing ownership or cleanup evidence is a refusal, never a successful run. Read automation/observation reports separately: a lifecycle receipt does not prove test assertions.
-- [general] Production preserves `Global\agent-plugins-engine-runs`; there is no launch bypass or production lock override. Waiters identify the holder and print a heartbeat. Unmanaged launches can still happen outside the mechanism; contention detection refuses recognized external engines and never stops them.
-- [general] Inspect `status`, the journal and the retained lifecycle before `clear-stale --evidence <fresh-directory>`. Recovery accepts only proved no-permit ownership with all recorded creation identities gone, or valid zero-member drain evidence. Live, corrupt, missing or ambiguous ownership refuses. Age and PID disappearance alone are insufficient.
+- [general] Each invocation uses a private Job and a journal in its evidence directory. Independent launches can overlap. A lost helper leaves that request's outcome unknown.
+- [general] Inspect `status` for legacy ownership. Plain `clear-stale` requires the original proof. To archive a legacy post-permit journal whose witness was lost, use `clear-stale --archive-unwitnessed <original-request.json> --evidence <fresh-directory>`. It matches the exact request ID and hash, checks each recorded identity, and preserves the original journal with drain unknown.
 
 ## Existing probe runners
 
@@ -26,5 +26,5 @@ node scripts/unreal-run.mjs package --config D:/Project/launcher.local.json --ev
 pwsh -NoProfile -File examples/unreal/engine_lock/with-engine-lock.ps1 node examples/unreal/editor_python/ep_validate.mjs --engine D:/Engines/UE --keep
 ```
 
-- [general] The [adapter README](../../../examples/unreal/engine_lock/README.md) documents bounded environment settings, exact arguments and exit codes. `--no-lock` is limited to the bundled descriptor scan and Node version query; it cannot launch arbitrary scripts or engines. Historical bare engine commands remain evidence of older experiments, not current launch instructions.
+- [general] The [adapter README](../../../examples/unreal/engine_lock/README.md) documents timeout settings, exact arguments and exit codes. `--no-lock` is limited to the bundled descriptor scan and Node version query; it cannot launch arbitrary scripts or engines. Historical bare engine commands remain evidence of older experiments, not current launch instructions.
 - [general] Native lifecycle fixtures and actual engine acceptance run separately from `node scripts/check.mjs`. Use the delivered commands and preserve their complete reports. A Linux skip, a doctor result, or an inert fixture does not prove native build/package behavior or visual correctness.

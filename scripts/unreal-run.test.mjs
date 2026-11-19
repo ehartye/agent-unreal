@@ -62,6 +62,17 @@ test('CLI advertises nine operations and preserves exact trailing arguments', ()
 test('CLI refuses missing, unknown, repeated and unbounded input before launch', () => {
   for (const args of [['unknown'], ['editor'], ['doctor', '--timeout', '0'], ['doctor', '--timeout', '86401'], ['doctor', '--timeout', 'x'], ['doctor', '--no-lock'], ['doctor', '--wait', '1', '--wait', '2'], ['status', '--', 'engine']]) assert.throws(() => parseArguments(args));
 });
+test('archiving an unwitnessed run binds the request and preserves strict clear-stale', () => {
+  const stale = { ...owner(), controller: identity(1), helper: identity(2), processes: [identity(1), identity(2)], phase: 'running', permitIssued: true };
+  const observed = stale.processes.map(p => ({ pid: p.pid, expectedCreated: p.created, state: 'gone' }));
+  const archive = { id, requestHash: sha };
+  assert.equal(recoveryDecision(stale, observed).allowed, false);
+  assert.equal(recoveryDecision(stale, observed, { archive }).disposition, 'archived-unwitnessed');
+  for (const bad of [{ ...archive, id: randomUUID() }, { ...archive, requestHash: 'b'.repeat(64) }]) assert.equal(recoveryDecision(stale, observed, { archive: bad }).allowed, false);
+  for (const state of ['live', 'reused', 'unknown']) assert.equal(recoveryDecision(stale, [{ ...observed[0], state }, observed[1]], { archive }).allowed, false);
+  assert.throws(() => parseArguments(['doctor', '--archive-unwitnessed', 'old.json']));
+});
+
 test('production requests cannot change lock identity or select fixture faults', () => {
   const request = { version: 1, kind: 'unreal-run/request', id, nonce: sha, purpose: 'production', operation: 'editor', lock: LOCK, executable: 'editor.exe', arguments: [''], cwd: 'cwd', evidence: 'out', state: 'state', node: 'node', timeoutMs: 1, waitMs: 1, controllerPid: 1, controllerCreated: identity(1).created };
   assert.deepEqual(validateRequest(request), []);
