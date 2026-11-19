@@ -1,5 +1,5 @@
 import { spawn } from 'node:child_process';
-import { realpathSync, readFileSync, existsSync } from 'node:fs';
+import { realpathSync, readFileSync } from 'node:fs';
 import { resolve, basename } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { runContainedProcess, temporaryEvidence } from '../../../scripts/lib/unreal-run/controller.mjs';
@@ -31,10 +31,9 @@ export async function main(argv = process.argv.slice(2)) {
   const evidence = process.env.ENGINE_LOCK_EVIDENCE || temporaryEvidence('compat');
   const result = await runContainedProcess({ executable, arguments: args, evidence, operation: 'compat',
     timeoutMs: bounded(process.env.ENGINE_RUN_TIMEOUT_SECONDS, 14400, 1000, 'workload timeout'),
-    waitMs: bounded(process.env.ENGINE_LOCK_TIMEOUT_MIN, 240, 60000, 'lock timeout'), fixtureIsolation,
+    fixtureIsolation,
     onStdout: value => process.stdout.write(value), onStderr: value => process.stderr.write(value), onDiagnostic: value => process.stderr.write(value) });
   console.error(`Engine launcher evidence: ${result.evidence}`);
-  if (!existsSync(resolve(result.evidence, 'workload-permit.json')) && readFileSync(resolve(result.evidence, 'helper.stderr.log'), 'utf8').includes('Bounded lock wait expired')) return 3;
   return result.exitCode;
 }
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) main().then(code => { process.exitCode = code; }).catch(error => { console.error(error.message); process.exitCode = 2; });

@@ -40,7 +40,7 @@ test('--no-lock only admits known engine-free scans', () => {
   assert.equal(scanAllowed('node', ['-e', 'launchEngine()']), false);
   assert.equal(scanAllowed('UnrealEditor.exe', []), false);
 });
-test('--no-lock runs a scan while another call holds the lock', { skip }, async () => {
+test('--no-lock runs a scan during another run', { skip }, async () => {
   const f = fixture(); const done = await startHolder(f); try { const r = wrapped(f, ['--no-lock', 'node', '--version']); assert.equal(r.status, 0, r.stderr); } finally { await done.promise; }
 });
 async function startHolder(f) {
@@ -52,13 +52,12 @@ async function startHolder(f) {
   while (!existsSync(join(evidence, 'workload-started.json'))) { if (child.exitCode !== null || Date.now() > deadline) throw Error('Holder did not start'); await new Promise(r => setTimeout(r, 50)); }
   return { child, promise };
 }
-test('a second call names the holder while waiting, then runs', { skip }, async () => {
+test('an independent adapter dispatches with a short legacy wait setting', { skip }, async () => {
   const f = fixture(); const h = await startHolder(f);
-  try { const r = wrapped(f, ['node', '--version']); assert.equal(r.status, 0, r.stderr); assert.match(r.stderr, /Waiting for.*holder:/); assert.match(r.stdout, /^v\d+/); } finally { await h.promise; }
-});
-test('bounded lock wait preserves exit code 3', { skip }, async () => {
-  const f = fixture(); const h = await startHolder(f);
-  try { const r = wrapped(f, ['node', '--version'], { ENGINE_LOCK_TIMEOUT_MIN: '0.01' }); assert.equal(r.status, 3, r.stderr); assert.match(r.stderr, /Bounded lock wait expired/); } finally { await h.promise; }
+  try {
+    const r = wrapped(f, ['node', '--version'], { ENGINE_LOCK_TIMEOUT_MIN: '0.001' });
+    assert.equal(r.status, 0, r.stderr); assert.match(r.stdout, /^v\d+/);
+  } finally { await h.promise; }
 });
 test('production lock overrides and unsafe no-lock commands refuse before dispatch', { skip }, () => {
   const f = fixture(); const marker = join(f.root, 'never-created');

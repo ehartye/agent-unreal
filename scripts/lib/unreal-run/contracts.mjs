@@ -14,8 +14,9 @@ export function validateRequest(r) {
   if (r.version !== VERSION || r.kind !== 'unreal-run/request') errors.push('unsupported request contract');
   if (!/^[a-f0-9-]{36}$/.test(r.id ?? '') || !sha(r.nonce)) errors.push('invalid request identity');
   if (!['production', 'fixture'].includes(r.purpose)) errors.push('invalid purpose');
-  if (r.purpose === 'production' && r.lock !== LOCK) errors.push('production lock identity mismatch');
-  if (r.purpose === 'fixture' && !/^Global\\agent-unreal-fixture-[a-f0-9-]{36}$/.test(r.lock ?? '')) errors.push('fixture isolation required');
+  if (r.lock === null && r.state !== r.evidence) errors.push('request-local journal required');
+  if (r.lock !== null && r.purpose === 'production' && r.lock !== LOCK) errors.push('production lock identity mismatch');
+  if (r.lock !== null && r.purpose === 'fixture' && !/^Global\\agent-unreal-fixture-[a-f0-9-]{36}$/.test(r.lock ?? '')) errors.push('fixture isolation required');
   if (!OPERATIONS.includes(r.operation) && r.operation !== 'compat') errors.push('unsupported operation');
   for (const key of ['executable', 'cwd', 'evidence', 'state', 'node']) if (typeof r[key] !== 'string' || !r[key] || r[key].includes('\0')) errors.push(`invalid ${key}`);
   if (!Array.isArray(r.arguments) || r.arguments.some(a => typeof a !== 'string' || a.includes('\0'))) errors.push('arguments must be a string array without NUL');
@@ -31,7 +32,7 @@ export function verifyLifecycle(r, { purpose = 'production', requestId, requestH
   if (!object(r)) return { valid: false, errors: ['missing lifecycle receipt'] };
   if (r.version !== VERSION || r.kind !== 'unreal-run/lifecycle') errors.push('unsupported lifecycle contract');
   if (!['build', 'editor', 'game', 'commandlet', 'package', 'test', 'doctor', 'compat'].includes(r.operation)) errors.push('missing or unsupported lifecycle operation');
-  if (r.purpose !== purpose || (purpose === 'production' && r.lock !== LOCK) || (purpose === 'fixture' && !/^Global\\agent-unreal-fixture-[a-f0-9-]{36}$/.test(r.lock ?? ''))) errors.push('lock or purpose mismatch');
+  if (r.purpose !== purpose || (r.lock !== null && purpose === 'production' && r.lock !== LOCK) || (r.lock !== null && purpose === 'fixture' && !/^Global\\agent-unreal-fixture-[a-f0-9-]{36}$/.test(r.lock ?? ''))) errors.push('lock or purpose mismatch');
   if (!sha(r.requestHash) || !/^[a-f0-9-]{36}$/.test(r.id ?? '') || (requestId && r.id !== requestId) || (requestHash && r.requestHash !== requestHash)) errors.push('request identity mismatch');
   if (!identity(r.controller) || !identity(r.helper)) errors.push('missing owner creation identity');
   if (!Array.isArray(r.processes) || r.processes.some(p => !identity(p))) errors.push('invalid recorded process identities');
@@ -70,10 +71,14 @@ export function recoveryDecision(owner, observations, expected = {}) {
   if ((expected.lock !== undefined && owner.lock !== expected.lock) || (expected.purpose !== undefined && owner.purpose !== expected.purpose) || typeof owner.permitIssued !== 'boolean' || !['pre-permit', 'running', 'unknown-after-permit', 'drained'].includes(owner.phase) || (owner.permitIssued ? owner.phase === 'pre-permit' : !['pre-permit', 'drained'].includes(owner.phase)) || new Set(owner.processes.map(p => `${p.pid}:${p.created}`)).size !== owner.processes.length) return { allowed: false, reason: 'contradictory or unbound ownership evidence' };
   if (!Array.isArray(observations) || observations.length !== owner.processes.length || observations.some((p, i) => !object(p) || p.pid !== owner.processes[i].pid || p.expectedCreated !== owner.processes[i].created || p.state !== 'gone')) return { allowed: false, reason: 'live, reused or ambiguous process identity' };
   const validDrain = object(owner.drain) && owner.drain.proved === true && owner.drain.active === 0 && Array.isArray(owner.drain.members) && owner.drain.members.length === 0 && owner.drain.requestHash === owner.requestHash && time(owner.drain.observed) && Date.parse(owner.drain.observed) >= Date.parse(owner.started);
-  if (validDrain) return { allowed: true, reason: 'verified zero-member owned Job drain' };
-  // Only an absent or explicitly unobserved drain can accompany pre-permit proof.
-  // A malformed or contradictory drain must not be rescued by the other branch.
   const unobserved = owner.drain === null || (object(owner.drain) && owner.drain.proved === false && owner.drain.active === null && owner.drain.members === null && owner.drain.observed === null && owner.drain.requestHash === owner.requestHash);
+  if (expected.archive !== undefined) {
+    const recorded = p => identity(p) && owner.processes.some(q => q.pid === p.pid && q.created === p.created);
+    if (expected.archive?.id !== owner.id || expected.archive?.requestHash !== owner.requestHash || !recorded(owner.helper) || !recorded(owner.controller)) return { allowed: false, reason: 'archive request or owner identity mismatch' };
+    if (!owner.permitIssued || !['running', 'unknown-after-permit'].includes(owner.phase) || !unobserved) return { allowed: false, reason: 'archive requires a missing post-permit witness' };
+    return { allowed: true, disposition: 'archived-unwitnessed', reason: 'explicitly archived with unknown drain' };
+  }
+  if (validDrain) return { allowed: true, reason: 'verified zero-member owned Job drain' };
   if (!unobserved) return { allowed: false, reason: 'corrupt or contradictory drain evidence' };
   if (owner.permitIssued === false && owner.phase === 'pre-permit') return { allowed: true, reason: 'no workload permit and every recorded identity gone' };
   return { allowed: false, reason: 'workload may have run without a drain proof' };

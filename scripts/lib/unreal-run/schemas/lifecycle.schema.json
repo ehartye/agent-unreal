@@ -11,7 +11,7 @@
     "version": {"const": 1}, "kind": {"const": "unreal-run/lifecycle"},
     "id": {"type": "string", "format": "uuid"}, "purpose": {"enum": ["production", "fixture"]},
     "operation": {"enum": ["build", "editor", "game", "commandlet", "package", "test", "doctor", "compat"]},
-    "requestHash": {"$ref": "#/$defs/hash"}, "lock": {"type": "string"},
+    "requestHash": {"$ref": "#/$defs/hash"}, "lock": {"type": ["string", "null"]},
     "started": {"type": "string", "format": "date-time"}, "finished": {"type": "string", "format": "date-time"},
     "controller": {"$ref": "#/$defs/identity"}, "helper": {"$ref": "#/$defs/identity"},
     "processes": {"type": "array", "items": {"$ref": "#/$defs/identity"}},

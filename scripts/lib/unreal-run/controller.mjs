@@ -1,6 +1,6 @@
 import { spawn, execFileSync } from 'node:child_process';
 import { randomUUID, randomBytes } from 'node:crypto';
-import { readFileSync, readSync, writeFileSync, mkdirSync, existsSync, openSync, closeSync, mkdtempSync, readdirSync, statSync } from 'node:fs';
+import { readFileSync, readSync, writeFileSync, renameSync, mkdirSync, existsSync, openSync, closeSync, mkdtempSync, readdirSync, statSync } from 'node:fs';
 import { StringDecoder } from 'node:string_decoder';
 import { join, resolve, dirname, isAbsolute } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -25,11 +25,18 @@ export async function runContainedProcess(options) {
   const evidence = resolve(options.evidence);
   mkdirSync(evidence, { recursive: true });
   if (readdirSync(evidence).length) throw Error('Evidence directory must be empty; retained receipts cannot be overwritten');
+  let archive;
+  if (options.archiveRequest !== undefined) {
+    if (action !== 'clear-stale') throw Error('Archiving requires clear-stale');
+    const bytes = readFileSync(options.archiveRequest);
+    archive = { id: JSON.parse(bytes.toString('utf8').replace(/^\uFEFF/, '')).id, requestHash: hash(bytes) };
+  }
   const r = {
     version: VERSION, kind: 'unreal-run/request', id: randomUUID(), nonce: randomBytes(32).toString('hex'),
     purpose: fixtureIsolation ? 'fixture' : 'production', operation,
-    lock: fixtureIsolation?.lock ?? LOCK,
-    state: fixtureIsolation?.state ?? join(process.env.ProgramData ?? '', 'agent-unreal', 'engine-runs'),
+    lock: action === 'run' ? null : fixtureIsolation?.lock ?? LOCK,
+    state: action === 'run' ? evidence : fixtureIsolation?.state ?? join(process.env.ProgramData ?? '', 'agent-unreal', 'engine-runs'),
+    ...(archive ? { archive } : {}),
     executable: options.executable ?? process.execPath, arguments: options.arguments ?? [], cwd: options.cwd ?? process.cwd(),
     evidence, node: process.execPath, timeoutMs: options.timeoutMs ?? 30000, waitMs: options.waitMs ?? 60000,
     controllerPid: process.pid, controllerCreated: creationIdentity(process.pid),
@@ -52,7 +59,8 @@ export async function runContainedProcess(options) {
   const cancel = () => {
     if (cancelled) return;
     cancelled = true;
-    writeJson(join(evidence, 'cancel.json'), { id: r.id, requestHash });
+    writeJson(join(evidence, 'cancel.tmp'), { id: r.id, requestHash });
+    renameSync(join(evidence, 'cancel.tmp'), join(evidence, 'cancel.json'));
   };
   const onSignal = () => cancel();
   process.on('SIGINT', onSignal); process.on('SIGTERM', onSignal);
@@ -117,7 +125,7 @@ export function operationCommand(operation, c, args) {
       dotnet = candidates[0];
     }
     executable = dotnet;
-    if (operation === 'build') arguments_ = [join(c.engine, 'Engine/Binaries/DotNET/UnrealBuildTool/UnrealBuildTool.dll'), c.editorTarget, c.platform, c.configuration, `-Project=${c.project}`, '-WaitMutex', ...args];
+    if (operation === 'build') arguments_ = [join(c.engine, 'Engine/Binaries/DotNET/UnrealBuildTool/UnrealBuildTool.dll'), c.editorTarget, c.platform, c.configuration, `-Project=${c.project}`, ...args];
     else {
       if (!c.packageDirectory) throw Error('packageDirectory is required for package');
       arguments_ = [join(c.engine, 'Engine/Binaries/DotNET/AutomationTool/AutomationTool.dll'), 'BuildCookRun', `-project=${c.project}`, `-target=${c.gameTarget}`, `-platform=${c.platform}`, `-clientconfig=${c.configuration}`, '-build', '-cook', '-stage', '-pak', '-archive', `-archivedirectory=${c.packageDirectory}`, ...args];
